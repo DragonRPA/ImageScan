@@ -1,16 +1,19 @@
 # 릴리즈 노트 (RELEASE_NOTES.md)
 
-## [v1.0.0.Build.10] - 2026-08-14 11:14:07 (KST)
+## [v1.0.0.Build.11] - 2026-08-14 11:28:33 (KST)
 
-### 🖨️ PC 연결 프린터 목록 확인 가이드 및 WebUSB 프린터 감지 모달 구축 (`PrinterGuideModal.jsx`)
-1. **브라우저 인쇄 창(Print Dialog) 자동 프린터 목록 동기화**:
-   - `[Code 39 라벨 인쇄]` 또는 `[테스트 라벨 1장 인쇄]` 클릭 시 브라우저 인쇄 창의 **'대상 (Destination)'** 드롭다운 메뉴에 Windows PC에 설치된 모든 프린터 드라이버(빅솔론, 지브라, 엑스프린터, 가덱스, 세우 등)가 자동으로 노출됩니다.
-2. **WebUSB 직접 연결 라벨 프린터 감지**:
-   - USB 케이블로 직접 연결된 라벨 프린터를 웹 브라우저(Chrome, Edge)에서 직접 탐색하는 WebUSB 감지 기능 제공.
-3. **라벨 3초 인쇄 설정 안내**:
-   - 인쇄 창 여백(None) 및 배율(Fit to printable area) 설정 팁 가이드 제공.
+### 📱 스마트 광역 자동 텍스트 영역 추적 & 핀포인트 타겟 하이라이트 구축 (Smart Auto-Localization)
+1. **편안한 조준 광역 스캐닝 영역 (Zero-Align Comfort Zone)**:
+   - 미세 상자에 맞출 필요 없이, 기기 뒷면 전체를 편안하게 비추기만 하면 80% 광역 탐색 영역에서 실시간 자동 추적.
+2. **Tesseract PSM 11 흩어진 미세 텍스트 자동 영역 검출 (Sparse Text Auto Region)**:
+   - 글자 위치가 상단, 중앙, 하단 어느 곳에 있든 1080p 고해상도 풀프레임에서 `IMEI:351379300226456` 글자를 자동으로 찾아서 정밀 추출.
+3. **실시간 감지 위치 핀포인트 타겟 하이라이트 (Live Pinpoint Bounding Box)**:
+   - IMEI 감지 성공 시 화면 상의 실제 글자 위치에 **초록색 핀포인트 박스 (Target Highlight)**가 실시간 팝업되어 감지 지점을 직관적으로 확신.
 
 ---
+
+## [v1.0.0.Build.10] - 2026-08-14 11:14:07 (KST)
+- **PC 연결 프린터 목록 확인 가이드 & WebUSB 프린터 감지 모달 구축 (`PrinterGuideModal.jsx`)**.
 
 ## [v1.0.0.Build.9] - 2026-08-14 11:11:00 (KST)
 - **Supabase 대시보드 URL 자동 감지 및 API URL 100% 자동 변환 (Auto URL Normalizer)**.
