@@ -79,10 +79,10 @@ export default function App() {
           </div>
           <div>
             <h1 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: '#f8fafc' }}>
-              {deviceMode === 'mobile' ? '스마트 광역 텍스트 추적 스캐너' : 'PC 라벨 프린터 오프셋 정밀 교정 대시보드'}
+              {deviceMode === 'mobile' ? '초점/플래시 선명도 강화 스캐너' : 'PC 라벨 프린터 ZPL 직통 출력 대시보드'}
             </h1>
             <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
-              버전: v1.0.0.Build.11 | 2026-08-14
+              버전: v1.0.0.Build.12 | 2026-08-14
             </span>
           </div>
         </div>

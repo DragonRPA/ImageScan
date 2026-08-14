@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { Camera, UploadCloud, Play, Square, Plus, Volume2, ShieldCheck, Target } from 'lucide-react';
+import { Camera, UploadCloud, Play, Square, Plus, Volume2, ShieldCheck, Target, Zap, ZapOff, RefreshCw } from 'lucide-react';
 import { getTesseractWorker, preprocessCanvasROI, parseFieldsFromTesseractResult } from '../utils/ocrWorker';
 import { triggerSuccessFeedback } from '../utils/soundFeedback';
 import { saveScansToSupabase, getStoredConfig } from '../utils/supabaseClient';
@@ -14,7 +14,12 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
   const [ocrStatus, setOcrStatus] = useState('기기 뒷면 전체를 편안하게 비추세요');
   const [detectedPulse, setDetectedPulse] = useState(false);
 
-  // Pinpoint Highlight Box Coordinates (relative to camera container %)
+  // Hardware Camera Features (Autofocus & Torch Flashlight)
+  const [isTorchOn, setIsTorchOn] = useState(false);
+  const [torchSupported, setTorchSupported] = useState(false);
+  const [autofocusSupported, setAutofocusSupported] = useState(false);
+
+  // Pinpoint Highlight Box Coordinates
   const [pinpointBox, setPinpointBox] = useState(null);
 
   // Recent scanned items list
@@ -32,31 +37,92 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
   const supabaseConfig = getStoredConfig();
   const isConfigured = Boolean(supabaseConfig.url && supabaseConfig.anonKey && !supabaseConfig.url.includes('your-supabase-project'));
 
-  // Start Camera Stream (Full 1080p High-Res)
+  // Start Camera Stream with Ultra-HD 4K/1080p + Continuous Focus Constraints
   const startCamera = async () => {
     try {
-      setCameraStatus('카메라 권한 요청 중...');
+      setCameraStatus('Ultra-HD 카메라 권한 요청 중...');
       const constraints = {
         video: {
           facingMode: { ideal: 'environment' },
-          width: { ideal: 1920 },
-          height: { ideal: 1080 }
+          width: { ideal: 3840, min: 1920 },
+          height: { ideal: 2160, min: 1080 }
         }
       };
 
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
 
+      const track = stream.getVideoTracks()[0];
+      if (track && track.getCapabilities) {
+        const capabilities = track.getCapabilities();
+
+        // 1. Check Torch (Flashlight)
+        if ('torch' in capabilities) {
+          setTorchSupported(true);
+        }
+
+        // 2. Check & Apply Continuous Macro Autofocus
+        if (capabilities.focusMode && capabilities.focusMode.includes('continuous')) {
+          setAutofocusSupported(true);
+          try {
+            await track.applyConstraints({
+              advanced: [{ focusMode: 'continuous' }]
+            });
+          } catch (e) {
+            console.warn('Autofocus constraint application warning:', e);
+          }
+        }
+      }
+
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
       }
       setIsScanning(true);
-      setCameraStatus('광역 자동 텍스트 영역 추적 중');
+      setCameraStatus('접사 자동초점 & 샤프닝 OCR 작동 중');
     } catch (err) {
       console.error('Camera Access Error:', err);
       setCameraStatus('카메라 연결 실패');
       onError(`카메라 권한을 얻을 수 없습니다: ${err.message}`);
+    }
+  };
+
+  // Toggle LED Flashlight (Torch)
+  const toggleTorch = async () => {
+    if (!streamRef.current) return;
+    const track = streamRef.current.getVideoTracks()[0];
+    if (track && track.applyConstraints) {
+      try {
+        const nextState = !isTorchOn;
+        await track.applyConstraints({
+          advanced: [{ torch: nextState }]
+        });
+        setIsTorchOn(nextState);
+      } catch (e) {
+        console.warn('Torch toggle error:', e);
+      }
+    }
+  };
+
+  // Manual Trigger Refocus Action (Re-runs continuous focus lens drive)
+  const triggerRefocus = async () => {
+    if (!streamRef.current) return;
+    const track = streamRef.current.getVideoTracks()[0];
+    if (track && track.applyConstraints) {
+      try {
+        setOcrStatus('🎯 초점 재조정(Refocus) 진행 중...');
+        await track.applyConstraints({
+          advanced: [{ focusMode: 'manual' }]
+        });
+        setTimeout(async () => {
+          await track.applyConstraints({
+            advanced: [{ focusMode: 'continuous' }]
+          });
+          setOcrStatus('🎯 초점 재조정 완료! 기기 뒷면을 비추세요.');
+        }, 200);
+      } catch (e) {
+        console.warn('Refocus error:', e);
+      }
     }
   };
 
@@ -96,13 +162,13 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
           return;
         }
 
-        // Broad Scanning Area (85% Width x 70% Height for comfortable user holding)
+        // Broad Scanning Area (85% Width x 70% Height)
         const roiWidth = Math.floor(vWidth * 0.85);
         const roiHeight = Math.floor(vHeight * 0.70);
         const roiX = Math.floor((vWidth - roiWidth) / 2);
         const roiY = Math.floor((vHeight - roiHeight) / 2);
 
-        // Preprocess High-Res Broad Canvas Frame
+        // Preprocess High-Res Broad Canvas Frame with Laplacian Sharpening Filter
         const roiCanvas = preprocessCanvasROI(video, { x: roiX, y: roiY, width: roiWidth, height: roiHeight });
 
         // Tesseract OCR with Sparse Text Auto Detection (PSM 11)
@@ -110,12 +176,11 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
         const tesseractResult = await worker.recognize(roiCanvas);
 
         const rawText = tesseractResult.data.text || '';
-        setOcrStatus(rawText.trim() ? `탐색 텍스트: ${rawText.slice(0, 30)}...` : '기기 뒷면 전체를 편안하게 비추세요...');
+        setOcrStatus(rawText.trim() ? `선명 탐색: ${rawText.slice(0, 30)}...` : '기기 뒷면 전체를 편안하게 비추세요...');
 
         const parsed = parseFieldsFromTesseractResult(tesseractResult);
 
         if (parsed && parsed.imei) {
-          // Compute pinpoint bounding box coordinates on camera screen %
           if (parsed.bbox) {
             const relX = ((roiX + parsed.bbox.x0) / vWidth) * 100;
             const relY = ((roiY + parsed.bbox.y0) / vHeight) * 100;
@@ -123,7 +188,6 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
             const relH = ((parsed.bbox.y1 - parsed.bbox.y0) / vHeight) * 100;
             setPinpointBox({ x: relX, y: relY, w: Math.max(20, relW), h: Math.max(8, relH) });
           } else {
-            // Default center pinpoint
             setPinpointBox({ x: 15, y: 40, w: 70, h: 20 });
           }
 
@@ -161,7 +225,7 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
             }
 
             setScannedItems(prev => [newItem, ...prev]);
-            setOcrStatus(`★ 자동 텍스트 영역 추적 성공! IMEI: ${parsed.imei}`);
+            setOcrStatus(`★ 선명 감지 성공! IMEI: ${parsed.imei}`);
           }
         }
       } catch (err) {
@@ -232,7 +296,7 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
       gap: '10px',
       position: 'relative'
     }}>
-      {/* Top Mobile Status Header */}
+      {/* Top Mobile Controls Bar: Refocus & Flashlight Torch */}
       <div style={{
         display: 'flex',
         justify: 'space-between',
@@ -249,11 +313,26 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
           </span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Volume2 size={15} style={{ color: '#38bdf8' }} />
-          <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#38bdf8' }}>
-            누적 {scannedItems.length}건
-          </span>
+        {/* Refocus & Flashlight Controls */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <button
+            className="btn btn-outline"
+            style={{ padding: '3px 8px', fontSize: '0.75rem', borderColor: '#38bdf8', color: '#7dd3fc' }}
+            onClick={triggerRefocus}
+          >
+            <RefreshCw size={13} /> 초점 재조정
+          </button>
+
+          {torchSupported && (
+            <button
+              className={`btn ${isTorchOn ? 'btn-success' : 'btn-outline'}`}
+              style={{ padding: '3px 8px', fontSize: '0.75rem' }}
+              onClick={toggleTorch}
+            >
+              {isTorchOn ? <Zap size={13} /> : <ZapOff size={13} />}
+              {isTorchOn ? '플래시 ON' : '플래시 OFF'}
+            </button>
+          )}
         </div>
       </div>
 
@@ -276,7 +355,7 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
         />
 
-        {/* Comfortable Broad Scanning Area Overlay (85% x 70%) */}
+        {/* Comfortable Broad Scanning Area Overlay */}
         <div style={{
           position: 'absolute',
           top: '50%',

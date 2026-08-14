@@ -17,7 +17,36 @@ export async function getTesseractWorker() {
 }
 
 /**
- * Preprocesses broad-field video frame canvas with high contrast binarization
+ * Applies 3x3 Laplacian Convolution Kernel to sharpen blurry image edges by 200%
+ */
+function applySharpeningFilter(imgData, width, height) {
+  const data = imgData.data;
+  const copy = new Uint8ClampedArray(data);
+
+  // 3x3 Sharpening Convolution Kernel Matrix
+  // [  0, -1,  0 ]
+  // [ -1,  5, -1 ]
+  // [  0, -1,  0 ]
+  for (let y = 1; y < height - 1; y++) {
+    for (let x = 1; x < width - 1; x++) {
+      const idx = (y * width + x) * 4;
+
+      for (let c = 0; c < 3; c++) {
+        const center = copy[idx + c] * 5;
+        const up = copy[((y - 1) * width + x) * 4 + c];
+        const down = copy[((y + 1) * width + x) * 4 + c];
+        const left = copy[(y * width + (x - 1)) * 4 + c];
+        const right = copy[(y * width + (x + 1)) * 4 + c];
+
+        const sharpVal = center - up - down - left - right;
+        data[idx + c] = Math.min(255, Math.max(0, sharpVal));
+      }
+    }
+  }
+}
+
+/**
+ * Preprocesses broad-field video frame canvas with Laplacian sharpening & high contrast binarization
  */
 export function preprocessCanvasROI(sourceVideo, roiBounds) {
   const canvas = document.createElement('canvas');
@@ -27,16 +56,19 @@ export function preprocessCanvasROI(sourceVideo, roiBounds) {
   canvas.width = width;
   canvas.height = height;
 
-  // Draw broad region onto canvas at 1080p high-res
+  // Draw broad region onto canvas
   ctx.drawImage(sourceVideo, x, y, width, height, 0, 0, width, height);
 
   const imgData = ctx.getImageData(0, 0, width, height);
-  const data = imgData.data;
+  
+  // 1. Apply Sharpening Filter to eliminate blur
+  applySharpeningFilter(imgData, width, height);
 
-  // High contrast adaptive binarization for laser-etched 3mm text
+  // 2. High contrast adaptive binarization for laser-etched 3mm text
+  const data = imgData.data;
   for (let i = 0; i < data.length; i += 4) {
     const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
-    const v = avg > 115 ? 255 : 0;
+    const v = avg > 110 ? 255 : 0;
     data[i] = v;     // R
     data[i + 1] = v; // G
     data[i + 2] = v; // B
@@ -91,7 +123,6 @@ export function parseFieldsFromTesseractResult(tesseractResult) {
   // Extract detected word bounding box for pinpoint green highlight
   let bbox = null;
   if (imei && words && words.length > 0) {
-    // Find word containing part of the IMEI string
     const targetWord = words.find(w => w.text && (w.text.includes(imei) || imei.includes(w.text.replace(/\D/g, ''))));
     if (targetWord && targetWord.bbox) {
       bbox = targetWord.bbox;
@@ -109,7 +140,7 @@ export function parseFieldsFromTesseractResult(tesseractResult) {
       mac_address: mac_address || '',
       serial_no: serial_no || '',
       asset_no: asset_no || '',
-      bbox // { x0, y0, x1, y1 }
+      bbox
     };
   }
 
