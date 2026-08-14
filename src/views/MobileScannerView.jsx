@@ -11,9 +11,12 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
   const scanTimerRef = useRef(null);
   const recognizerRef = useRef(null);
 
+  // Ref to fix React closure stale state bug in Web Speech onEnd loop
+  const isVoiceOnRef = useRef(false);
+
   const [isScanning, setIsScanning] = useState(false);
   const [cameraStatus, setCameraStatus] = useState('카메라 준비 중');
-  const [ocrStatus, setOcrStatus] = useState('기기 뒷면을 비추며 4자리(예: 5052)를 입력/말씀하세요');
+  const [ocrStatus, setOcrStatus] = useState('초광각 접사 카메라 & 상시 음성 인식 가동 중');
   const [detectedPulse, setDetectedPulse] = useState(false);
 
   // Galaxy S24 Multi-Lens State
@@ -42,6 +45,11 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
   const supabaseConfig = getStoredConfig();
   const isConfigured = Boolean(supabaseConfig.url && supabaseConfig.anonKey && !supabaseConfig.url.includes('your-supabase-project'));
 
+  // Sync ref with isVoiceOn state
+  useEffect(() => {
+    isVoiceOnRef.current = isVoiceOn;
+  }, [isVoiceOn]);
+
   // Pre-load Master DB Data for Instant 4-Digit Matching
   useEffect(() => {
     async function loadMasterData() {
@@ -57,7 +65,7 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
     loadMasterData();
   }, [isConfigured]);
 
-  // Enumerate REAR physical camera lenses ONLY (Strictly Filter Out Front Selfie Cameras!)
+  // Enumerate REAR physical camera lenses ONLY & AUTO-SELECT ULTRA-WIDE MACRO LENS!
   const enumeratePhysicalCameras = async () => {
     if (typeof window === 'undefined' || !('navigator' in window) || !('mediaDevices' in navigator)) return;
     try {
@@ -93,8 +101,13 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
       });
 
       setVideoDevices(formatted);
-      if (formatted.length > 0 && !selectedDeviceId) {
-        setSelectedDeviceId(formatted[0].deviceId);
+
+      // AUTO UX: Prioritize Ultra-Wide Macro Lens (Index 1 or Ultra/Wide label) as DEFAULT!
+      if (formatted.length > 0) {
+        const macroLens = formatted.find(dev => dev.label.includes('초광각') || dev.label.includes('접사')) || formatted[1] || formatted[0];
+        const defaultId = macroLens.deviceId;
+        setSelectedDeviceId(defaultId);
+        startCamera(defaultId);
       }
     } catch (e) {
       console.warn('Enumerate devices warning:', e);
@@ -104,12 +117,12 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
   // Start Camera Stream with Robust Multi-Level Fallback
   const startCamera = async (targetDeviceId) => {
     const devId = targetDeviceId || selectedDeviceId;
-    setCameraStatus('카메라 렌즈 연결 중...');
+    setCameraStatus('접사 렌즈 연결 중...');
 
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
-      await new Promise(r => setTimeout(r, 150));
+      await new Promise(r => setTimeout(r, 100));
     }
 
     let stream = null;
@@ -168,7 +181,7 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
       await videoRef.current.play();
     }
     setIsScanning(true);
-    setCameraStatus('일체형 워크스테이션 가동 중');
+    setCameraStatus('📷 초광각 접사 가동 중');
   };
 
   const handleDeviceChange = (e) => {
@@ -233,7 +246,7 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
     }
   };
 
-  // Main Screen Always-On Voice Recognition Toggle
+  // Main Screen Seamless 1-Tap & Infinite Auto-Restart Voice Recognition
   const toggleVoice = () => {
     if (!isSpeechRecognitionSupported()) {
       alert('현재 브라우저 환경에서는 음성 인식(Speech API)을 지원하지 않습니다. 최신 크롬 또는 삼성 인터넷 브라우저를 사용해 주세요.');
@@ -241,6 +254,7 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
     }
 
     if (isVoiceOn) {
+      isVoiceOnRef.current = false;
       if (recognizerRef.current) {
         try { recognizerRef.current.stop(); } catch (e) {}
         recognizerRef.current = null;
@@ -249,36 +263,55 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
       setVoiceStatus('');
       setOcrStatus('🎙️ 음성 인식이 꺼졌습니다');
     } else {
-      const recognizer = createSpeechRecognizer({
-        onResult: ({ transcript, digits }) => {
-          setVoiceStatus(`🎙️ 음성: "${transcript}" -> [${digits || '듣는중'}]`);
-          if (digits && digits.length >= 1) {
-            const last4 = digits.slice(-4);
-            setFourDigits(last4);
-            const matchResult = perform4DigitDataMatching(last4);
+      isVoiceOnRef.current = true;
+      setIsVoiceOn(true);
+      startVoiceEngine();
+    }
+  };
 
-            if (last4.length === 4) {
-              handleAutoSaveFrom4Digits(last4, matchResult);
+  const startVoiceEngine = () => {
+    if (!isVoiceOnRef.current) return;
+
+    if (recognizerRef.current) {
+      try { recognizerRef.current.stop(); } catch (e) {}
+      recognizerRef.current = null;
+    }
+
+    const recognizer = createSpeechRecognizer({
+      onResult: ({ transcript, digits }) => {
+        setVoiceStatus(`🎙️ 음성: "${transcript}" -> [${digits || '듣는중'}]`);
+        if (digits && digits.length >= 1) {
+          const last4 = digits.slice(-4);
+          setFourDigits(last4);
+          const matchResult = perform4DigitDataMatching(last4);
+
+          if (last4.length === 4) {
+            handleAutoSaveFrom4Digits(last4, matchResult);
+          }
+        }
+      },
+      onError: (err) => {
+        console.warn('Voice STT warning:', err);
+      },
+      onEnd: () => {
+        // FIX STALE CLOSURE: Use isVoiceOnRef.current to seamlessly auto-restart in 50ms!
+        if (isVoiceOnRef.current) {
+          setTimeout(() => {
+            if (isVoiceOnRef.current) {
+              startVoiceEngine();
             }
-          }
-        },
-        onError: (err) => console.warn('Voice STT error:', err),
-        onEnd: () => {
-          if (isVoiceOn && recognizerRef.current) {
-            try { recognizerRef.current.start(); } catch (e) {}
-          }
+          }, 80);
         }
-      });
+      }
+    });
 
-      if (recognizer) {
-        try {
-          recognizer.start();
-          recognizerRef.current = recognizer;
-          setIsVoiceOn(true);
-          setOcrStatus('🎙️ 음성 상시 인식 가동! "오공오이" 또는 "5052"라고 말씀하세요.');
-        } catch (e) {
-          console.error('Voice start error:', e);
-        }
+    if (recognizer) {
+      try {
+        recognizer.start();
+        recognizerRef.current = recognizer;
+        setOcrStatus('🎙️ 음성 상시 인식 가동 중! "오공오이" 또는 "5052"라고 말씀하세요.');
+      } catch (e) {
+        console.warn('Voice start exception:', e);
       }
     }
   };
@@ -375,6 +408,7 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
       clearInterval(scanTimerRef.current);
       scanTimerRef.current = null;
     }
+    isVoiceOnRef.current = false;
     if (recognizerRef.current) {
       try { recognizerRef.current.stop(); } catch (e) {}
       recognizerRef.current = null;
@@ -465,6 +499,11 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
     };
   }, [isScanning]);
 
+  useEffect(() => {
+    enumeratePhysicalCameras();
+    return () => stopCamera();
+  }, []);
+
   return (
     <div style={{
       display: 'flex',
@@ -534,7 +573,7 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
               ))}
             </select>
           ) : (
-            <span style={{ fontSize: '0.7rem', color: '#38bdf8', fontWeight: 700 }}>후면 접사 렌즈</span>
+            <span style={{ fontSize: '0.7rem', color: '#38bdf8', fontWeight: 700 }}>📷 초광각 접사 렌즈</span>
           )}
 
           {/* Controls: Focus, Torch, and Voice Recognition */}
@@ -581,7 +620,7 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
             borderRadius: '4px',
             whiteSpace: 'nowrap'
           }}>
-            {isVoiceOn ? '💡 카메라를 비추고 "오공오이" 또는 "5052"라고 말씀하세요!' : '기기 뒷면 조준 (아래 직통 바에 4자리 타핑/음성)'}
+            {isVoiceOn ? '💡 마이크 상시 가동 중! "오공오이" 또는 "5052"라고 불러주세요.' : '기기 뒷면 조준 (아래 직통 바에 4자리 타핑/음성)'}
           </div>
         </div>
 
@@ -717,7 +756,7 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
             onClick={toggleVoice}
           >
             <Mic size={14} />
-            {isVoiceOn ? '음성듣는중' : '음성ON'}
+            {isVoiceOn ? '🎙️ 음성듣는중' : '🎙️ 음성ON'}
           </button>
 
           <button
