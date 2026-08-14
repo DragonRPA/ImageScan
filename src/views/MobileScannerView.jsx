@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import { Camera, UploadCloud, Play, Square, Plus, Volume2, ShieldCheck, Target, Zap, ZapOff, RefreshCw, Smartphone, Eye, Mic, MicOff, CheckCircle, Search, Database, Layers, CheckSquare } from 'lucide-react';
 import { getTesseractWorker, preprocessCanvasROI, parseFieldsFromTesseractResult } from '../utils/ocrWorker';
 import { triggerSuccessFeedback } from '../utils/soundFeedback';
-import { saveScansToSupabase, getStoredConfig, fetchScansFromSupabase } from '../utils/supabaseClient';
+import { saveScansToSupabase, getStoredConfig, fetchScansFromSupabase, insertPrintQueue } from '../utils/supabaseClient';
 import { isSpeechRecognitionSupported, createSpeechRecognizer, convertKoreanSpeechToDigits } from '../utils/speechRecognition';
 
 export default function MobileScannerView({ onError, onOpenConfigModal }) {
@@ -348,7 +348,7 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
   };
 
   // Direct Auto Save Execution from 4 Digits (Zero Modal Click!)
-  const handleAutoSaveFrom4Digits = (digits4, recordObj) => {
+  const handleAutoSaveFrom4Digits = async (digits4, recordObj) => {
     if (!digits4 || digits4.length < 4) return;
     const match = recordObj || matchedRecord;
 
@@ -368,22 +368,44 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
     triggerSuccessFeedback();
     setDetectedPulse(true);
     setTimeout(() => setDetectedPulse(false), 1200);
-
     setScannedItems(prev => [newItem, ...prev]);
-
-    if (isConfigured) {
-      try {
-        saveScansToSupabase([newItem]);
-        newItem.status = 'EXPORTED';
-      } catch (e) {
-        console.error('Auto save error:', e);
-      }
-    }
-
-    setOcrStatus(`★ 4자리 직통 저장 성공! IMEI: ${targetImei} (PC 라벨 출력 연동됨)`);
     setFourDigits('');
     setMatchedRecord(null);
     setCandidateMatches([]);
+
+    // ── DB 저장 + 프린트 큐 등록 (isConfigured 무관하게 항상 시도) ──────────
+    const cfg = getStoredConfig();
+    const dbReady = Boolean(cfg.url && cfg.anonKey && !cfg.url.includes('your-supabase-project'));
+
+    if (dbReady) {
+      // 1) imei_scans 저장
+      try {
+        await saveScansToSupabase([newItem]);
+        newItem.status = 'EXPORTED';
+      } catch (e) {
+        console.error('[imei_scans] 저장 실패:', e);
+        setOcrStatus(`⚠️ imei_scans 저장 실패: ${e.message}`);
+        return;
+      }
+
+      // 2) print_queue 등록 (await → 실패 시 화면에 즉시 표시)
+      setOcrStatus(`🖨️ 프린트 큐 등록 중... (${autoAssetNo} / ${targetImei})`);
+      try {
+        const queued = await insertPrintQueue({
+          asset_no:    newItem.asset_no,
+          imei:        newItem.imei,
+          mac_address: newItem.mac_address,
+          serial_no:   newItem.serial_no
+        });
+        setOcrStatus(`✅ 라벨 출력 요청 완료! 큐ID: ${queued?.id?.slice(0,8) ?? '?'} / IMEI: ${targetImei}`);
+      } catch (e) {
+        console.error('[print_queue] 큐 등록 실패:', e);
+        setOcrStatus(`❌ 프린트 큐 등록 실패: ${e.message}`);
+      }
+    } else {
+      // DB 미연결 상태 - 로컬만 저장
+      setOcrStatus(`⚠️ DB 미연결 (로컬 저장만). URL: ${cfg.url?.slice(0,30) ?? '없음'}`);
+    }
   };
 
   const handleFourDigitsChange = (e) => {

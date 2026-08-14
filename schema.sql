@@ -47,3 +47,58 @@ BEGIN
 EXCEPTION
   WHEN OTHERS THEN NULL;
 END $$;
+
+-- ============================================================================
+-- Print Queue Table: Mobile → PC Agent ZPL Label Print Pipeline
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS public.print_queue (
+    id            UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    -- 자산 정보 (모바일에서 확정한 자산)
+    asset_no      VARCHAR(100) NOT NULL,              -- 관리번호 e.g., 'TEST0001'
+    imei          VARCHAR(100) NOT NULL,              -- IMEI e.g., '351379300225052'
+    mac_address   VARCHAR(100) DEFAULT '',            -- MAC Address
+    serial_no     VARCHAR(100) DEFAULT '',            -- 시리얼 번호
+
+    -- 인쇄 제어 필드
+    print_status  VARCHAR(20)  DEFAULT 'PENDING',     -- 'PENDING' | 'PRINTING' | 'PRINTED' | 'ERROR'
+    print_error   TEXT         DEFAULT NULL,          -- 에러 발생 시 메시지 기록
+    printed_at    TIMESTAMPTZ  DEFAULT NULL,          -- 출력 완료 일시
+    agent_id      VARCHAR(100) DEFAULT NULL,          -- 처리한 에이전트 식별자 (hostname)
+
+    -- 메타
+    requested_by  VARCHAR(100) DEFAULT 'MOBILE',      -- 요청 발신 출처
+    created_at    TIMESTAMPTZ  DEFAULT NOW()
+);
+
+-- Indexes for agent polling efficiency
+CREATE INDEX IF NOT EXISTS idx_print_queue_status     ON public.print_queue(print_status);
+CREATE INDEX IF NOT EXISTS idx_print_queue_created_at ON public.print_queue(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_print_queue_imei       ON public.print_queue(imei);
+
+-- Enable RLS
+ALTER TABLE public.print_queue ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policies (Idempotent - DROP IF EXISTS)
+DROP POLICY IF EXISTS "Allow anon read all print_queue" ON public.print_queue;
+CREATE POLICY "Allow anon read all print_queue"
+    ON public.print_queue FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Allow anon insert print_queue" ON public.print_queue;
+CREATE POLICY "Allow anon insert print_queue"
+    ON public.print_queue FOR INSERT WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow anon update print_queue" ON public.print_queue;
+CREATE POLICY "Allow anon update print_queue"
+    ON public.print_queue FOR UPDATE USING (true);
+
+-- Enable Supabase Realtime for print_queue (agent subscribes to this)
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime') THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.print_queue;
+  END IF;
+EXCEPTION
+  WHEN OTHERS THEN NULL;
+END $$;

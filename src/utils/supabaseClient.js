@@ -4,6 +4,11 @@ const LOCAL_KEY_URL = 'IMAGE_SCAN_SUPABASE_URL';
 const LOCAL_KEY_ANON = 'IMAGE_SCAN_SUPABASE_ANON_KEY';
 const LOCAL_STORAGE_SCANS_KEY = 'IMAGE_SCAN_LOCAL_ITEMS';
 
+// ── 시스템 고정 DB 인증 정보 (백엔드 상수 - 자꾸 물어보지 않도록 하드코딩) ──
+// 우선순위: localStorage 저장값 > .env > 아래 하드코딩 상수
+const HARDCODED_SUPABASE_URL = 'https://tfgbpgutxxlhqbzewkyt.supabase.co';
+const HARDCODED_SUPABASE_KEY = 'sb_publishable_wruJQfp3Op-ISvVwb4ZdmA_2OqMUJeQ';
+
 /**
  * Normalizes user-input Supabase URL (Converts dashboard URLs like
  * https://supabase.com/dashboard/project/tfgbpgutxxlhqbzewky
@@ -28,8 +33,12 @@ export function normalizeSupabaseUrl(inputUrl) {
 }
 
 export function getStoredConfig() {
-  const rawUrl = localStorage.getItem(LOCAL_KEY_URL) || import.meta.env.VITE_SUPABASE_URL || '';
-  const anonKey = localStorage.getItem(LOCAL_KEY_ANON) || import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+  const rawUrl = localStorage.getItem(LOCAL_KEY_URL)
+    || import.meta.env.VITE_SUPABASE_URL
+    || HARDCODED_SUPABASE_URL;
+  const anonKey = localStorage.getItem(LOCAL_KEY_ANON)
+    || import.meta.env.VITE_SUPABASE_ANON_KEY
+    || HARDCODED_SUPABASE_KEY;
   return { url: normalizeSupabaseUrl(rawUrl), anonKey: anonKey.trim() };
 }
 
@@ -224,4 +233,41 @@ export function subscribeRealtimeScans(onInsertCallback) {
     .subscribe();
 
   return channel;
+}
+
+/**
+ * Insert a single confirmed asset record into the print_queue table.
+ * Called by MobileScannerView when the user confirms an IMEI/asset match.
+ * The PC local agent (zebra-agent.mjs) watches this table via Realtime
+ * and immediately sends a ZPL print job to the Zebra GK-420D.
+ *
+ * @param {Object} item - { asset_no, imei, mac_address, serial_no }
+ * @returns {Promise<Object>} - inserted row data
+ */
+export async function insertPrintQueue(item) {
+  const client = getSupabaseClient();
+  if (!client) {
+    console.warn('[print_queue] Supabase 미연결 - 큐 등록 건너뜀');
+    return null;
+  }
+
+  const payload = {
+    asset_no:     item.asset_no     || item.assetNo  || '',
+    imei:         item.imei                           || '',
+    mac_address:  item.mac_address  || item.macAddress || '',
+    serial_no:    item.serial_no    || item.serialNo  || '',
+    print_status: 'PENDING',
+    requested_by: 'MOBILE'
+  };
+
+  const { data, error } = await client
+    .from('print_queue')
+    .insert(payload)
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error(`print_queue INSERT 실패: ${error.message}`);
+  }
+  return data;
 }
