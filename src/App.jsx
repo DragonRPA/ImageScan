@@ -7,7 +7,7 @@ import LabelPrintModal from './components/LabelPrintModal';
 import DataImportModal from './components/DataImportModal';
 import SupabaseConfigModal from './components/SupabaseConfigModal';
 import ErrorModal from './components/ErrorModal';
-import { getStoredConfig, saveScansToSupabase, deleteAllScansFromSupabase } from './utils/supabaseClient';
+import { getStoredConfig } from './utils/supabaseClient';
 
 export default function App() {
   const [deviceMode, setDeviceMode] = useState(() => {
@@ -26,21 +26,15 @@ export default function App() {
   const [exportModalState, setExportModalState] = useState({ isOpen: false, items: [] });
   const [printModalState, setPrintModalState] = useState({ isOpen: false, items: [], config: null });
 
+  // Key to force reload dashboard data when import succeeds
+  const [refreshKey, setRefreshKey] = useState(0);
+
   const supabaseConfig = getStoredConfig();
   const isConfigured = Boolean(supabaseConfig.url && supabaseConfig.anonKey && !supabaseConfig.url.includes('your-supabase-project'));
 
-  // Handle Bulk Import / Replace Execution
-  const handleImportExecution = async (parsedRows, importMode) => {
-    try {
-      if (importMode === 'replace') {
-        await deleteAllScansFromSupabase();
-      }
-      await saveScansToSupabase(parsedRows);
-      alert(`성공적으로 DB에 ${parsedRows.length}건의 데이터를 ${importMode === 'replace' ? '전체 덮어쓰기' : '추가'}하였습니다!`);
-    } catch (err) {
-      console.error('Import execution error:', err);
-      throw err;
-    }
+  // Trigger dashboard reload on import completion
+  const handleImportSuccess = async () => {
+    setRefreshKey(prev => prev + 1);
   };
 
   return (
@@ -75,7 +69,7 @@ export default function App() {
               {deviceMode === 'mobile' ? '3mm 각인 OCR 줌 스캐너' : 'PC 라벨 프린터 오프셋 정밀 교정 대시보드'}
             </h1>
             <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
-              버전: v1.0.0.Build.7 | 2026-08-14
+              버전: v1.0.0.Build.8 | 2026-08-14
             </span>
           </div>
         </div>
@@ -133,6 +127,7 @@ export default function App() {
           />
         ) : (
           <PCDashboardView
+            key={refreshKey}
             onError={(msg) => setErrorMessage(msg)}
             onOpenExportModal={(items) => setExportModalState({ isOpen: true, items })}
             onOpenPrintModal={(items, config) => setPrintModalState({ isOpen: true, items, config })}
@@ -157,7 +152,7 @@ export default function App() {
       <DataImportModal
         isOpen={isImportOpen}
         onClose={() => setIsImportOpen(false)}
-        onImportSuccess={handleImportExecution}
+        onImportSuccess={handleImportSuccess}
         onError={(msg) => setErrorMessage(msg)}
       />
 
