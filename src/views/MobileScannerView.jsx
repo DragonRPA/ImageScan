@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { Camera, UploadCloud, Play, Square, Plus, Volume2, ShieldCheck, Target, Zap, ZapOff, RefreshCw, Smartphone, Eye, Mic, MicOff, CheckCircle, Search, Database } from 'lucide-react';
+import { Camera, UploadCloud, Play, Square, Plus, Volume2, ShieldCheck, Target, Zap, ZapOff, RefreshCw, Smartphone, Eye, Mic, MicOff, CheckCircle, Search, Database, Layers, CheckSquare } from 'lucide-react';
 import { getTesseractWorker, preprocessCanvasROI, parseFieldsFromTesseractResult } from '../utils/ocrWorker';
 import { triggerSuccessFeedback } from '../utils/soundFeedback';
 import { saveScansToSupabase, getStoredConfig, fetchScansFromSupabase } from '../utils/supabaseClient';
@@ -28,9 +28,10 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
   const [isVoiceOn, setIsVoiceOn] = useState(false);
   const [voiceStatus, setVoiceStatus] = useState('');
 
-  // Real-Time 4-Digit IMEI Direct Workstation State (NO MODAL NEEDED)
+  // Real-Time 4-Digit IMEI Direct Workstation & Candidate Matches State
   const [fourDigits, setFourDigits] = useState('');
   const [matchedRecord, setMatchedRecord] = useState(null);
+  const [candidateMatches, setCandidateMatches] = useState([]);
 
   // Real-Time OCR Text Region Bounding Boxes
   const [liveBoxes, setLiveBoxes] = useState([]);
@@ -212,11 +213,12 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
     }
   };
 
-  // Perform 4-Digit Auto Matching against DB / Master Excel Data
+  // Perform 4-Digit Auto Matching (Support Unique 1:1 vs Multi-Candidate Picker)
   const perform4DigitDataMatching = (inputDigits) => {
     const clean4 = inputDigits.replace(/\D/g, '');
     if (clean4.length < 4) {
       setMatchedRecord(null);
+      setCandidateMatches([]);
       return null;
     }
 
@@ -224,16 +226,37 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
 
     // Search inside Master DB Items & Scanned Items
     const pool = [...masterDbItems, ...scannedItems];
-    const match = pool.find(item => {
+    
+    // Deduplicate by IMEI
+    const uniquePoolMap = new Map();
+    pool.forEach(item => {
+      if (item && item.imei) {
+        const cleanImei = item.imei.replace(/\D/g, '');
+        if (!uniquePoolMap.has(cleanImei)) {
+          uniquePoolMap.set(cleanImei, item);
+        }
+      }
+    });
+    const uniquePool = Array.from(uniquePoolMap.values());
+
+    const matches = uniquePool.filter(item => {
       const targetImei = (item.imei || '').replace(/\D/g, '');
       return targetImei.endsWith(last4);
     });
 
-    if (match) {
-      setMatchedRecord(match);
-      return match;
+    if (matches.length === 1) {
+      // CASE 1: Single Unique Match (1:1)
+      setMatchedRecord(matches[0]);
+      setCandidateMatches([]);
+      return matches[0];
+    } else if (matches.length > 1) {
+      // CASE 2: Multi-Candidate Match (2+ items with same ending 4 digits)
+      setCandidateMatches(matches);
+      setMatchedRecord(null);
+      setOcrStatus(`⚠️ IMEI 끝 4자리(${last4}) 동일 장비 ${matches.length}건 발견! 해당 자산을 선택하세요.`);
+      return null;
     } else {
-      // Auto-construct candidate full IMEI placeholder if missing in DB
+      // CASE 3: No pre-existing record found ➔ Auto-construct candidate full IMEI placeholder
       const constructed = {
         asset_no: `TEST${last4}`,
         imei: `351379300${last4.padStart(6, '0')}`,
@@ -242,6 +265,7 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
         isNewConstructed: true
       };
       setMatchedRecord(constructed);
+      setCandidateMatches([]);
       return constructed;
     }
   };
@@ -285,7 +309,7 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
           setFourDigits(last4);
           const matchResult = perform4DigitDataMatching(last4);
 
-          if (last4.length === 4) {
+          if (last4.length === 4 && matchResult) {
             handleAutoSaveFrom4Digits(last4, matchResult);
           }
         }
@@ -314,6 +338,13 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
         console.warn('Voice start exception:', e);
       }
     }
+  };
+
+  // Select Candidate Device from Multi-Match List
+  const handleSelectCandidate = (candidateItem) => {
+    setMatchedRecord(candidateItem);
+    setCandidateMatches([]);
+    handleAutoSaveFrom4Digits(fourDigits, candidateItem);
   };
 
   // Direct Auto Save Execution from 4 Digits (Zero Modal Click!)
@@ -349,9 +380,10 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
       }
     }
 
-    setOcrStatus(`★ 4자리 직통 저장 성공! IMEI: ${targetImei}`);
+    setOcrStatus(`★ 4자리 직통 저장 성공! IMEI: ${targetImei} (PC 라벨 출력 연동됨)`);
     setFourDigits('');
     setMatchedRecord(null);
+    setCandidateMatches([]);
   };
 
   const handleFourDigitsChange = (e) => {
@@ -366,6 +398,12 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
       if (onError) onError('IMEI 끝 4자리를 정확히 4자리 숫자로 입력해주세요.');
       return;
     }
+
+    if (candidateMatches.length > 1) {
+      alert('동일한 끝 4자리를 가진 장비가 복수개 존재합니다. 아래 목록에서 해당 자산을 선택해주세요.');
+      return;
+    }
+
     handleAutoSaveFrom4Digits(fourDigits, matchedRecord);
   };
 
@@ -380,7 +418,7 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
     try {
       await saveScansToSupabase(scannedItems);
       setScannedItems(prev => prev.map(item => ({ ...item, status: 'EXPORTED' })));
-      alert(`성공적으로 ${scannedItems.length}건의 데이터를 Supabase DB에 저장하였습니다!`);
+      alert(`성공적으로 ${scannedItems.length}건의 데이터를 Supabase DB에 저장하였습니다! (PC 라벨 동기화)`);
     } catch (err) {
       if (onError) onError(err.message || 'Supabase 저장 중 오류가 발생했습니다.');
     } finally {
@@ -706,6 +744,66 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
         </div>
       </div>
 
+      {/* MULTI-CANDIDATE PICKER CARD PANEL (Shown when multiple DB items share same ending 4 digits) */}
+      {candidateMatches.length > 1 && (
+        <div style={{
+          backgroundColor: '#0f172a',
+          border: '2px solid #f59e0b',
+          borderRadius: '10px',
+          padding: '8px 10px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '6px',
+          boxShadow: '0 0 15px rgba(245, 158, 11, 0.4)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', fontWeight: 800, color: '#fef08a' }}>
+            <Layers size={15} style={{ color: '#f59e0b' }} />
+            <span>⚠️ 끝 4자리({fourDigits}) 동일 장비가 {candidateMatches.length}건 발견되었습니다! 해당 자산을 터치하세요:</span>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '140px', overflowY: 'auto' }}>
+            {candidateMatches.map((cand, idx) => (
+              <button
+                key={cand.id || `cand_${idx}`}
+                type="button"
+                className="btn btn-outline"
+                style={{
+                  display: 'flex',
+                  justify: 'space-between',
+                  alignItems: 'center',
+                  backgroundColor: '#1e293b',
+                  borderColor: '#38bdf8',
+                  color: '#fff',
+                  padding: '6px 10px',
+                  textAlign: 'left',
+                  fontSize: '0.76rem'
+                }}
+                onClick={() => handleSelectCandidate(cand)}
+              >
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                  <span style={{ fontWeight: 800, color: '#38bdf8' }}>
+                    #{idx + 1}. 자산: {cand.asset_no || '미지정'}
+                  </span>
+                  <span style={{ fontFamily: 'monospace', fontSize: '0.72rem', color: '#fef08a' }}>
+                    IMEI: {cand.imei}
+                  </span>
+                </div>
+                <span style={{
+                  fontSize: '0.68rem',
+                  backgroundColor: '#10b981',
+                  color: '#fff',
+                  padding: '2px 8px',
+                  borderRadius: '4px',
+                  fontWeight: 800
+                }}>
+                  선택 확정 ➔
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* MAIN VIEW INTEGRATED 4-DIGIT & VOICE QUICK WORKSTATION BAR (NO MODAL NEEDED!) */}
       <div style={{
         backgroundColor: '#1e293b',
@@ -731,9 +829,9 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
               fontWeight: 900,
               letterSpacing: '2px',
               textAlign: 'center',
-              borderColor: fourDigits.length === 4 ? '#10b981' : '#38bdf8',
+              borderColor: candidateMatches.length > 1 ? '#f59e0b' : fourDigits.length === 4 ? '#10b981' : '#38bdf8',
               backgroundColor: '#0f172a',
-              color: '#6ee7b7',
+              color: candidateMatches.length > 1 ? '#fef08a' : '#6ee7b7',
               padding: '6px 8px'
             }}
           />
@@ -762,7 +860,7 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
           <button
             type="submit"
             className="btn btn-primary"
-            disabled={fourDigits.length < 4}
+            disabled={fourDigits.length < 4 || candidateMatches.length > 1}
             style={{
               padding: '6px 12px',
               fontSize: '0.78rem',
@@ -774,7 +872,7 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
           </button>
         </form>
 
-        {/* Real-time DB Auto Match Result Card */}
+        {/* Real-time Single Unique DB Auto Match Result Card */}
         {matchedRecord && (
           <div style={{
             backgroundColor: matchedRecord.isNewConstructed ? '#0f172a' : '#064e3b',
@@ -795,7 +893,7 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
             </div>
 
             <span style={{ fontSize: '0.68rem', fontWeight: 800, color: matchedRecord.isNewConstructed ? '#fef08a' : '#6ee7b7', whiteSpace: 'nowrap' }}>
-              {matchedRecord.isNewConstructed ? '신규생성' : '★ 100% DB 매칭'}
+              {matchedRecord.isNewConstructed ? '신규생성' : '★ 100% DB 매칭 (PC 라벨연동)'}
             </span>
           </div>
         )}
