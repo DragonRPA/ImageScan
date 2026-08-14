@@ -10,22 +10,24 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
   const streamRef = useRef(null);
   const scanTimerRef = useRef(null);
   const recognizerRef = useRef(null);
-  const modalRecognizerRef = useRef(null);
 
   const [isScanning, setIsScanning] = useState(false);
   const [cameraStatus, setCameraStatus] = useState('카메라 준비 중');
-  const [ocrStatus, setOcrStatus] = useState('기기 뒷면 전체를 편안하게 비추세요');
+  const [ocrStatus, setOcrStatus] = useState('기기 뒷면을 비추며 4자리(예: 5052)를 입력/말씀하세요');
   const [detectedPulse, setDetectedPulse] = useState(false);
 
   // Galaxy S24 Multi-Lens State
   const [videoDevices, setVideoDevices] = useState([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState('');
 
-  // Hardware Camera Features & Voice Recognition
+  // Hardware Camera Features & Always-On Voice Recognition
   const [isTorchOn, setIsTorchOn] = useState(false);
   const [isVoiceOn, setIsVoiceOn] = useState(false);
   const [voiceStatus, setVoiceStatus] = useState('');
-  const [lastVoiceDigits, setLastVoiceDigits] = useState('');
+
+  // Real-Time 4-Digit IMEI Direct Workstation State (NO MODAL NEEDED)
+  const [fourDigits, setFourDigits] = useState('');
+  const [matchedRecord, setMatchedRecord] = useState(null);
 
   // Real-Time OCR Text Region Bounding Boxes
   const [liveBoxes, setLiveBoxes] = useState([]);
@@ -36,12 +38,6 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
   const [masterDbItems, setMasterDbItems] = useState([]);
   const [lastScannedImei, setLastScannedImei] = useState('');
   const [isSaving, setIsSaving] = useState(false);
-
-  // Ultra-Fast 4-Digit Manual & Voice Matching Modal State
-  const [showManualModal, setShowManualModal] = useState(false);
-  const [fourDigits, setFourDigits] = useState('');
-  const [matchedRecord, setMatchedRecord] = useState(null);
-  const [isModalListening, setIsModalListening] = useState(false);
 
   const supabaseConfig = getStoredConfig();
   const isConfigured = Boolean(supabaseConfig.url && supabaseConfig.anonKey && !supabaseConfig.url.includes('your-supabase-project'));
@@ -172,7 +168,7 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
       await videoRef.current.play();
     }
     setIsScanning(true);
-    setCameraStatus('카메라+음성 하이브리드 OCR 가동 중');
+    setCameraStatus('일체형 워크스테이션 가동 중');
   };
 
   const handleDeviceChange = (e) => {
@@ -203,7 +199,41 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
     }
   };
 
-  // Voice Recognition Toggle Action for Main Camera
+  // Perform 4-Digit Auto Matching against DB / Master Excel Data
+  const perform4DigitDataMatching = (inputDigits) => {
+    const clean4 = inputDigits.replace(/\D/g, '');
+    if (clean4.length < 4) {
+      setMatchedRecord(null);
+      return null;
+    }
+
+    const last4 = clean4.slice(-4);
+
+    // Search inside Master DB Items & Scanned Items
+    const pool = [...masterDbItems, ...scannedItems];
+    const match = pool.find(item => {
+      const targetImei = (item.imei || '').replace(/\D/g, '');
+      return targetImei.endsWith(last4);
+    });
+
+    if (match) {
+      setMatchedRecord(match);
+      return match;
+    } else {
+      // Auto-construct candidate full IMEI placeholder if missing in DB
+      const constructed = {
+        asset_no: `TEST${last4}`,
+        imei: `351379300${last4.padStart(6, '0')}`,
+        mac_address: '',
+        serial_no: '',
+        isNewConstructed: true
+      };
+      setMatchedRecord(constructed);
+      return constructed;
+    }
+  };
+
+  // Main Screen Always-On Voice Recognition Toggle
   const toggleVoice = () => {
     if (!isSpeechRecognitionSupported()) {
       alert('현재 브라우저 환경에서는 음성 인식(Speech API)을 지원하지 않습니다. 최신 크롬 또는 삼성 인터넷 브라우저를 사용해 주세요.');
@@ -217,18 +247,22 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
       }
       setIsVoiceOn(false);
       setVoiceStatus('');
-      setOcrStatus('🎙️ 음성 보조 인식이 꺼졌습니다');
+      setOcrStatus('🎙️ 음성 인식이 꺼졌습니다');
     } else {
       const recognizer = createSpeechRecognizer({
         onResult: ({ transcript, digits }) => {
-          setVoiceStatus(`🎙️ 음성: "${transcript}" -> [${digits || '숫자탐색'}]`);
-          if (digits && digits.length >= 4) {
-            setLastVoiceDigits(digits.slice(-4));
+          setVoiceStatus(`🎙️ 음성: "${transcript}" -> [${digits || '듣는중'}]`);
+          if (digits && digits.length >= 1) {
+            const last4 = digits.slice(-4);
+            setFourDigits(last4);
+            const matchResult = perform4DigitDataMatching(last4);
+
+            if (last4.length === 4) {
+              handleAutoSaveFrom4Digits(last4, matchResult);
+            }
           }
         },
-        onError: (err) => {
-          console.warn('Voice recognition error:', err);
-        },
+        onError: (err) => console.warn('Voice STT error:', err),
         onEnd: () => {
           if (isVoiceOn && recognizerRef.current) {
             try { recognizerRef.current.start(); } catch (e) {}
@@ -241,7 +275,7 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
           recognizer.start();
           recognizerRef.current = recognizer;
           setIsVoiceOn(true);
-          setOcrStatus('🎙️ 음성 보조 인식 가동! IMEI 끝 4자리(예: "오공이" 또는 "5052")를 불러주세요.');
+          setOcrStatus('🎙️ 음성 상시 인식 가동! "오공오이" 또는 "5052"라고 말씀하세요.');
         } catch (e) {
           console.error('Voice start error:', e);
         }
@@ -249,100 +283,28 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
     }
   };
 
-  // Dedicated Voice Input inside the 4-digit Modal
-  const toggleModalVoice = () => {
-    if (!isSpeechRecognitionSupported()) {
-      alert('음성 인식을 지원하지 않는 브라우저입니다.');
-      return;
-    }
+  // Direct Auto Save Execution from 4 Digits (Zero Modal Click!)
+  const handleAutoSaveFrom4Digits = (digits4, recordObj) => {
+    if (!digits4 || digits4.length < 4) return;
+    const match = recordObj || matchedRecord;
 
-    if (isModalListening) {
-      if (modalRecognizerRef.current) {
-        try { modalRecognizerRef.current.stop(); } catch (e) {}
-        modalRecognizerRef.current = null;
-      }
-      setIsModalListening(false);
-    } else {
-      const recognizer = createSpeechRecognizer({
-        onResult: ({ transcript, digits }) => {
-          if (digits && digits.length >= 1) {
-            const input4 = digits.slice(-4);
-            setFourDigits(input4);
-            perform4DigitDataMatching(input4);
-          }
-        },
-        onError: (err) => console.warn('Modal STT error:', err),
-        onEnd: () => setIsModalListening(false)
-      });
-
-      if (recognizer) {
-        try {
-          recognizer.start();
-          modalRecognizerRef.current = recognizer;
-          setIsModalListening(true);
-        } catch (e) {}
-      }
-    }
-  };
-
-  // Perform 4-Digit Auto Matching against DB / Master Excel Data
-  const perform4DigitDataMatching = (inputDigits) => {
-    const clean4 = inputDigits.replace(/\D/g, '');
-    if (clean4.length < 4) {
-      setMatchedRecord(null);
-      return;
-    }
-
-    const last4 = clean4.slice(-4);
-
-    // 1. Search inside Master DB Items & Scanned Items
-    const pool = [...masterDbItems, ...scannedItems];
-    const match = pool.find(item => {
-      const targetImei = (item.imei || '').replace(/\D/g, '');
-      return targetImei.endsWith(last4);
-    });
-
-    if (match) {
-      setMatchedRecord(match);
-    } else {
-      // Auto-construct candidate full IMEI placeholder if missing in DB
-      setMatchedRecord({
-        asset_no: `AUTO_${last4}`,
-        imei: `351379300${last4.padStart(6, '0')}`,
-        mac_address: '',
-        serial_no: '',
-        isNewConstructed: true
-      });
-    }
-  };
-
-  const handleFourDigitsChange = (e) => {
-    const val = e.target.value.replace(/\D/g, '').slice(0, 4);
-    setFourDigits(val);
-    perform4DigitDataMatching(val);
-  };
-
-  const handleConfirmFourDigits = (e) => {
-    e.preventDefault();
-    if (fourDigits.length < 4) {
-      onError('IMEI 끝 4자리를 정확각히 4자리 숫자로 입력해주세요.');
-      return;
-    }
-
-    const targetImei = matchedRecord ? matchedRecord.imei : `351379300${fourDigits.padStart(6, '0')}`;
-    const autoAssetNo = matchedRecord ? matchedRecord.asset_no : `TEST${fourDigits}`;
+    const targetImei = match ? match.imei : `351379300${digits4.padStart(6, '0')}`;
+    const autoAssetNo = match ? match.asset_no : `TEST${digits4}`;
 
     const newItem = {
-      id: `manual_${Date.now()}`,
+      id: `direct_${Date.now()}`,
       asset_no: autoAssetNo,
       imei: targetImei,
-      mac_address: matchedRecord?.mac_address || '',
-      serial_no: matchedRecord?.serial_no || '',
+      mac_address: match?.mac_address || '',
+      serial_no: match?.serial_no || '',
       scanned_at: new Date().toLocaleTimeString('ko-KR'),
       status: 'COMPLETED'
     };
 
     triggerSuccessFeedback();
+    setDetectedPulse(true);
+    setTimeout(() => setDetectedPulse(false), 1200);
+
     setScannedItems(prev => [newItem, ...prev]);
 
     if (isConfigured) {
@@ -354,16 +316,24 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
       }
     }
 
-    setOcrStatus(`★ 4자리 매칭 완료! IMEI: ${targetImei}`);
+    setOcrStatus(`★ 4자리 직통 저장 성공! IMEI: ${targetImei}`);
     setFourDigits('');
     setMatchedRecord(null);
-    setShowManualModal(false);
+  };
 
-    if (modalRecognizerRef.current) {
-      try { modalRecognizerRef.current.stop(); } catch (e) {}
-      modalRecognizerRef.current = null;
+  const handleFourDigitsChange = (e) => {
+    const val = e.target.value.replace(/\D/g, '').slice(0, 4);
+    setFourDigits(val);
+    perform4DigitDataMatching(val);
+  };
+
+  const handleDirectSubmit = (e) => {
+    e.preventDefault();
+    if (fourDigits.length < 4) {
+      onError('IMEI 끝 4자리를 정확히 4자리 숫자로 입력해주세요.');
+      return;
     }
-    setIsModalListening(false);
+    handleAutoSaveFrom4Digits(fourDigits, matchedRecord);
   };
 
   const triggerRefocus = async () => {
@@ -402,18 +372,14 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
     setCameraStatus('카메라 정지됨');
   };
 
-  // Scanning Loop with Real-Time Bounding Box & Voice Digit Matching
+  // Scanning Loop with Real-Time Bounding Box
   useEffect(() => {
     if (!isScanning) return;
 
     let isProcessing = false;
-    let lastScanTime = 0;
 
     scanTimerRef.current = setInterval(async () => {
       if (isProcessing || !videoRef.current || videoRef.current.readyState !== 4) return;
-      const now = Date.now();
-      if (now - lastScanTime < 350) return;
-
       isProcessing = true;
       try {
         const video = videoRef.current;
@@ -455,79 +421,17 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
             };
           });
           setLiveBoxes(mappedLiveBoxes);
-
-          const readWords = candidateBoxes.map(c => c.text).join(' | ');
-          const displayMsg = voiceStatus ? `${voiceStatus} | 🔍 ${readWords.slice(0, 30)}` : `🔍 탐색 중: ${readWords.slice(0, 45)}...`;
-          setOcrStatus(displayMsg);
         } else {
           setLiveBoxes([]);
-          setOcrStatus(voiceStatus || '기기 뒷면 텍스트 탐색 중...');
         }
 
-        // Check if Voice Spoken Digits (e.g. 5052) matches partial OCR candidate digits!
-        let targetImei = parsed?.imei;
-
-        if (!targetImei && lastVoiceDigits && candidateBoxes && candidateBoxes.length > 0) {
-          // Find any numeric word ending with lastVoiceDigits or containing it
-          const voiceMatchedWord = candidateBoxes.find(c => {
-            const numStr = c.text.replace(/\D/g, '');
-            return numStr.length >= 10 && numStr.endsWith(lastVoiceDigits);
-          });
-
-          if (voiceMatchedWord) {
-            const digitsOnly = voiceMatchedWord.text.replace(/\D/g, '');
-            if (digitsOnly.length >= 14) {
-              targetImei = digitsOnly.slice(0, 15);
-            }
-          }
-        }
-
-        if (targetImei && targetImei.length >= 15) {
-          if (parsed && parsed.bbox) {
+        if (parsed && parsed.imei && parsed.imei.length >= 15) {
+          if (parsed.bbox) {
             const relX = ((roiX + parsed.bbox.x0) / vWidth) * 100;
             const relY = ((roiY + parsed.bbox.y0) / vHeight) * 100;
             const relW = ((parsed.bbox.x1 - parsed.bbox.x0) / vWidth) * 100;
             const relH = ((parsed.bbox.y1 - parsed.bbox.y0) / vHeight) * 100;
             setPinpointBox({ x: relX, y: relY, w: Math.max(20, relW), h: Math.max(8, relH) });
-          } else {
-            setPinpointBox({ x: 15, y: 40, w: 70, h: 20 });
-          }
-
-          const exists = scannedItems.some(item => item.imei === targetImei);
-          if (!exists && targetImei !== lastScannedImei) {
-            lastScanTime = now;
-            setLastScannedImei(targetImei);
-
-            const autoAssetNo = parsed?.asset_no || `${Date.now().toString().slice(-8)}`;
-
-            const newItem = {
-              id: `scanned_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
-              asset_no: autoAssetNo,
-              imei: targetImei,
-              mac_address: parsed?.mac_address || '',
-              serial_no: parsed?.serial_no || '',
-              scanned_at: new Date().toLocaleTimeString('ko-KR'),
-              status: 'COMPLETED'
-            };
-
-            triggerSuccessFeedback();
-            setDetectedPulse(true);
-            setTimeout(() => {
-              setDetectedPulse(false);
-              setPinpointBox(null);
-            }, 1200);
-
-            if (isConfigured) {
-              try {
-                saveScansToSupabase([newItem]);
-                newItem.status = 'EXPORTED';
-              } catch (e) {
-                console.error('Auto save error:', e);
-              }
-            }
-
-            setScannedItems(prev => [newItem, ...prev]);
-            setOcrStatus(`★ 카메라+음성 감지 성공! IMEI: ${targetImei}`);
           }
         }
       } catch (err) {
@@ -535,48 +439,24 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
       } finally {
         isProcessing = false;
       }
-    }, 350);
+    }, 400);
 
     return () => {
       if (scanTimerRef.current) clearInterval(scanTimerRef.current);
     };
-  }, [isScanning, lastScannedImei, scannedItems, isConfigured, lastVoiceDigits, voiceStatus]);
-
-  useEffect(() => {
-    enumeratePhysicalCameras();
-    startCamera();
-    return () => stopCamera();
-  }, []);
-
-  const handleExportAll = async () => {
-    if (scannedItems.length === 0) {
-      onError('내보낼 스캔 데이터가 없습니다.');
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      await saveScansToSupabase(scannedItems);
-      setScannedItems(prev => prev.map(item => ({ ...item, status: 'EXPORTED' })));
-      alert(`성공적으로 ${scannedItems.length}건의 데이터를 Supabase DB에 저장하였습니다!`);
-    } catch (err) {
-      onError(err.message || 'Supabase 저장 중 오류가 발생했습니다.');
-    } finally {
-      setIsSaving(false);
-    }
-  };
+  }, [isScanning]);
 
   return (
     <div style={{
       display: 'flex',
       flexDirection: 'column',
-      height: 'calc(100vh - 20px)',
+      height: 'calc(100vh - 12px)',
       gap: '8px',
       position: 'relative',
       margin: '-12px -12px 0 -12px',
-      padding: '8px'
+      padding: '6px'
     }}>
-      {/* Viewfinder First Screen - Takes 88%+ Height starting from top */}
+      {/* Viewfinder Screen - Main Camera Screen */}
       <div style={{
         flex: 1,
         position: 'relative',
@@ -598,13 +478,13 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
         {/* Top Floating Translucent Overlay Control Bar inside Viewfinder */}
         <div style={{
           position: 'absolute',
-          top: '10px',
-          left: '10px',
-          right: '10px',
+          top: '8px',
+          left: '8px',
+          right: '8px',
           backgroundColor: 'rgba(15, 23, 42, 0.88)',
           backdropFilter: 'blur(6px)',
           borderRadius: '8px',
-          padding: '6px 10px',
+          padding: '6px 8px',
           display: 'flex',
           justify: 'space-between',
           alignItems: 'center',
@@ -659,7 +539,7 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
         {/* Broad Scanning Area Guide Box Overlay */}
         <div style={{
           position: 'absolute',
-          top: '52%',
+          top: '50%',
           left: '50%',
           transform: 'translate(-50%, -50%)',
           width: '88%',
@@ -682,7 +562,7 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
             borderRadius: '4px',
             whiteSpace: 'nowrap'
           }}>
-            {isVoiceOn ? '💡 카메라를 비추고 IMEI 끝 4자리(예: "5052")를 말씀해 보세요!' : '기기 뒷면을 비추세요 (자동 실시간 텍스트 영역 가이드)'}
+            {isVoiceOn ? '💡 카메라를 비추고 "오공오이" 또는 "5052"라고 말씀하세요!' : '기기 뒷면 조준 (아래 직통 바에 4자리 타핑/음성)'}
           </div>
         </div>
 
@@ -701,26 +581,9 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
               borderRadius: '3px',
               pointerEvents: 'none',
               zIndex: 15,
-              transition: 'all 0.1s ease',
-              display: 'flex',
-              alignItems: 'flex-start',
-              padding: '1px'
+              transition: 'all 0.1s ease'
             }}
-          >
-            <span style={{
-              fontSize: '0.55rem',
-              color: '#38bdf8',
-              backgroundColor: 'rgba(15, 23, 42, 0.9)',
-              padding: '1px 3px',
-              borderRadius: '2px',
-              lineHeight: 1,
-              whiteSpace: 'nowrap',
-              transform: 'translateY(-12px)',
-              pointerEvents: 'none'
-            }}>
-              🔍 {b.text}
-            </span>
-          </div>
+          />
         ))}
 
         {/* Live Pinpoint Bounding Box Highlight on Matched Target IMEI Location */}
@@ -760,38 +623,133 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
         {/* Bottom Floating Status Controls over Camera */}
         <div style={{
           position: 'absolute',
-          bottom: '10px',
-          left: '10px',
-          right: '10px',
+          bottom: '8px',
+          left: '8px',
+          right: '8px',
           display: 'flex',
           justify: 'space-between',
           alignItems: 'center',
           zIndex: 20
         }}>
           <div style={{
-            fontSize: '0.72rem',
+            fontSize: '0.7rem',
             color: '#fff',
             backgroundColor: 'rgba(15, 23, 42, 0.9)',
-            padding: '4px 10px',
+            padding: '4px 8px',
             borderRadius: '6px'
           }}>
             {cameraStatus}
           </div>
 
-          <button className={`btn ${isScanning ? 'btn-danger' : 'btn-primary'}`} style={{ padding: '6px 14px', fontSize: '0.78rem' }} onClick={isScanning ? stopCamera : () => startCamera()}>
-            {isScanning ? <Square size={13} /> : <Play size={13} />}
+          <button className={`btn ${isScanning ? 'btn-danger' : 'btn-primary'}`} style={{ padding: '4px 12px', fontSize: '0.75rem' }} onClick={isScanning ? stopCamera : () => startCamera()}>
+            {isScanning ? <Square size={12} /> : <Play size={12} />}
             {isScanning ? '스캔 정지' : '스캔 시작'}
           </button>
         </div>
       </div>
 
-      {/* OCR Real-Time Text Subtitle / Log Banner */}
+      {/* MAIN VIEW INTEGRATED 4-DIGIT & VOICE QUICK WORKSTATION BAR (NO MODAL NEEDED!) */}
+      <div style={{
+        backgroundColor: '#1e293b',
+        borderRadius: '10px',
+        padding: '8px 10px',
+        border: '1px solid #38bdf8',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '6px',
+        boxShadow: '0 0 15px rgba(56, 189, 248, 0.2)'
+      }}>
+        <form onSubmit={handleDirectSubmit} style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+          <input
+            type="text"
+            className="form-input"
+            placeholder="끝 4자리 (5052)"
+            value={fourDigits}
+            onChange={handleFourDigitsChange}
+            maxLength={4}
+            style={{
+              flex: 1,
+              fontSize: '1.15rem',
+              fontWeight: 900,
+              letterSpacing: '2px',
+              textAlign: 'center',
+              borderColor: fourDigits.length === 4 ? '#10b981' : '#38bdf8',
+              backgroundColor: '#0f172a',
+              color: '#6ee7b7',
+              padding: '6px 8px'
+            }}
+          />
+
+          <button
+            type="button"
+            className={`btn ${isVoiceOn ? 'btn-success' : 'btn-outline'}`}
+            style={{
+              padding: '6px 10px',
+              fontSize: '0.75rem',
+              borderColor: '#a78bfa',
+              color: isVoiceOn ? '#fff' : '#c4b5fd',
+              backgroundColor: isVoiceOn ? '#8b5cf6' : '#1e1b4b',
+              whiteSpace: 'nowrap',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              fontWeight: 700
+            }}
+            onClick={toggleVoice}
+          >
+            <Mic size={14} />
+            {isVoiceOn ? '음성듣는중' : '음성ON'}
+          </button>
+
+          <button
+            type="submit"
+            className="btn btn-primary"
+            disabled={fourDigits.length < 4}
+            style={{
+              padding: '6px 12px',
+              fontSize: '0.78rem',
+              fontWeight: 800,
+              whiteSpace: 'nowrap'
+            }}
+          >
+            ⚡ DB 저장
+          </button>
+        </form>
+
+        {/* Real-time DB Auto Match Result Card */}
+        {matchedRecord && (
+          <div style={{
+            backgroundColor: matchedRecord.isNewConstructed ? '#0f172a' : '#064e3b',
+            border: `1px solid ${matchedRecord.isNewConstructed ? '#334155' : '#10b981'}`,
+            borderRadius: '6px',
+            padding: '6px 10px',
+            display: 'flex',
+            alignItems: 'center',
+            justify: 'space-between',
+            fontSize: '0.75rem'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
+              <CheckCircle size={14} style={{ color: matchedRecord.isNewConstructed ? '#fef08a' : '#6ee7b7', flexShrink: 0 }} />
+              <span style={{ fontWeight: 800, fontFamily: 'monospace', color: '#ffffff', whiteSpace: 'nowrap' }}>
+                {matchedRecord.imei}
+              </span>
+              <span style={{ color: '#94a3b8', whiteSpace: 'nowrap' }}>({matchedRecord.asset_no})</span>
+            </div>
+
+            <span style={{ fontSize: '0.68rem', fontWeight: 800, color: matchedRecord.isNewConstructed ? '#fef08a' : '#6ee7b7', whiteSpace: 'nowrap' }}>
+              {matchedRecord.isNewConstructed ? '신규생성' : '★ 100% DB 매칭'}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* OCR Status Banner */}
       <div style={{
         backgroundColor: '#1e293b',
         padding: '6px 10px',
         borderRadius: '6px',
-        fontSize: '0.78rem',
-        color: detectedPulse ? '#6ee7b7' : isVoiceOn ? '#c4b5fd' : '#38bdf8',
+        fontSize: '0.76rem',
+        color: detectedPulse ? '#6ee7b7' : isVoiceOn ? '#c4b5fd' : '#94a3b8',
         fontWeight: detectedPulse ? 700 : 500,
         textAlign: 'center',
         border: '1px solid #334155',
@@ -800,11 +758,11 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
         justify: 'center',
         gap: '6px'
       }}>
-        {isVoiceOn ? <Mic size={14} style={{ color: '#a78bfa' }} /> : <Eye size={14} style={{ color: '#38bdf8' }} />}
-        <span>{ocrStatus}</span>
+        {isVoiceOn ? <Mic size={13} style={{ color: '#a78bfa' }} /> : <Eye size={13} style={{ color: '#38bdf8' }} />}
+        <span>{voiceStatus || ocrStatus}</span>
       </div>
 
-      {/* Bottom Compact Toolbar with Ultra-Fast 4-Digit Manual & Voice Action */}
+      {/* Bottom Compact Summary Toolbar */}
       <div style={{
         backgroundColor: '#1e293b',
         borderRadius: '8px',
@@ -823,20 +781,15 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
             <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>| 누적 {scannedItems.length}건</span>
           </div>
 
-          <div style={{ display: 'flex', gap: '6px' }}>
-            <button className="btn btn-primary" style={{ padding: '4px 10px', fontSize: '0.76rem', fontWeight: 700 }} onClick={() => setShowManualModal(true)}>
-              <Plus size={13} /> ⚡ 4자리 수동/음성 입력
-            </button>
-            <button className="btn btn-success" style={{ padding: '4px 10px', fontSize: '0.76rem' }} onClick={handleExportAll} disabled={scannedItems.length === 0 || isSaving}>
-              <UploadCloud size={13} /> DB 저장
-            </button>
-          </div>
+          <button className="btn btn-success" style={{ padding: '2px 8px', fontSize: '0.72rem' }} onClick={handleExportAll} disabled={scannedItems.length === 0 || isSaving}>
+            <UploadCloud size={12} /> DB 내보내기
+          </button>
         </div>
 
         <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '2px' }}>
           {scannedItems.length === 0 ? (
             <span style={{ fontSize: '0.7rem', color: '#64748b', padding: '2px 0' }}>
-              아직 감지된 항목이 없습니다.
+              아직 스캔 완료된 항목이 없습니다.
             </span>
           ) : (
             scannedItems.slice(0, 5).map((item) => (
@@ -862,114 +815,6 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
           )}
         </div>
       </div>
-
-      {/* ULTRA-FAST 4-DIGIT & VOICE AUTO-MATCHING MODAL */}
-      {showManualModal && (
-        <div className="modal-overlay">
-          <div className="modal-content" style={{ width: '92%', maxWidth: '420px', padding: '16px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-              <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#38bdf8' }}>
-                ⚡ 초고속 IMEI 4자리 매칭 입력
-              </h3>
-              <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>DB/엑셀 100% 자동 매칭</span>
-            </div>
-
-            <form onSubmit={handleConfirmFourDigits} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              {/* Single Large 4-Digit Input + Voice Mic Button Group */}
-              <div className="form-group">
-                <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 700, color: '#f8fafc', marginBottom: '6px' }}>
-                  IMEI 끝 4자리 입력 또는 음성 발화
-                </label>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <input
-                    type="text"
-                    className="form-input"
-                    placeholder="예: 5052"
-                    value={fourDigits}
-                    onChange={handleFourDigitsChange}
-                    maxLength={4}
-                    autoFocus
-                    style={{
-                      fontSize: '1.4rem',
-                      fontWeight: 900,
-                      letterSpacing: '4px',
-                      textAlign: 'center',
-                      borderColor: fourDigits.length === 4 ? '#10b981' : '#38bdf8',
-                      backgroundColor: '#0f172a',
-                      color: '#6ee7b7'
-                    }}
-                  />
-                  <button
-                    type="button"
-                    className={`btn ${isModalListening ? 'btn-danger' : 'btn-outline'}`}
-                    style={{
-                      padding: '0 14px',
-                      fontSize: '0.82rem',
-                      borderColor: '#a78bfa',
-                      color: isModalListening ? '#fff' : '#c4b5fd',
-                      backgroundColor: isModalListening ? '#ef4444' : '#1e1b4b',
-                      whiteSpace: 'nowrap',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}
-                    onClick={toggleModalVoice}
-                  >
-                    <Mic size={16} />
-                    {isModalListening ? '듣는 중...' : '음성입력'}
-                  </button>
-                </div>
-                <span style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '4px' }}>
-                  💡 음성 버튼 터치 후 "오공오이" 또는 "5052"라고 말씀하세요.
-                </span>
-              </div>
-
-              {/* Matched Data Result Card Banner */}
-              {matchedRecord && (
-                <div style={{
-                  backgroundColor: matchedRecord.isNewConstructed ? '#1e293b' : '#064e3b',
-                  border: `1px solid ${matchedRecord.isNewConstructed ? '#334155' : '#10b981'}`,
-                  borderRadius: '8px',
-                  padding: '10px 12px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '4px'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', fontWeight: 800, color: matchedRecord.isNewConstructed ? '#fef08a' : '#6ee7b7' }}>
-                    <CheckCircle size={14} />
-                    {matchedRecord.isNewConstructed ? '신규 IMEI 4자리 조합 생성됨' : '★ DB/마스터 100% 매칭 성공!'}
-                  </div>
-
-                  <div style={{ fontSize: '0.95rem', fontWeight: 800, fontFamily: 'monospace', color: '#ffffff', letterSpacing: '0.5px' }}>
-                    IMEI: {matchedRecord.imei}
-                  </div>
-
-                  <div style={{ display: 'flex', gap: '10px', fontSize: '0.72rem', color: '#cbd5e1' }}>
-                    <span>자산: {matchedRecord.asset_no}</span>
-                    {matchedRecord.serial_no && <span>S/N: {matchedRecord.serial_no}</span>}
-                    {matchedRecord.mac_address && <span>MAC: {matchedRecord.mac_address}</span>}
-                  </div>
-                </div>
-              )}
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '4px' }}>
-                <button type="button" className="btn btn-outline" onClick={() => {
-                  setShowManualModal(false);
-                  if (modalRecognizerRef.current) {
-                    try { modalRecognizerRef.current.stop(); } catch (e) {}
-                  }
-                  setIsModalListening(false);
-                }}>
-                  취소
-                </button>
-                <button type="submit" className="btn btn-primary" style={{ padding: '8px 18px', fontWeight: 800 }} disabled={fourDigits.length < 4}>
-                  확인 및 DB 저장
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
