@@ -18,9 +18,8 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
   const [videoDevices, setVideoDevices] = useState([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState('');
 
-  // Hardware Camera Features
+  // Hardware Camera Features (Always Allow Flashlight Toggle)
   const [isTorchOn, setIsTorchOn] = useState(false);
-  const [torchSupported, setTorchSupported] = useState(false);
 
   // Pinpoint Highlight Box Coordinates
   const [pinpointBox, setPinpointBox] = useState(null);
@@ -139,8 +138,6 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
     const track = stream.getVideoTracks()[0];
     if (track && track.getCapabilities) {
       const capabilities = track.getCapabilities();
-      if ('torch' in capabilities) setTorchSupported(true);
-      
       if (capabilities.focusMode && capabilities.focusMode.includes('continuous')) {
         try {
           await track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] });
@@ -162,16 +159,25 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
     startCamera(newId);
   };
 
+  // Always Allow Flashlight Torch Toggle Action
   const toggleTorch = async () => {
-    if (!streamRef.current) return;
+    if (!streamRef.current) {
+      alert('카메라가 정지되어 있습니다. 스캔 시작 후 플래시를 켜주세요.');
+      return;
+    }
     const track = streamRef.current.getVideoTracks()[0];
     if (track && track.applyConstraints) {
       try {
         const nextState = !isTorchOn;
-        await track.applyConstraints({ advanced: [{ torch: nextState }] });
+        await track.applyConstraints({
+          advanced: [{ torch: nextState }]
+        });
         setIsTorchOn(nextState);
+        setOcrStatus(nextState ? '🔦 플래시 조명이 켜졌습니다 (금속 각인 음영 극대화)' : '🔦 플래시 조명이 꺼졌습니다');
       } catch (e) {
         console.warn('Torch toggle error:', e);
+        // Fallback alert for non-torch sub-lenses
+        alert('현재 선택된 카메라 렌즈는 LED 플래시 조명을 직접 지원하지 않습니다. 기본 메인 렌즈로 전환해 보세요.');
       }
     }
   };
@@ -201,6 +207,7 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
       streamRef.current = null;
     }
     setIsScanning(false);
+    setIsTorchOn(false);
     setCameraStatus('카메라 정지됨');
   };
 
@@ -409,7 +416,7 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
                 color: '#38bdf8',
                 fontWeight: 700,
                 borderRadius: '6px',
-                maxWidth: '65%'
+                maxWidth: '60%'
               }}
               value={selectedDeviceId}
               onChange={handleDeviceChange}
@@ -424,17 +431,16 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
             <span style={{ fontSize: '0.72rem', color: '#38bdf8', fontWeight: 700 }}>후면 접사 렌즈</span>
           )}
 
+          {/* Unconditional Focus & Flashlight Torch Buttons */}
           <div style={{ display: 'flex', gap: '4px' }}>
-            <button className="btn btn-outline" style={{ padding: '3px 6px', fontSize: '0.7rem', borderColor: '#38bdf8', color: '#7dd3fc', backgroundColor: 'rgba(15,23,42,0.6)' }} onClick={triggerRefocus}>
-              <RefreshCw size={11} /> 초점
+            <button className="btn btn-outline" style={{ padding: '4px 8px', fontSize: '0.72rem', borderColor: '#38bdf8', color: '#7dd3fc', backgroundColor: 'rgba(15,23,42,0.6)' }} onClick={triggerRefocus}>
+              <RefreshCw size={12} /> 초점
             </button>
 
-            {torchSupported && (
-              <button className={`btn ${isTorchOn ? 'btn-success' : 'btn-outline'}`} style={{ padding: '3px 6px', fontSize: '0.7rem' }} onClick={toggleTorch}>
-                {isTorchOn ? <Zap size={11} /> : <ZapOff size={11} />}
-                {isTorchOn ? '플래시 ON' : '플래시 OFF'}
-              </button>
-            )}
+            <button className={`btn ${isTorchOn ? 'btn-success' : 'btn-outline'}`} style={{ padding: '4px 8px', fontSize: '0.72rem', backgroundColor: isTorchOn ? '#10b981' : 'rgba(15,23,42,0.6)' }} onClick={toggleTorch}>
+              {isTorchOn ? <Zap size={12} /> : <ZapOff size={12} />}
+              {isTorchOn ? '플래시 ON' : '플래시 OFF'}
+            </button>
           </div>
         </div>
 

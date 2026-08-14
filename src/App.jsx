@@ -52,7 +52,7 @@ export default function App() {
 
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', padding: deviceMode === 'mobile' ? '4px' : '12px' }}>
-      {/* Header Bar - Rendered ONLY on PC View (Hidden on Mobile View for 100% Full-Screen Viewfinder) */}
+      {/* Header Bar - Rendered ONLY on PC View */}
       {deviceMode === 'pc' && (
         <header style={{
           display: 'flex',
@@ -83,7 +83,7 @@ export default function App() {
                 PC 라벨 프린터 ZPL 직통 출력 대시보드
               </h1>
               <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
-                버전: v1.0.0.Build.16 | 2026-08-14
+                버전: v1.0.0.Build.17 | 2026-08-14
               </span>
             </div>
           </div>
