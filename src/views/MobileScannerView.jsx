@@ -146,7 +146,7 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
       } catch (errC) {
         console.error('All camera strategies failed:', errC);
         setCameraStatus('카메라 렌즈 연결 실패');
-        onError(`카메라를 실행할 수 없습니다: ${errC.message || '장치가 사용 중이거나 지원되지 않습니다.'}`);
+        if (onError) onError(`카메라를 실행할 수 없습니다: ${errC.message || '장치가 사용 중이거나 지원되지 않습니다.'}`);
         return;
       }
     }
@@ -330,10 +330,29 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
   const handleDirectSubmit = (e) => {
     e.preventDefault();
     if (fourDigits.length < 4) {
-      onError('IMEI 끝 4자리를 정확히 4자리 숫자로 입력해주세요.');
+      if (onError) onError('IMEI 끝 4자리를 정확히 4자리 숫자로 입력해주세요.');
       return;
     }
     handleAutoSaveFrom4Digits(fourDigits, matchedRecord);
+  };
+
+  // Export Scans to Supabase DB
+  const handleExportAll = async () => {
+    if (scannedItems.length === 0) {
+      if (onError) onError('내보낼 스캔 데이터가 없습니다.');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await saveScansToSupabase(scannedItems);
+      setScannedItems(prev => prev.map(item => ({ ...item, status: 'EXPORTED' })));
+      alert(`성공적으로 ${scannedItems.length}건의 데이터를 Supabase DB에 저장하였습니다!`);
+    } catch (err) {
+      if (onError) onError(err.message || 'Supabase 저장 중 오류가 발생했습니다.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const triggerRefocus = async () => {
