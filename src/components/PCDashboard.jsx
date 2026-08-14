@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { RefreshCw, Download, Printer, Search, Plus, Trash2, Edit3, CheckCircle, Database, Zap } from 'lucide-react';
-import { fetchScansFromSupabase, subscribeRealtimeScans, deleteScanFromSupabase } from '../utils/supabaseClient';
+import { RefreshCw, Download, Printer, Search, Plus, Trash2, Edit3, CheckCircle, Database, Zap, Upload } from 'lucide-react';
+import { fetchScansFromSupabase, subscribeRealtimeScans, deleteScanFromSupabase, saveScansToSupabase, deleteAllScansFromSupabase } from '../utils/supabaseClient';
 import initialData from '../data/initialData.json';
 
-export default function PCDashboard({ onError, onOpenExportModal, onOpenPrintModal, onOpenConfigModal }) {
+export default function PCDashboard({ onError, onOpenExportModal, onOpenPrintModal, onOpenConfigModal, onOpenImportModal }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -17,7 +17,7 @@ export default function PCDashboard({ onError, onOpenExportModal, onOpenPrintMod
     autoPrintRef.current = autoPrintEnabled;
   }, [autoPrintEnabled]);
 
-  // Load initial scans from Supabase or default 400 seed items
+  // Load initial scans from Supabase or default seed items
   const loadData = async () => {
     setLoading(true);
     try {
@@ -25,11 +25,10 @@ export default function PCDashboard({ onError, onOpenExportModal, onOpenPrintMod
       if (data && data.length > 0) {
         setItems(data);
       } else {
-        // Fallback 400 default items
         setItems(initialData);
       }
     } catch (err) {
-      console.warn('Realtime fetch warning, using 400 default items:', err);
+      console.warn('Realtime fetch warning, using default items:', err);
       setItems(initialData);
     } finally {
       setLoading(false);
@@ -43,7 +42,6 @@ export default function PCDashboard({ onError, onOpenExportModal, onOpenPrintMod
     const channel = subscribeRealtimeScans((newRecord) => {
       setItems((prev) => [newRecord, ...prev]);
 
-      // If Auto Print Mode is ON, immediately trigger Label Printing Modal/Dialog on PC!
       if (autoPrintRef.current) {
         console.log('[Auto-Print Triggered] Mobile scan received:', newRecord);
         onOpenPrintModal([newRecord]);
@@ -150,7 +148,7 @@ export default function PCDashboard({ onError, onOpenExportModal, onOpenPrintMod
         border: '1px solid #334155'
       }}>
         {/* Search Bar */}
-        <div style={{ position: 'relative', width: '280px' }}>
+        <div style={{ position: 'relative', width: '260px' }}>
           <Search size={18} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
           <input
             type="text"
@@ -174,6 +172,11 @@ export default function PCDashboard({ onError, onOpenExportModal, onOpenPrintMod
             DB 연동 설정
           </button>
 
+          <button className="btn btn-outline" style={{ borderColor: '#f43f5e', color: '#fda4af' }} onClick={onOpenImportModal}>
+            <Upload size={16} />
+            양식 덮어쓰기 / 업로드
+          </button>
+
           <button
             className="btn btn-success"
             onClick={() => onOpenExportModal(selectedObjects.length > 0 ? selectedObjects : filteredItems)}
@@ -189,7 +192,7 @@ export default function PCDashboard({ onError, onOpenExportModal, onOpenPrintMod
             disabled={filteredItems.length === 0}
           >
             <Printer size={16} />
-            Code 39 라벨 수동 인쇄 ({selectedObjects.length || filteredItems.length}매)
+            Code 39 라벨 인쇄 ({selectedObjects.length || filteredItems.length}매)
           </button>
 
           {selectedIds.length > 0 && (
@@ -243,7 +246,7 @@ export default function PCDashboard({ onError, onOpenExportModal, onOpenPrintMod
             {filteredItems.length === 0 ? (
               <tr>
                 <td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
-                  등록된 데이터가 없습니다. 핸드폰 모바일 스캐너에서 IMEI를 수집하거나 DB를 동기화하세요.
+                  등록된 데이터가 없습니다. 핸드폰 모바일 스캐너에서 IMEI를 수집하거나 엑셀 양식을 업로드하세요.
                 </td>
               </tr>
             ) : (

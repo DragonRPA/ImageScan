@@ -1,6 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Default / Stored config
 const LOCAL_KEY_URL = 'IMAGE_SCAN_SUPABASE_URL';
 const LOCAL_KEY_ANON = 'IMAGE_SCAN_SUPABASE_ANON_KEY';
 
@@ -64,17 +63,16 @@ export async function fetchScansFromSupabase() {
 export async function saveScansToSupabase(scans) {
   const client = getSupabaseClient();
   if (!client) {
-    throw new Error('Supabase URL 및 API Key 설정이 필요합니다. 설정 버튼을 눌러 정보를 입력하세요.');
+    throw new Error('Supabase URL 및 API Key 설정이 필요합니다. DB 연동 설정 버튼을 입력하세요.');
   }
 
-  // Formatting items according to Image 2 database columns
   const payload = scans.map(item => ({
-    asset_no: item.asset_no || item.assetNo || `A${Date.now().toString().slice(-8)}`,
-    imei: item.imei || '',
-    mac_address: item.mac_address || item.macAddress || '',
-    serial_no: item.serial_no || item.serialNo || '',
+    asset_no: item.asset_no || item.assetNo || item['자산번호'] || `A${Date.now().toString().slice(-8)}`,
+    imei: item.imei || item['IMEI'] || '',
+    mac_address: item.mac_address || item.macAddress || item['MAC Address'] || '',
+    serial_no: item.serial_no || item.serialNo || item['시리얼'] || '',
     status: item.status || 'COMPLETED',
-    device_info: item.device_info || 'MOBILE_OCR'
+    device_info: item.device_info || 'FILE_IMPORT'
   }));
 
   const { data, error } = await client.from('imei_scans').insert(payload).select();
@@ -93,6 +91,15 @@ export async function deleteScanFromSupabase(id) {
   const { error } = await client.from('imei_scans').delete().eq('id', id);
   if (error) {
     throw new Error(`Supabase 삭제 실패: ${error.message}`);
+  }
+}
+
+export async function deleteAllScansFromSupabase() {
+  const client = getSupabaseClient();
+  if (!client) return;
+  const { error } = await client.from('imei_scans').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+  if (error) {
+    throw new Error(`Supabase 전체 데이터 삭제 실패: ${error.message}`);
   }
 }
 
