@@ -51,85 +51,87 @@ export default function App() {
   };
 
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '12px' }}>
-      {/* Header Bar */}
-      <header style={{
-        display: 'flex',
-        flexWrap: 'wrap',
-        justify: 'space-between',
-        alignItems: 'center',
-        padding: '12px 16px',
-        backgroundColor: '#1e293b',
-        borderRadius: '12px',
-        border: '1px solid #334155',
-        marginBottom: '16px',
-        gap: '10px'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{
-            backgroundColor: 'var(--primary)',
-            color: '#fff',
-            padding: '6px 10px',
-            borderRadius: '8px',
-            fontWeight: 800,
-            fontSize: '1rem',
-            letterSpacing: '0.5px'
-          }}>
-            IMEI SCANNER
+    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: deviceMode === 'mobile' ? '4px' : '12px' }}>
+      {/* Header Bar - Rendered ONLY on PC View (Hidden on Mobile View for 100% Full-Screen Viewfinder) */}
+      {deviceMode === 'pc' && (
+        <header style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          justify: 'space-between',
+          alignItems: 'center',
+          padding: '12px 16px',
+          backgroundColor: '#1e293b',
+          borderRadius: '12px',
+          border: '1px solid #334155',
+          marginBottom: '16px',
+          gap: '10px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{
+              backgroundColor: 'var(--primary)',
+              color: '#fff',
+              padding: '6px 10px',
+              borderRadius: '8px',
+              fontWeight: 800,
+              fontSize: '1rem',
+              letterSpacing: '0.5px'
+            }}>
+              IMEI SCANNER
+            </div>
+            <div>
+              <h1 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: '#f8fafc' }}>
+                PC 라벨 프린터 ZPL 직통 출력 대시보드
+              </h1>
+              <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
+                버전: v1.0.0.Build.16 | 2026-08-14
+              </span>
+            </div>
           </div>
-          <div>
-            <h1 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: '#f8fafc' }}>
-              {deviceMode === 'mobile' ? 'S24 후면 전용 접사 스캐너' : 'PC 라벨 프린터 ZPL 직통 출력 대시보드'}
-            </h1>
-            <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
-              버전: v1.0.0.Build.15 | 2026-08-14
-            </span>
-          </div>
-        </div>
 
-        {/* Mode Switcher & DB Config Status */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <button
-            className="btn btn-outline"
-            style={{
-              padding: '4px 10px',
-              fontSize: '0.75rem',
-              borderColor: isConfigured ? 'var(--accent-green)' : '#f59e0b',
-              color: isConfigured ? '#6ee7b7' : '#fef08a'
-            }}
-            onClick={() => setIsConfigOpen(true)}
-          >
-            <Database size={14} />
-            {isConfigured ? 'Supabase 연동됨' : 'DB 연동 필요'}
-          </button>
+          {/* Mode Switcher & DB Config Status */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button
+              className="btn btn-outline"
+              style={{
+                padding: '4px 10px',
+                fontSize: '0.75rem',
+                borderColor: isConfigured ? 'var(--accent-green)' : '#f59e0b',
+                color: isConfigured ? '#6ee7b7' : '#fef08a'
+              }}
+              onClick={() => setIsConfigOpen(true)}
+            >
+              <Database size={14} />
+              {isConfigured ? 'Supabase 연동됨' : 'DB 연동 필요'}
+            </button>
 
-          {/* Device View Switcher Tabs */}
-          <div style={{
-            backgroundColor: '#0f172a',
-            padding: '3px',
-            borderRadius: '8px',
-            display: 'flex',
-            gap: '3px'
-          }}>
-            <button
-              className={`btn ${deviceMode === 'mobile' ? 'btn-primary' : 'btn-outline'}`}
-              style={{ padding: '4px 10px', fontSize: '0.75rem', border: 'none' }}
-              onClick={() => setDeviceMode('mobile')}
-            >
-              <Smartphone size={13} />
-              모바일 뷰
-            </button>
-            <button
-              className={`btn ${deviceMode === 'pc' ? 'btn-primary' : 'btn-outline'}`}
-              style={{ padding: '4px 10px', fontSize: '0.75rem', border: 'none' }}
-              onClick={() => setDeviceMode('pc')}
-            >
-              <Monitor size={13} />
-              PC 대시보드 뷰
-            </button>
+            {/* Device View Switcher Tabs */}
+            <div style={{
+              backgroundColor: '#0f172a',
+              padding: '3px',
+              borderRadius: '8px',
+              display: 'flex',
+              gap: '3px'
+            }}>
+              <button
+                className={`btn ${deviceMode === 'mobile' ? 'btn-primary' : 'btn-outline'}`}
+                style={{ padding: '4px 10px', fontSize: '0.75rem', border: 'none' }}
+                onClick={() => setDeviceMode('mobile')}
+              >
+                <Smartphone size={13} />
+                모바일 뷰
+              </button>
+              <button
+                className={`btn ${deviceMode === 'pc' ? 'btn-primary' : 'btn-outline'}`}
+                style={{ padding: '4px 10px', fontSize: '0.75rem', border: 'none' }}
+                onClick={() => setDeviceMode('pc')}
+              >
+                <Monitor size={13} />
+                PC 대시보드 뷰
+              </button>
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
+      )}
 
       {/* Main View Area */}
       <main>

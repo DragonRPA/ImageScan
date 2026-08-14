@@ -61,9 +61,9 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
         const lower = label.toLowerCase();
         
         if (lower.includes('ultra') || lower.includes('wide') || index === 1) {
-          label = `📷 초광각 접사 렌즈 (5cm 초접사 특화)`;
+          label = `📷 초광각 접사 렌즈 (5cm 초접사)`;
         } else if (lower.includes('tele') || lower.includes('zoom') || index === 2) {
-          label = `📷 3배/5배 망원 렌즈 (30cm 거리 줌 특화)`;
+          label = `📷 3배/5배 망원 렌즈 (30cm 줌)`;
         } else {
           label = `📷 기본 메인 렌즈 (기본 광각)`;
         }
@@ -232,7 +232,7 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
         const roiX = Math.floor((vWidth - roiWidth) / 2);
         const roiY = Math.floor((vHeight - roiHeight) / 2);
 
-        // Preprocess High-Res Broad Canvas Frame with Laplacian Sharpening Filter
+        // Preprocess High-Res Broad Canvas Frame with Metallic Adaptive Local Contrast Binarization
         const roiCanvas = preprocessCanvasROI(video, { x: roiX, y: roiY, width: roiWidth, height: roiHeight });
 
         const worker = await getTesseractWorker();
@@ -288,7 +288,7 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
             }
 
             setScannedItems(prev => [newItem, ...prev]);
-            setOcrStatus(`★ 선명 감지 성공! IMEI: ${parsed.imei}`);
+            setOcrStatus(`★ 금속 각인 감지 성공! IMEI: ${parsed.imei}`);
           }
         }
       } catch (err) {
@@ -356,60 +356,13 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
     <div style={{
       display: 'flex',
       flexDirection: 'column',
-      height: 'calc(100vh - 100px)',
-      gap: '10px',
-      position: 'relative'
+      height: 'calc(100vh - 20px)',
+      gap: '8px',
+      position: 'relative',
+      margin: '-12px -12px 0 -12px',
+      padding: '8px'
     }}>
-      {/* Galaxy S24 Multi-Lens Selection Toolbar */}
-      <div style={{
-        backgroundColor: '#1e293b',
-        padding: '10px 12px',
-        borderRadius: '8px',
-        border: '1px solid #334155',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '8px'
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Smartphone size={16} style={{ color: '#38bdf8' }} />
-            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#f8fafc' }}>
-              후면 카메라 물리 렌즈 선택 (S24/아이폰 전용)
-            </span>
-          </div>
-
-          <div style={{ display: 'flex', gap: '6px' }}>
-            <button className="btn btn-outline" style={{ padding: '3px 8px', fontSize: '0.73rem', borderColor: '#38bdf8', color: '#7dd3fc' }} onClick={triggerRefocus}>
-              <RefreshCw size={12} /> 초점 리셋
-            </button>
-
-            {torchSupported && (
-              <button className={`btn ${isTorchOn ? 'btn-success' : 'btn-outline'}`} style={{ padding: '3px 8px', fontSize: '0.73rem' }} onClick={toggleTorch}>
-                {isTorchOn ? <Zap size={12} /> : <ZapOff size={12} />}
-                {isTorchOn ? '플래시 ON' : '플래시 OFF'}
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Device Select Dropdown */}
-        {videoDevices.length > 0 && (
-          <select
-            className="form-input"
-            style={{ fontSize: '0.78rem', padding: '6px 10px', backgroundColor: '#0f172a', borderColor: '#38bdf8', color: '#38bdf8', fontWeight: 700 }}
-            value={selectedDeviceId}
-            onChange={handleDeviceChange}
-          >
-            {videoDevices.map((dev) => (
-              <option key={dev.deviceId} value={dev.deviceId}>
-                {dev.label}
-              </option>
-            ))}
-          </select>
-        )}
-      </div>
-
-      {/* Main Viewfinder Screen */}
+      {/* Viewfinder First Screen - Takes 88%+ Height starting from top */}
       <div style={{
         flex: 1,
         position: 'relative',
@@ -428,17 +381,74 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
         />
 
-        {/* Comfortable Broad Scanning Area Overlay */}
+        {/* Top Floating Translucent Overlay Control Bar inside Viewfinder */}
         <div style={{
           position: 'absolute',
-          top: '50%',
+          top: '10px',
+          left: '10px',
+          right: '10px',
+          backgroundColor: 'rgba(15, 23, 42, 0.88)',
+          backdropFilter: 'blur(6px)',
+          borderRadius: '8px',
+          padding: '6px 10px',
+          display: 'flex',
+          justify: 'space-between',
+          alignItems: 'center',
+          gap: '8px',
+          zIndex: 20,
+          border: '1px solid rgba(255,255,255,0.15)'
+        }}>
+          {/* Physical Lens Select Dropdown */}
+          {videoDevices.length > 0 ? (
+            <select
+              style={{
+                fontSize: '0.72rem',
+                padding: '4px 8px',
+                backgroundColor: '#0f172a',
+                borderColor: '#38bdf8',
+                color: '#38bdf8',
+                fontWeight: 700,
+                borderRadius: '6px',
+                maxWidth: '65%'
+              }}
+              value={selectedDeviceId}
+              onChange={handleDeviceChange}
+            >
+              {videoDevices.map((dev) => (
+                <option key={dev.deviceId} value={dev.deviceId}>
+                  {dev.label}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <span style={{ fontSize: '0.72rem', color: '#38bdf8', fontWeight: 700 }}>후면 접사 렌즈</span>
+          )}
+
+          <div style={{ display: 'flex', gap: '4px' }}>
+            <button className="btn btn-outline" style={{ padding: '3px 6px', fontSize: '0.7rem', borderColor: '#38bdf8', color: '#7dd3fc', backgroundColor: 'rgba(15,23,42,0.6)' }} onClick={triggerRefocus}>
+              <RefreshCw size={11} /> 초점
+            </button>
+
+            {torchSupported && (
+              <button className={`btn ${isTorchOn ? 'btn-success' : 'btn-outline'}`} style={{ padding: '3px 6px', fontSize: '0.7rem' }} onClick={toggleTorch}>
+                {isTorchOn ? <Zap size={11} /> : <ZapOff size={11} />}
+                {isTorchOn ? '플래시 ON' : '플래시 OFF'}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Broad Scanning Area Guide Box Overlay */}
+        <div style={{
+          position: 'absolute',
+          top: '52%',
           left: '50%',
           transform: 'translate(-50%, -50%)',
-          width: '85%',
-          height: '70%',
+          width: '88%',
+          height: '75%',
           border: '1px dashed rgba(56, 189, 248, 0.5)',
           borderRadius: '12px',
-          boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.45)',
+          boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.4)',
           pointerEvents: 'none'
         }}>
           <div style={{
@@ -454,7 +464,7 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
             borderRadius: '4px',
             whiteSpace: 'nowrap'
           }}>
-            선택한 후면 물리 렌즈로 비추세요
+            기기 뒷면을 비추세요 (자동 텍스트 탐색)
           </div>
         </div>
 
@@ -492,7 +502,7 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
           </div>
         )}
 
-        {/* Floating Controls over Camera */}
+        {/* Bottom Floating Status Controls over Camera */}
         <div style={{
           position: 'absolute',
           bottom: '10px',
@@ -500,7 +510,8 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
           right: '10px',
           display: 'flex',
           justify: 'space-between',
-          alignItems: 'center'
+          alignItems: 'center',
+          zIndex: 20
         }}>
           <div style={{
             fontSize: '0.72rem',
@@ -522,9 +533,9 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
       {/* OCR Status Banner */}
       <div style={{
         backgroundColor: '#1e293b',
-        padding: '8px 12px',
+        padding: '6px 10px',
         borderRadius: '6px',
-        fontSize: '0.8rem',
+        fontSize: '0.78rem',
         color: detectedPulse ? '#6ee7b7' : '#94a3b8',
         fontWeight: detectedPulse ? 700 : 500,
         textAlign: 'center',
@@ -533,32 +544,39 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
         {ocrStatus}
       </div>
 
-      {/* Bottom Compact Quick Items */}
+      {/* Bottom Compact Toolbar */}
       <div style={{
         backgroundColor: '#1e293b',
         borderRadius: '8px',
-        padding: '8px 10px',
+        padding: '6px 10px',
         border: '1px solid #334155',
         display: 'flex',
         flexDirection: 'column',
         gap: '4px'
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: 600 }}>최근 감지 목록 ({scannedItems.length}건)</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <ShieldCheck size={14} style={{ color: isConfigured ? '#10b981' : '#f59e0b' }} />
+            <span style={{ fontSize: '0.72rem', fontWeight: 600, color: isConfigured ? '#6ee7b7' : '#fef08a' }}>
+              {isConfigured ? 'DB 실시간 동기화' : '로컬 스캔 모드'}
+            </span>
+            <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>| 누적 {scannedItems.length}건</span>
+          </div>
+
           <div style={{ display: 'flex', gap: '6px' }}>
             <button className="btn btn-outline" style={{ padding: '2px 6px', fontSize: '0.72rem' }} onClick={() => setShowManualModal(true)}>
               <Plus size={12} /> 수동 입력
             </button>
             <button className="btn btn-success" style={{ padding: '2px 6px', fontSize: '0.72rem' }} onClick={handleExportAll} disabled={scannedItems.length === 0 || isSaving}>
-              <UploadCloud size={12} /> DB 내보내기
+              <UploadCloud size={12} /> DB 저장
             </button>
           </div>
         </div>
 
         <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '2px' }}>
           {scannedItems.length === 0 ? (
-            <span style={{ fontSize: '0.72rem', color: '#64748b', padding: '2px 0' }}>
-              아직 감지된 항목이 없습니다. 물리 렌즈를 전환하며 비추세요.
+            <span style={{ fontSize: '0.7rem', color: '#64748b', padding: '2px 0' }}>
+              아직 감지된 항목이 없습니다.
             </span>
           ) : (
             scannedItems.slice(0, 5).map((item) => (
@@ -568,8 +586,8 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
                   backgroundColor: '#0f172a',
                   border: '1px solid #334155',
                   borderRadius: '4px',
-                  padding: '4px 8px',
-                  fontSize: '0.7rem',
+                  padding: '3px 6px',
+                  fontSize: '0.68rem',
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '1px',

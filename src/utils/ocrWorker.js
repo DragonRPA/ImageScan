@@ -7,7 +7,7 @@ export async function getTesseractWorker() {
     workerPromise = (async () => {
       const worker = await createWorker('eng');
       await worker.setParameters({
-        tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz:- /',
+        tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz:- /.;|',
         tessedit_pageseg_mode: '11', // Sparse text - Find as much text as possible in no particular order
       });
       return worker;
@@ -17,36 +17,70 @@ export async function getTesseractWorker() {
 }
 
 /**
- * Applies 3x3 Laplacian Convolution Kernel to sharpen blurry image edges by 200%
+ * Applies Adaptive Local Contrast Thresholding (Otsu's Dynamic Local Window)
+ * Specifically tuned for Laser-Etched Text on Silver Metallic Surfaces:
+ * Converts silver metallic background to pure white (255) and silver-gray engraved text to dark black (0).
  */
-function applySharpeningFilter(imgData, width, height) {
+function applyAdaptiveMetallicContrast(imgData, width, height) {
   const data = imgData.data;
-  const copy = new Uint8ClampedArray(data);
+  const gray = new Uint8Array(width * height);
 
-  // 3x3 Sharpening Convolution Kernel Matrix
-  // [  0, -1,  0 ]
-  // [ -1,  5, -1 ]
-  // [  0, -1,  0 ]
-  for (let y = 1; y < height - 1; y++) {
-    for (let x = 1; x < width - 1; x++) {
-      const idx = (y * width + x) * 4;
+  // 1. Convert to Grayscale
+  for (let i = 0; i < gray.length; i++) {
+    const r = data[i * 4];
+    const g = data[i * 4 + 1];
+    const b = data[i * 4 + 2];
+    gray[i] = (r * 299 + g * 587 + b * 114) / 1000;
+  }
 
-      for (let c = 0; c < 3; c++) {
-        const center = copy[idx + c] * 5;
-        const up = copy[((y - 1) * width + x) * 4 + c];
-        const down = copy[((y + 1) * width + x) * 4 + c];
-        const left = copy[(y * width + (x - 1)) * 4 + c];
-        const right = copy[(y * width + (x + 1)) * 4 + c];
-
-        const sharpVal = center - up - down - left - right;
-        data[idx + c] = Math.min(255, Math.max(0, sharpVal));
+  // 2. Integral Image for Fast Local Mean Calculation
+  const integral = new Float64Array(width * height);
+  for (let y = 0; y < height; y++) {
+    let sum = 0;
+    for (let x = 0; x < width; x++) {
+      sum += gray[y * width + x];
+      if (y === 0) {
+        integral[x] = sum;
+      } else {
+        integral[y * width + x] = integral[(y - 1) * width + x] + sum;
       }
+    }
+  }
+
+  // 3. Local Window Adaptive Binarization (Window size S = width / 16, Constant C = 7)
+  const S = Math.max(16, Math.floor(width / 16));
+  const s2 = Math.floor(S / 2);
+  const C = 7; // Local threshold offset
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const y1 = Math.max(0, y - s2);
+      const y2 = Math.min(height - 1, y + s2);
+      const x1 = Math.max(0, x - s2);
+      const x2 = Math.min(width - 1, x + s2);
+
+      const count = (y2 - y1 + 1) * (x2 - x1 + 1);
+
+      let sum = integral[y2 * width + x2];
+      if (y1 > 0) sum -= integral[(y1 - 1) * width + x2];
+      if (x1 > 0) sum -= integral[y2 * width + (x1 - 1)];
+      if (y1 > 0 && x1 > 0) sum += integral[(y1 - 1) * width + (x1 - 1)];
+
+      const localMean = sum / count;
+      const pixel = gray[y * width + x];
+
+      // Engraved letters are darker than local metallic reflection
+      const v = pixel < (localMean - C) ? 0 : 255;
+      const idx = (y * width + x) * 4;
+      data[idx] = v;     // R
+      data[idx + 1] = v; // G
+      data[idx + 2] = v; // B
     }
   }
 }
 
 /**
- * Preprocesses broad-field video frame canvas with Laplacian sharpening & high contrast binarization
+ * Preprocesses broad-field video frame canvas with Adaptive Metallic Contrast Binarization
  */
 export function preprocessCanvasROI(sourceVideo, roiBounds) {
   const canvas = document.createElement('canvas');
@@ -60,26 +94,16 @@ export function preprocessCanvasROI(sourceVideo, roiBounds) {
   ctx.drawImage(sourceVideo, x, y, width, height, 0, 0, width, height);
 
   const imgData = ctx.getImageData(0, 0, width, height);
-  
-  // 1. Apply Sharpening Filter to eliminate blur
-  applySharpeningFilter(imgData, width, height);
 
-  // 2. High contrast adaptive binarization for laser-etched 3mm text
-  const data = imgData.data;
-  for (let i = 0; i < data.length; i += 4) {
-    const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
-    const v = avg > 110 ? 255 : 0;
-    data[i] = v;     // R
-    data[i + 1] = v; // G
-    data[i + 2] = v; // B
-  }
+  // Apply Adaptive Local Contrast for laser-etched metallic surfaces
+  applyAdaptiveMetallicContrast(imgData, width, height);
 
   ctx.putImageData(imgData, 0, 0);
   return canvas;
 }
 
 /**
- * Parse OCR raw output (with word bounding boxes) into structured fields and target location
+ * Parse OCR raw output (with Fault-Tolerant OCR error normalization) into structured fields
  */
 export function parseFieldsFromTesseractResult(tesseractResult) {
   if (!tesseractResult || !tesseractResult.data) return null;
@@ -87,16 +111,29 @@ export function parseFieldsFromTesseractResult(tesseractResult) {
   const { text, words, lines } = tesseractResult.data;
   if (!text) return null;
 
-  const cleanText = text.replace(/[\r\n]+/g, ' ').toUpperCase();
+  // 1. Normalize OCR text misreads for IMEI label prefixes: (1MEI, lMEI, |MEI, ;MEI, I.M.E.I -> IMEI)
+  const cleanText = text
+    .replace(/[\r\n]+/g, ' ')
+    .replace(/[1l|;]\s*M\s*E\s*I/gi, 'IMEI')
+    .replace(/I\s*M\s*E\s*I/gi, 'IMEI')
+    .toUpperCase();
 
-  // 1. IMEI Parsing (15 digits)
+  // 2. IMEI Parsing (Fault-Tolerant 15 digits)
   let imei = null;
-  const imeiMatch = cleanText.match(/IMEI\s*[:;=]?\s*(\d{15})/i) || cleanText.match(/\b(\d{15})\b/);
+  
+  // Match IMEI: 351379... or any 15-digit number block
+  const imeiMatch = cleanText.match(/IMEI\s*[:;=.-]?\s*(\d{15})/i) ||
+                    cleanText.match(/IMEI\s*[:;=.-]?\s*(\d{14,16})/i) ||
+                    cleanText.match(/\b(\d{15})\b/);
+
   if (imeiMatch) {
-    imei = imeiMatch[1] || imeiMatch[0];
+    const rawDigitStr = (imeiMatch[1] || imeiMatch[0]).replace(/\D/g, '');
+    if (rawDigitStr.length >= 15) {
+      imei = rawDigitStr.slice(0, 15);
+    }
   }
 
-  // 2. MAC Address Parsing
+  // 3. MAC Address Parsing
   let mac_address = '';
   const macMatch = cleanText.match(/MAC\s*[:;=]?\s*([0-9A-F]{12})/i) || 
                    cleanText.match(/MAC\s*[:;=]?\s*([0-9A-F]{2}:[0-9A-F]{2}:[0-9A-F]{2}:[0-9A-F]{2}:[0-9A-F]{2}:[0-9A-F]{2})/i) ||
@@ -105,7 +142,7 @@ export function parseFieldsFromTesseractResult(tesseractResult) {
     mac_address = (macMatch[1] || macMatch[0]).replace(/:/g, '');
   }
 
-  // 3. Serial Number Parsing
+  // 4. Serial Number Parsing
   let serial_no = '';
   const serialMatch = cleanText.match(/(?:시리얼|SERIAL|SN|S\/N)\s*[:;=]?\s*([A-Z0-9]{8,15})/i) ||
                       cleanText.match(/\b([A-Z0-9]{11,12})\b/);
@@ -113,14 +150,14 @@ export function parseFieldsFromTesseractResult(tesseractResult) {
     serial_no = serialMatch[1];
   }
 
-  // 4. Asset No Parsing
+  // 5. Asset No Parsing
   let asset_no = '';
   const assetMatch = cleanText.match(/(?:관리번호|자산번호|ASSET)\s*[:;=]?\s*(\d{6,12})/i);
   if (assetMatch) {
     asset_no = assetMatch[1];
   }
 
-  // Extract detected word bounding box for pinpoint green highlight
+  // Extract word bounding box for pinpoint green highlight
   let bbox = null;
   if (imei && words && words.length > 0) {
     const targetWord = words.find(w => w.text && (w.text.includes(imei) || imei.includes(w.text.replace(/\D/g, ''))));
