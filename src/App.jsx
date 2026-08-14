@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Smartphone, Monitor, Database } from 'lucide-react';
 import MobileScannerView from './views/MobileScannerView';
 import PCDashboardView from './views/PCDashboardView';
@@ -10,7 +10,6 @@ import ErrorModal from './components/ErrorModal';
 import { getStoredConfig, saveScansToSupabase, deleteAllScansFromSupabase } from './utils/supabaseClient';
 
 export default function App() {
-  // Auto detect mobile device via userAgent or screen width
   const [deviceMode, setDeviceMode] = useState(() => {
     if (typeof window !== 'undefined') {
       const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -25,7 +24,7 @@ export default function App() {
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [exportModalState, setExportModalState] = useState({ isOpen: false, items: [] });
-  const [printModalState, setPrintModalState] = useState({ isOpen: false, items: [] });
+  const [printModalState, setPrintModalState] = useState({ isOpen: false, items: [], config: null });
 
   const supabaseConfig = getStoredConfig();
   const isConfigured = Boolean(supabaseConfig.url && supabaseConfig.anonKey && !supabaseConfig.url.includes('your-supabase-project'));
@@ -73,10 +72,10 @@ export default function App() {
           </div>
           <div>
             <h1 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: '#f8fafc' }}>
-              {deviceMode === 'mobile' ? '모바일 전용 실시간 OCR 카메라 스캐너' : 'PC 전용 수집 대시보드 & 라벨 프린터 수식'}
+              {deviceMode === 'mobile' ? '3mm 각인 OCR 줌 스캐너' : 'PC 라벨 프린터 오프셋 정밀 교정 대시보드'}
             </h1>
             <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
-              버전: v1.0.0.Build.6 | 2026-08-14
+              버전: v1.0.0.Build.7 | 2026-08-14
             </span>
           </div>
         </div>
@@ -136,7 +135,7 @@ export default function App() {
           <PCDashboardView
             onError={(msg) => setErrorMessage(msg)}
             onOpenExportModal={(items) => setExportModalState({ isOpen: true, items })}
-            onOpenPrintModal={(items) => setPrintModalState({ isOpen: true, items })}
+            onOpenPrintModal={(items, config) => setPrintModalState({ isOpen: true, items, config })}
             onOpenConfigModal={() => setIsConfigOpen(true)}
             onOpenImportModal={() => setIsImportOpen(true)}
           />
@@ -170,8 +169,9 @@ export default function App() {
 
       <LabelPrintModal
         isOpen={printModalState.isOpen}
-        onClose={() => setPrintModalState({ isOpen: false, items: [] })}
+        onClose={() => setPrintModalState({ isOpen: false, items: [], config: null })}
         items={printModalState.items}
+        offsetConfig={printModalState.config}
       />
     </div>
   );

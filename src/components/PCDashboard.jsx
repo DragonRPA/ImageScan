@@ -1,14 +1,23 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { RefreshCw, Download, Printer, Search, Plus, Trash2, Edit3, CheckCircle, Database, Zap, Upload } from 'lucide-react';
+import { RefreshCw, Download, Printer, Search, Plus, Trash2, Edit3, CheckCircle, Database, Zap, Upload, Table, CheckSquare, Clock } from 'lucide-react';
 import { fetchScansFromSupabase, subscribeRealtimeScans, deleteScanFromSupabase, saveScansToSupabase, deleteAllScansFromSupabase } from '../utils/supabaseClient';
-import initialData from '../data/initialData.json';
 
-export default function PCDashboard({ onError, onOpenExportModal, onOpenPrintModal, onOpenConfigModal, onOpenImportModal }) {
+export default function PCDashboard({
+  onError,
+  onOpenExportModal,
+  onOpenPrintModal,
+  onOpenConfigModal,
+  onOpenImportModal,
+  offsetConfig
+}) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIds, setSelectedIds] = useState([]);
   
+  // Drawer/Modal toggle for viewing full data table
+  const [showTableDrawer, setShowTableDrawer] = useState(false);
+
   // Realtime Auto-Print Toggle Switch
   const [autoPrintEnabled, setAutoPrintEnabled] = useState(false);
   const autoPrintRef = useRef(false);
@@ -17,19 +26,16 @@ export default function PCDashboard({ onError, onOpenExportModal, onOpenPrintMod
     autoPrintRef.current = autoPrintEnabled;
   }, [autoPrintEnabled]);
 
-  // Load initial scans from Supabase or default seed items
+  // Load scans strictly from DB (No seed fallback!)
   const loadData = async () => {
     setLoading(true);
     try {
       const data = await fetchScansFromSupabase();
-      if (data && data.length > 0) {
-        setItems(data);
-      } else {
-        setItems(initialData);
-      }
+      // If DB has no data, set empty array [] (Do NOT load seed fallback!)
+      setItems(data || []);
     } catch (err) {
-      console.warn('Realtime fetch warning, using default items:', err);
-      setItems(initialData);
+      console.warn('Realtime fetch warning:', err);
+      setItems([]);
     } finally {
       setLoading(false);
     }
@@ -44,7 +50,7 @@ export default function PCDashboard({ onError, onOpenExportModal, onOpenPrintMod
 
       if (autoPrintRef.current) {
         console.log('[Auto-Print Triggered] Mobile scan received:', newRecord);
-        onOpenPrintModal([newRecord]);
+        onOpenPrintModal([newRecord], offsetConfig);
       }
     });
 
@@ -52,6 +58,10 @@ export default function PCDashboard({ onError, onOpenExportModal, onOpenPrintMod
       if (channel) channel.unsubscribe();
     };
   }, []);
+
+  // Production KPI Metrics
+  const printedItemsCount = items.filter(i => i.status === 'EXPORTED' || i.status === 'PRINTED').length;
+  const pendingItemsCount = items.length - printedItemsCount;
 
   // Filtered Items
   const filteredItems = items.filter((item) => {
@@ -97,7 +107,7 @@ export default function PCDashboard({ onError, onOpenExportModal, onOpenPrintMod
   const selectedObjects = items.filter((i) => selectedIds.includes(i.id));
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       {/* Realtime Auto-Print Controller Banner */}
       <div style={{
         backgroundColor: autoPrintEnabled ? 'rgba(16, 185, 129, 0.15)' : '#1e293b',
@@ -135,7 +145,71 @@ export default function PCDashboard({ onError, onOpenExportModal, onOpenPrintMod
         </button>
       </div>
 
-      {/* Action Toolbar */}
+      {/* Production KPI Summary Cards */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+        gap: '12px'
+      }}>
+        {/* KPI Card 1: Unprinted Pending */}
+        <div style={{
+          backgroundColor: '#1e293b',
+          border: '1px solid #334155',
+          borderRadius: '10px',
+          padding: '14px 18px',
+          display: 'flex',
+          justify: 'space-between',
+          alignItems: 'center'
+        }}>
+          <div>
+            <div style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600 }}>출력 대기 IMEI</div>
+            <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#facc15', marginTop: '2px' }}>
+              {pendingItemsCount} <span style={{ fontSize: '0.85rem', fontWeight: 500, color: '#94a3b8' }}>건</span>
+            </div>
+          </div>
+          <Clock size={28} style={{ color: '#facc15', opacity: 0.8 }} />
+        </div>
+
+        {/* KPI Card 2: Printed Completed */}
+        <div style={{
+          backgroundColor: '#1e293b',
+          border: '1px solid #334155',
+          borderRadius: '10px',
+          padding: '14px 18px',
+          display: 'flex',
+          justify: 'space-between',
+          alignItems: 'center'
+        }}>
+          <div>
+            <div style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600 }}>출력 완료 라벨</div>
+            <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#10b981', marginTop: '2px' }}>
+              {printedItemsCount} <span style={{ fontSize: '0.85rem', fontWeight: 500, color: '#94a3b8' }}>매</span>
+            </div>
+          </div>
+          <CheckSquare size={28} style={{ color: '#10b981', opacity: 0.8 }} />
+        </div>
+
+        {/* KPI Card 3: Total IMEI Count */}
+        <div style={{
+          backgroundColor: '#1e293b',
+          border: '1px solid #334155',
+          borderRadius: '10px',
+          padding: '14px 18px',
+          display: 'flex',
+          justify: 'space-between',
+          alignItems: 'center'
+        }}>
+          <div>
+            <div style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600 }}>전체 수집 수량</div>
+            <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#38bdf8', marginTop: '2px' }}>
+              {items.length} <span style={{ fontSize: '0.85rem', fontWeight: 500, color: '#94a3b8' }}>건</span>
+            </div>
+          </div>
+          <Database size={28} style={{ color: '#38bdf8', opacity: 0.8 }} />
+        </div>
+      </div>
+
+      {/* Main Production Toolbar */}
       <div style={{
         display: 'flex',
         flexWrap: 'wrap',
@@ -143,165 +217,178 @@ export default function PCDashboard({ onError, onOpenExportModal, onOpenPrintMod
         alignItems: 'center',
         gap: '12px',
         backgroundColor: '#1e293b',
-        padding: '16px',
+        padding: '14px 18px',
         borderRadius: '10px',
         border: '1px solid #334155'
       }}>
-        {/* Search Bar */}
-        <div style={{ position: 'relative', width: '260px' }}>
-          <Search size={18} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
-          <input
-            type="text"
-            className="form-input"
-            placeholder="자산번호, IMEI, MAC, 시리얼 검색..."
-            style={{ paddingLeft: '34px', width: '100%' }}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-
-        {/* Action Buttons */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
           <button className="btn btn-outline" onClick={loadData} disabled={loading}>
-            <RefreshCw size={16} className={loading ? 'spin' : ''} />
+            <RefreshCw size={15} className={loading ? 'spin' : ''} />
             {loading ? '동기화 중...' : '새로고침'}
           </button>
 
           <button className="btn btn-outline" onClick={onOpenConfigModal}>
-            <Database size={16} />
+            <Database size={15} />
             DB 연동 설정
           </button>
 
           <button className="btn btn-outline" style={{ borderColor: '#f43f5e', color: '#fda4af' }} onClick={onOpenImportModal}>
-            <Upload size={16} />
+            <Upload size={15} />
             양식 덮어쓰기 / 업로드
+          </button>
+        </div>
+
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          <button
+            className="btn btn-outline"
+            style={{ borderColor: '#38bdf8', color: '#7dd3fc' }}
+            onClick={() => setShowTableDrawer(!showTableDrawer)}
+          >
+            <Table size={15} />
+            {showTableDrawer ? '수집 목록 닫기' : `수집 데이터 목록 보기 (${items.length}건)`}
           </button>
 
           <button
             className="btn btn-success"
-            onClick={() => onOpenExportModal(selectedObjects.length > 0 ? selectedObjects : filteredItems)}
-            disabled={filteredItems.length === 0}
+            onClick={() => onOpenExportModal(selectedObjects.length > 0 ? selectedObjects : items)}
+            disabled={items.length === 0}
           >
-            <Download size={16} />
-            엑셀/CSV 내보내기 ({selectedObjects.length || filteredItems.length}건)
+            <Download size={15} />
+            엑셀/CSV 내보내기
           </button>
 
           <button
             className="btn btn-primary"
-            onClick={() => onOpenPrintModal(selectedObjects.length > 0 ? selectedObjects : filteredItems)}
-            disabled={filteredItems.length === 0}
+            onClick={() => onOpenPrintModal(selectedObjects.length > 0 ? selectedObjects : items, offsetConfig)}
+            disabled={items.length === 0}
           >
-            <Printer size={16} />
-            Code 39 라벨 인쇄 ({selectedObjects.length || filteredItems.length}매)
+            <Printer size={15} />
+            Code 39 라벨 인쇄 ({selectedObjects.length || items.length}매)
           </button>
-
-          {selectedIds.length > 0 && (
-            <button className="btn btn-danger" onClick={handleDeleteSelected}>
-              <Trash2 size={16} />
-              선택 삭제 ({selectedIds.length})
-            </button>
-          )}
         </div>
       </div>
 
-      {/* Main Data Table (Image 2 Columns 100% Match) */}
-      <div style={{
-        backgroundColor: '#1e293b',
-        borderRadius: '10px',
-        border: '1px solid #334155',
-        overflowX: 'auto',
-        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.2)'
-      }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem', textAlign: 'left' }}>
-          <thead>
-            <tr style={{ backgroundColor: '#0f172a', color: '#94a3b8', borderBottom: '1px solid #334155' }}>
-              <th style={{ padding: '12px 16px', width: '40px' }} className="nowrap-cell">
-                <input
-                  type="checkbox"
-                  checked={selectedIds.length > 0 && selectedIds.length === filteredItems.length}
-                  onChange={handleSelectAll}
-                />
-              </th>
-              <th style={{ padding: '12px 16px', color: '#38bdf8', fontWeight: 700 }} className="nowrap-cell">
-                자산번호 (A)
-              </th>
-              <th style={{ padding: '12px 16px', color: '#facc15', fontWeight: 700 }} className="nowrap-cell">
-                IMEI (B)
-              </th>
-              <th style={{ padding: '12px 16px', color: '#f43f5e', fontWeight: 700 }} className="nowrap-cell">
-                MAC Address (C)
-              </th>
-              <th style={{ padding: '12px 16px', color: '#a855f7', fontWeight: 700 }} className="nowrap-cell">
-                시리얼 (D)
-              </th>
-              <th style={{ padding: '12px 16px' }} className="nowrap-cell">
-                스캔 일시
-              </th>
-              <th style={{ padding: '12px 16px', textAlign: 'center' }} className="nowrap-cell">
-                상태
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredItems.length === 0 ? (
-              <tr>
-                <td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
-                  등록된 데이터가 없습니다. 핸드폰 모바일 스캐너에서 IMEI를 수집하거나 엑셀 양식을 업로드하세요.
-                </td>
-              </tr>
-            ) : (
-              filteredItems.map((item) => {
-                const isSelected = selectedIds.includes(item.id);
-                return (
-                  <tr
-                    key={item.id}
-                    style={{
-                      borderBottom: '1px solid #334155',
-                      backgroundColor: isSelected ? 'rgba(37, 99, 235, 0.15)' : 'transparent',
-                      transition: 'background-color 0.15s ease'
-                    }}
-                  >
-                    <td style={{ padding: '12px 16px' }} className="nowrap-cell">
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => handleToggleSelect(item.id)}
-                      />
-                    </td>
-                    <td style={{ padding: '12px 16px', fontWeight: 700, color: '#38bdf8' }} className="nowrap-cell">
-                      {item.asset_no}
-                    </td>
-                    <td style={{ padding: '12px 16px', fontFamily: 'monospace', fontWeight: 700, color: '#fef08a' }} className="nowrap-cell">
-                      {item.imei}
-                    </td>
-                    <td style={{ padding: '12px 16px', fontFamily: 'monospace', color: '#fda4af' }} className="nowrap-cell">
-                      {item.mac_address || '-'}
-                    </td>
-                    <td style={{ padding: '12px 16px', fontFamily: 'monospace', color: '#d8b4fe' }} className="nowrap-cell">
-                      {item.serial_no || '-'}
-                    </td>
-                    <td style={{ padding: '12px 16px', color: '#94a3b8', fontSize: '0.8rem' }} className="nowrap-cell">
-                      {new Date(item.created_at || item.scanned_at || Date.now()).toLocaleString('ko-KR')}
-                    </td>
-                    <td style={{ padding: '12px 16px', textAlign: 'center' }} className="nowrap-cell">
-                      <span style={{
-                        padding: '4px 8px',
-                        borderRadius: '4px',
-                        fontSize: '0.75rem',
-                        fontWeight: 600,
-                        backgroundColor: item.status === 'EXPORTED' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(37, 99, 235, 0.2)',
-                        color: item.status === 'EXPORTED' ? '#6ee7b7' : '#93c5fd'
-                      }}>
-                        {item.status === 'EXPORTED' ? '내보냄' : '수집완료'}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })
+      {/* Empty State Banner when 0 items */}
+      {items.length === 0 && !loading && (
+        <div style={{
+          backgroundColor: '#0f172a',
+          border: '2px dashed #334155',
+          borderRadius: '12px',
+          padding: '40px 20px',
+          textAlign: 'center',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '12px'
+        }}>
+          <Database size={40} style={{ color: '#64748b' }} />
+          <h4 style={{ margin: 0, fontSize: '1.05rem', color: '#f8fafc' }}>
+            수집되거나 업로드된 IMEI 데이터가 없습니다
+          </h4>
+          <p style={{ margin: 0, fontSize: '0.85rem', color: '#94a3b8', maxWidth: '450px' }}>
+            상단의 <strong>[양식 덮어쓰기 / 업로드]</strong> 버튼을 클릭하여 엑셀 양식을 업로드하거나, 모바일 핸드폰 스캐너로 기기 IMEI를 스캔하세요.
+          </p>
+          <button className="btn btn-primary" style={{ marginTop: '8px' }} onClick={onOpenImportModal}>
+            <Upload size={16} /> 엑셀 파일 직접 업로드하기
+          </button>
+        </div>
+      )}
+
+      {/* Drawer Data Table View (Collapsible) */}
+      {showTableDrawer && items.length > 0 && (
+        <div style={{
+          backgroundColor: '#1e293b',
+          borderRadius: '10px',
+          border: '1px solid #334155',
+          padding: '16px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '12px'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ position: 'relative', width: '280px' }}>
+              <Search size={16} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+              <input
+                type="text"
+                className="form-input"
+                placeholder="자산번호, IMEI, MAC, 시리얼 검색..."
+                style={{ paddingLeft: '32px', width: '100%', fontSize: '0.85rem' }}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+
+            {selectedIds.length > 0 && (
+              <button className="btn btn-danger" style={{ padding: '6px 12px', fontSize: '0.8rem' }} onClick={handleDeleteSelected}>
+                <Trash2 size={14} /> 선택 삭제 ({selectedIds.length})
+              </button>
             )}
-          </tbody>
-        </table>
-      </div>
+          </div>
+
+          <div style={{ overflowX: 'auto', maxHeight: '350px' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', textAlign: 'left' }}>
+              <thead>
+                <tr style={{ backgroundColor: '#0f172a', color: '#94a3b8', borderBottom: '1px solid #334155' }}>
+                  <th style={{ padding: '10px 12px', width: '40px' }} className="nowrap-cell">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.length > 0 && selectedIds.length === filteredItems.length}
+                      onChange={handleSelectAll}
+                    />
+                  </th>
+                  <th style={{ padding: '10px 12px', color: '#38bdf8', fontWeight: 700 }} className="nowrap-cell">자산번호 (A)</th>
+                  <th style={{ padding: '10px 12px', color: '#facc15', fontWeight: 700 }} className="nowrap-cell">IMEI (B)</th>
+                  <th style={{ padding: '10px 12px', color: '#f43f5e', fontWeight: 700 }} className="nowrap-cell">MAC Address (C)</th>
+                  <th style={{ padding: '10px 12px', color: '#a855f7', fontWeight: 700 }} className="nowrap-cell">시리얼 (D)</th>
+                  <th style={{ padding: '10px 12px' }} className="nowrap-cell">스캔/등록 일시</th>
+                  <th style={{ padding: '10px 12px', textAlign: 'center' }} className="nowrap-cell">인쇄 상태</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredItems.map((item) => {
+                  const isSelected = selectedIds.includes(item.id);
+                  return (
+                    <tr
+                      key={item.id}
+                      style={{
+                        borderBottom: '1px solid #334155',
+                        backgroundColor: isSelected ? 'rgba(37, 99, 235, 0.15)' : 'transparent'
+                      }}
+                    >
+                      <td style={{ padding: '10px 12px' }} className="nowrap-cell">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => handleToggleSelect(item.id)}
+                        />
+                      </td>
+                      <td style={{ padding: '10px 12px', fontWeight: 700, color: '#38bdf8' }} className="nowrap-cell">{item.asset_no}</td>
+                      <td style={{ padding: '10px 12px', fontFamily: 'monospace', fontWeight: 700, color: '#fef08a' }} className="nowrap-cell">{item.imei}</td>
+                      <td style={{ padding: '10px 12px', fontFamily: 'monospace', color: '#fda4af' }} className="nowrap-cell">{item.mac_address || '-'}</td>
+                      <td style={{ padding: '10px 12px', fontFamily: 'monospace', color: '#d8b4fe' }} className="nowrap-cell">{item.serial_no || '-'}</td>
+                      <td style={{ padding: '10px 12px', color: '#94a3b8', fontSize: '0.78rem' }} className="nowrap-cell">
+                        {new Date(item.created_at || item.scanned_at || Date.now()).toLocaleString('ko-KR')}
+                      </td>
+                      <td style={{ padding: '10px 12px', textAlign: 'center' }} className="nowrap-cell">
+                        <span style={{
+                          padding: '3px 6px',
+                          borderRadius: '4px',
+                          fontSize: '0.72rem',
+                          fontWeight: 600,
+                          backgroundColor: item.status === 'EXPORTED' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(234, 179, 8, 0.2)',
+                          color: item.status === 'EXPORTED' ? '#6ee7b7' : '#fef08a'
+                        }}>
+                          {item.status === 'EXPORTED' ? '인쇄 완료' : '출력 대기'}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

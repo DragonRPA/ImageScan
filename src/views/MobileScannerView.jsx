@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { Camera, RefreshCw, UploadCloud, CheckCircle2, Play, Square, Plus, Trash2, Volume2, Database, ShieldCheck } from 'lucide-react';
+import { Camera, ZoomIn, ZoomOut, UploadCloud, Play, Square, Plus, Trash2, Volume2, ShieldCheck, Eye } from 'lucide-react';
 import { getTesseractWorker, preprocessCanvasROI, parseFieldsFromText } from '../utils/ocrWorker';
 import { triggerSuccessFeedback } from '../utils/soundFeedback';
 import { saveScansToSupabase, getStoredConfig } from '../utils/supabaseClient';
@@ -8,18 +8,23 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const scanTimerRef = useRef(null);
+  const magnifierCanvasRef = useRef(null);
 
   const [isScanning, setIsScanning] = useState(false);
   const [cameraStatus, setCameraStatus] = useState('카메라 준비 중');
-  const [ocrStatus, setOcrStatus] = useState('IMEI 각인 부위에 카메라를 대세요');
+  const [ocrStatus, setOcrStatus] = useState('3mm 각인 부위에 마이크로 타겟을 맞추세요');
   const [detectedPulse, setDetectedPulse] = useState(false);
 
-  // Recent 3 scanned items only for compact mobile view
+  // Zoom Level (1.0x to 5.0x)
+  const [zoomLevel, setZoomLevel] = useState(3.0);
+  const [hardwareZoomSupported, setHardwareZoomSupported] = useState(false);
+
+  // Recent scanned items list
   const [scannedItems, setScannedItems] = useState([]);
   const [lastScannedImei, setLastScannedImei] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
-  // Manual Add Form Modal Toggle
+  // Manual Add Modal Form
   const [showManualModal, setShowManualModal] = useState(false);
   const [manualAssetNo, setManualAssetNo] = useState('');
   const [manualImei, setManualImei] = useState('');
@@ -29,26 +34,40 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
   const supabaseConfig = getStoredConfig();
   const isConfigured = Boolean(supabaseConfig.url && supabaseConfig.anonKey && !supabaseConfig.url.includes('your-supabase-project'));
 
-  // Start Mobile Camera Stream
+  // Start Camera Stream with Zoom Capabilities
   const startCamera = async () => {
     try {
       setCameraStatus('카메라 권한 요청 중...');
       const constraints = {
         video: {
           facingMode: { ideal: 'environment' },
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
+          width: { ideal: 1920 },
+          height: { ideal: 1080 }
         }
       };
 
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
+      
+      const track = stream.getVideoTracks()[0];
+      if (track && track.getCapabilities) {
+        const capabilities = track.getCapabilities();
+        if (capabilities.zoom) {
+          setHardwareZoomSupported(true);
+          try {
+            await track.applyConstraints({ advanced: [{ zoom: zoomLevel }] });
+          } catch (e) {
+            console.warn('Hardware zoom constrain failed:', e);
+          }
+        }
+      }
+
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
       }
       setIsScanning(true);
-      setCameraStatus('실시간 무버튼 OCR 자동 감지 중');
+      setCameraStatus(`3mm 미세 각인 OCR 줌 ${zoomLevel}x 감지 중`);
     } catch (err) {
       console.error('Camera Access Error:', err);
       setCameraStatus('카메라 연결 실패');
@@ -56,7 +75,27 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
     }
   };
 
-  // Stop Camera Stream
+  // Change Hardware / Software Zoom
+  const applyZoom = async (newZoom) => {
+    const clamped = Math.max(1.0, Math.min(5.0, newZoom));
+    setZoomLevel(clamped);
+
+    if (streamRef.current) {
+      const track = streamRef.current.getVideoTracks()[0];
+      if (track && track.getCapabilities) {
+        const cap = track.getCapabilities();
+        if (cap.zoom) {
+          try {
+            const target = Math.min(cap.zoom.max, Math.max(cap.zoom.min, clamped));
+            await track.applyConstraints({ advanced: [{ zoom: target }] });
+          } catch (e) {
+            // Ignore
+          }
+        }
+      }
+    }
+  };
+
   const stopCamera = () => {
     if (scanTimerRef.current) {
       clearInterval(scanTimerRef.current);
@@ -70,7 +109,7 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
     setCameraStatus('카메라 정지됨');
   };
 
-  // Continuous OCR Scan Loop
+  // Continuous Micro-Text OCR Scan Loop
   useEffect(() => {
     if (!isScanning) return;
 
@@ -80,7 +119,7 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
     scanTimerRef.current = setInterval(async () => {
       if (isProcessing || !videoRef.current || videoRef.current.readyState !== 4) return;
       const now = Date.now();
-      if (now - lastScanTime < 400) return; // 400ms throttle
+      if (now - lastScanTime < 400) return;
 
       isProcessing = true;
       try {
@@ -93,17 +132,28 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
           return;
         }
 
-        const roiWidth = Math.floor(vWidth * 0.8);
-        const roiHeight = Math.floor(vHeight * 0.3);
-        const roiX = Math.floor((vWidth - roiWidth) / 2);
-        const roiY = Math.floor((vHeight - roiHeight) / 2);
+        // Narrow Micro-Reticle for 3mm Etched Text
+        const baseRoiWidth = Math.floor(vWidth * 0.75 / zoomLevel);
+        const baseRoiHeight = Math.floor(vHeight * 0.15 / zoomLevel);
+        const roiX = Math.floor((vWidth - baseRoiWidth) / 2);
+        const roiY = Math.floor((vHeight - baseRoiHeight) / 2);
 
-        const roiCanvas = preprocessCanvasROI(video, { x: roiX, y: roiY, width: roiWidth, height: roiHeight });
+        // Preprocess High-Res ROI with 3x Upscaling
+        const roiCanvas = preprocessCanvasROI(video, { x: roiX, y: roiY, width: baseRoiWidth, height: baseRoiHeight });
 
+        // Update Magnifier Preview Canvas
+        if (magnifierCanvasRef.current) {
+          const mCtx = magnifierCanvasRef.current.getContext('2d');
+          magnifierCanvasRef.current.width = roiCanvas.width;
+          magnifierCanvasRef.current.height = roiCanvas.height;
+          mCtx.drawImage(roiCanvas, 0, 0);
+        }
+
+        // Tesseract OCR
         const worker = await getTesseractWorker();
         const { data: { text } } = await worker.recognize(roiCanvas);
 
-        setOcrStatus(text.trim() ? `감지: ${text.slice(0, 25)}...` : 'IMEI 감지 대기 중...');
+        setOcrStatus(text.trim() ? `3mm 감지: ${text.slice(0, 25)}...` : `3mm 각인 감지 중 (${zoomLevel.toFixed(1)}x 줌)...`);
 
         const parsed = parseFieldsFromText(text);
 
@@ -125,12 +175,10 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
               status: 'COMPLETED'
             };
 
-            // Trigger sound & haptic feedback & pulse effect
             triggerSuccessFeedback();
             setDetectedPulse(true);
             setTimeout(() => setDetectedPulse(false), 900);
 
-            // Auto Save to Supabase DB immediately if configured!
             if (isConfigured) {
               try {
                 saveScansToSupabase([newItem]);
@@ -141,7 +189,7 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
             }
 
             setScannedItems(prev => [newItem, ...prev]);
-            setOcrStatus(`★ 감지 성공! IMEI: ${parsed.imei}`);
+            setOcrStatus(`★ 3mm 감지 성공! IMEI: ${parsed.imei}`);
           }
         }
       } catch (err) {
@@ -154,7 +202,7 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
     return () => {
       if (scanTimerRef.current) clearInterval(scanTimerRef.current);
     };
-  }, [isScanning, lastScannedImei, scannedItems, isConfigured]);
+  }, [isScanning, lastScannedImei, scannedItems, isConfigured, zoomLevel]);
 
   useEffect(() => {
     startCamera();
@@ -208,8 +256,8 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
     <div style={{
       display: 'flex',
       flexDirection: 'column',
-      height: 'calc(100vh - 110px)',
-      gap: '12px',
+      height: 'calc(100vh - 100px)',
+      gap: '10px',
       position: 'relative'
     }}>
       {/* Top Mobile Status Header */}
@@ -218,35 +266,43 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
         justify: 'space-between',
         alignItems: 'center',
         backgroundColor: '#1e293b',
-        padding: '10px 14px',
-        borderRadius: '10px',
+        padding: '8px 12px',
+        borderRadius: '8px',
         border: '1px solid #334155'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <ShieldCheck size={18} style={{ color: isConfigured ? '#10b981' : '#f59e0b' }} />
-          <span style={{ fontSize: '0.8rem', fontWeight: 600, color: isConfigured ? '#6ee7b7' : '#fef08a' }}>
-            {isConfigured ? 'DB 실시간 저장 연동됨' : '로컬 모드 (DB 설정 필요)'}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <ShieldCheck size={16} style={{ color: isConfigured ? '#10b981' : '#f59e0b' }} />
+          <span style={{ fontSize: '0.78rem', fontWeight: 600, color: isConfigured ? '#6ee7b7' : '#fef08a' }}>
+            {isConfigured ? 'DB 실시간 저장 중' : 'DB 설정 필요'}
           </span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Volume2 size={16} style={{ color: '#38bdf8' }} />
-          <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#38bdf8' }}>
-            누적 {scannedItems.length}건
-          </span>
+        {/* Zoom Quick Selector */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <span style={{ fontSize: '0.75rem', color: '#94a3b8', marginRight: '4px' }}>3mm 각인 줌:</span>
+          {[1.5, 2.5, 3.5, 5.0].map(z => (
+            <button
+              key={z}
+              className={`btn ${zoomLevel === z ? 'btn-primary' : 'btn-outline'}`}
+              style={{ padding: '2px 6px', fontSize: '0.72rem', border: '1px solid #334155' }}
+              onClick={() => applyZoom(z)}
+            >
+              {z}x
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* 100% Full Viewfinder Camera Screen */}
+      {/* Main Viewfinder Screen with 3mm Magnifier */}
       <div style={{
         flex: 1,
         position: 'relative',
         backgroundColor: '#000',
-        borderRadius: '16px',
+        borderRadius: '12px',
         overflow: 'hidden',
         border: `3px solid ${detectedPulse ? '#10b981' : '#334155'}`,
         boxShadow: detectedPulse ? '0 0 25px rgba(16, 185, 129, 0.9)' : 'none',
-        transition: 'all 0.25s ease'
+        transition: 'all 0.2s ease'
       }}>
         <video
           ref={videoRef}
@@ -256,77 +312,105 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
         />
 
-        {/* Central ROI Target Overlay */}
+        {/* Live Magnifier Window Overlay (3mm Text Super-Magnified) */}
+        <div style={{
+          position: 'absolute',
+          top: '10px',
+          left: '10px',
+          backgroundColor: 'rgba(15, 23, 42, 0.92)',
+          border: '2px solid #38bdf8',
+          borderRadius: '8px',
+          padding: '6px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '4px',
+          boxShadow: '0 4px 10px rgba(0,0,0,0.6)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.7rem', color: '#38bdf8', fontWeight: 700 }}>
+            <Eye size={12} /> 3mm 미세 각인 돋보기 ({zoomLevel.toFixed(1)}x)
+          </div>
+          <canvas
+            ref={magnifierCanvasRef}
+            style={{
+              width: '140px',
+              height: '40px',
+              borderRadius: '4px',
+              border: '1px solid #334155',
+              backgroundColor: '#fff'
+            }}
+          />
+        </div>
+
+        {/* Slim Micro-Reticle Box for 3mm Etched Text */}
         <div style={{
           position: 'absolute',
           top: '50%',
           left: '50%',
           transform: 'translate(-50%, -50%)',
-          width: '85%',
-          height: '28%',
+          width: '80%',
+          height: '14%',
           border: `2px dashed ${detectedPulse ? '#10b981' : '#38bdf8'}`,
-          borderRadius: '12px',
-          boxShadow: detectedPulse ? '0 0 30px rgba(16, 185, 129, 0.9)' : '0 0 0 9999px rgba(0, 0, 0, 0.55)',
+          borderRadius: '8px',
+          boxShadow: detectedPulse ? '0 0 30px rgba(16, 185, 129, 0.9)' : '0 0 0 9999px rgba(0, 0, 0, 0.6)',
           display: 'flex',
-          flexDirection: 'column',
           alignItems: 'center',
           justify: 'center',
-          gap: '6px',
           transition: 'all 0.2s ease'
         }}>
           <span style={{
-            fontSize: '0.8rem',
+            fontSize: '0.75rem',
             color: detectedPulse ? '#6ee7b7' : '#e0f2fe',
             fontWeight: 800,
             backgroundColor: 'rgba(15, 23, 42, 0.85)',
-            padding: '4px 10px',
-            borderRadius: '6px'
+            padding: '2px 8px',
+            borderRadius: '4px'
           }}>
-            {detectedPulse ? '★ IMEI 실시간 감지 성공!' : 'IMEI / 텍스트 중앙 조준'}
-          </span>
-          <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
-            버튼을 누르지 않아도 자동으로 인식됩니다
+            {detectedPulse ? '★ 3mm IMEI 감지 성공!' : '3mm 레이저 각인 조준'}
           </span>
         </div>
 
         {/* Floating Controls over Camera */}
         <div style={{
           position: 'absolute',
-          bottom: '12px',
-          left: '12px',
-          right: '12px',
+          bottom: '10px',
+          left: '10px',
+          right: '10px',
           display: 'flex',
           justify: 'space-between',
           alignItems: 'center'
         }}>
           <div style={{
-            fontSize: '0.75rem',
+            fontSize: '0.72rem',
             color: '#fff',
             backgroundColor: 'rgba(15, 23, 42, 0.9)',
-            padding: '6px 12px',
-            borderRadius: '8px',
-            fontWeight: 600
+            padding: '4px 10px',
+            borderRadius: '6px'
           }}>
             {cameraStatus}
           </div>
 
-          <button
-            className={`btn ${isScanning ? 'btn-danger' : 'btn-primary'}`}
-            style={{ padding: '8px 14px', fontSize: '0.85rem' }}
-            onClick={isScanning ? stopCamera : startCamera}
-          >
-            {isScanning ? <Square size={14} /> : <Play size={14} />}
-            {isScanning ? '스캔 정지' : '스캔 시작'}
-          </button>
+          <div style={{ display: 'flex', gap: '6px' }}>
+            <button className="btn btn-outline" style={{ padding: '6px 10px', fontSize: '0.75rem', backgroundColor: 'rgba(15,23,42,0.8)' }} onClick={() => applyZoom(zoomLevel - 0.5)}>
+              <ZoomOut size={14} />
+            </button>
+            <button className="btn btn-outline" style={{ padding: '6px 10px', fontSize: '0.75rem', backgroundColor: 'rgba(15,23,42,0.8)' }} onClick={() => applyZoom(zoomLevel + 0.5)}>
+              <ZoomIn size={14} />
+            </button>
+            <button className={`btn ${isScanning ? 'btn-danger' : 'btn-primary'}`} style={{ padding: '6px 12px', fontSize: '0.78rem' }} onClick={isScanning ? stopCamera : startCamera}>
+              {isScanning ? <Square size={13} /> : <Play size={13} />}
+              {isScanning ? '정지' : '시작'}
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* OCR Realtime Status Alert */}
+      {/* OCR Status Banner */}
       <div style={{
         backgroundColor: '#1e293b',
-        padding: '10px 14px',
-        borderRadius: '8px',
-        fontSize: '0.85rem',
+        padding: '8px 12px',
+        borderRadius: '6px',
+        fontSize: '0.8rem',
         color: detectedPulse ? '#6ee7b7' : '#94a3b8',
         fontWeight: detectedPulse ? 700 : 500,
         textAlign: 'center',
@@ -335,33 +419,32 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
         {ocrStatus}
       </div>
 
-      {/* Bottom Compact 3 Items Quick Bar */}
+      {/* Bottom Compact Quick Items */}
       <div style={{
         backgroundColor: '#1e293b',
-        borderRadius: '10px',
-        padding: '10px 12px',
+        borderRadius: '8px',
+        padding: '8px 10px',
         border: '1px solid #334155',
         display: 'flex',
         flexDirection: 'column',
-        gap: '6px'
+        gap: '4px'
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600 }}>최근 감지 목록 (PC 대시보드로 즉시 전송됨)</span>
+          <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: 600 }}>최근 감지 목록 ({scannedItems.length}건)</span>
           <div style={{ display: 'flex', gap: '6px' }}>
-            <button className="btn btn-outline" style={{ padding: '3px 8px', fontSize: '0.75rem' }} onClick={() => setShowManualModal(true)}>
+            <button className="btn btn-outline" style={{ padding: '2px 6px', fontSize: '0.72rem' }} onClick={() => setShowManualModal(true)}>
               <Plus size={12} /> 수동 입력
             </button>
-            <button className="btn btn-success" style={{ padding: '3px 8px', fontSize: '0.75rem' }} onClick={handleExportAll} disabled={scannedItems.length === 0 || isSaving}>
+            <button className="btn btn-success" style={{ padding: '2px 6px', fontSize: '0.72rem' }} onClick={handleExportAll} disabled={scannedItems.length === 0 || isSaving}>
               <UploadCloud size={12} /> DB 내보내기
             </button>
           </div>
         </div>
 
-        {/* Compact List Chips */}
-        <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
+        <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '2px' }}>
           {scannedItems.length === 0 ? (
-            <span style={{ fontSize: '0.75rem', color: '#64748b', padding: '4px 0' }}>
-              아직 스캔된 항목이 없습니다. 카메라를 IMEI 각인 부위에 대세요.
+            <span style={{ fontSize: '0.72rem', color: '#64748b', padding: '2px 0' }}>
+              아직 감지된 항목이 없습니다. 3mm 각인에 조준하세요.
             </span>
           ) : (
             scannedItems.slice(0, 5).map((item) => (
@@ -370,12 +453,12 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
                 style={{
                   backgroundColor: '#0f172a',
                   border: '1px solid #334155',
-                  borderRadius: '6px',
-                  padding: '6px 10px',
-                  fontSize: '0.75rem',
+                  borderRadius: '4px',
+                  padding: '4px 8px',
+                  fontSize: '0.7rem',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '2px',
+                  gap: '1px',
                   whiteSpace: 'nowrap',
                   flexShrink: 0
                 }}
@@ -392,8 +475,8 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
       {showManualModal && (
         <div className="modal-overlay">
           <div className="modal-content">
-            <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '1.1rem' }}>수동 IMEI 데이터 입력</h3>
-            <form onSubmit={handleAddManualItem} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <h3 style={{ marginTop: 0, marginBottom: '14px', fontSize: '1rem' }}>수동 IMEI 데이터 입력</h3>
+            <form onSubmit={handleAddManualItem} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <div className="form-group">
                 <label className="form-label">자산번호 (관리번호)</label>
                 <input type="text" className="form-input" placeholder="TEST0001" value={manualAssetNo} onChange={e => setManualAssetNo(e.target.value)} />

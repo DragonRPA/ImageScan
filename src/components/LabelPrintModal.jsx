@@ -1,9 +1,16 @@
 import React, { useState } from 'react';
-import { Printer, X } from 'lucide-react';
+import { Printer, X, Sliders } from 'lucide-react';
 import { generateCode39DataUrl } from '../utils/barcode39';
 
-export default function LabelPrintModal({ isOpen, onClose, items }) {
+export default function LabelPrintModal({ isOpen, onClose, items, offsetConfig }) {
   if (!isOpen) return null;
+
+  const config = offsetConfig || {
+    offsetX: 0,
+    offsetY: 0,
+    fontSize: 11,
+    barcodeHeight: 11
+  };
 
   const [labelWidth, setLabelWidth] = useState(65);  // mm
   const [labelHeight, setLabelHeight] = useState(35); // mm
@@ -14,60 +21,49 @@ export default function LabelPrintModal({ isOpen, onClose, items }) {
 
   return (
     <div className="modal-overlay">
-      <div className="modal-content" style={{ maxWidth: '750px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+      <div className="modal-content" style={{ maxWidth: '800px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--primary)' }}>
             <Printer size={22} />
-            <h3 style={{ margin: 0, fontSize: '1.15rem' }}>Code 39 라벨 프린터 출력 제어</h3>
+            <h3 style={{ margin: 0, fontSize: '1.15rem' }}>Code 39 라벨 인쇄 (오프셋 보정 적용됨)</h3>
           </div>
           <button className="btn btn-outline" style={{ padding: '4px 8px' }} onClick={onClose}>
             <X size={18} />
           </button>
         </div>
 
-        {/* Label Dimension Adjuster */}
+        {/* Applied Offset Summary Banner */}
         <div style={{
-          display: 'flex',
-          gap: '16px',
           backgroundColor: '#0f172a',
-          padding: '12px 16px',
+          padding: '10px 14px',
           borderRadius: '8px',
-          marginBottom: '20px',
-          fontSize: '0.85rem'
+          border: '1px solid #334155',
+          marginBottom: '16px',
+          display: 'flex',
+          justify: 'space-between',
+          alignItems: 'center',
+          fontSize: '0.8rem',
+          color: '#94a3b8'
         }}>
-          <div className="form-group" style={{ flex: 1 }}>
-            <label className="form-label">라벨 가로 크기 (mm)</label>
-            <input
-              type="number"
-              className="form-input"
-              value={labelWidth}
-              onChange={e => setLabelWidth(Number(e.target.value))}
-            />
+          <div style={{ display: 'flex', gap: '16px' }}>
+            <span>오프셋 X: <strong style={{ color: '#38bdf8' }}>{config.offsetX}mm</strong></span>
+            <span>오프셋 Y: <strong style={{ color: '#38bdf8' }}>{config.offsetY}mm</strong></span>
+            <span>폰트 크기: <strong style={{ color: '#facc15' }}>{config.fontSize}px</strong></span>
+            <span>바코드 높이: <strong style={{ color: '#10b981' }}>{config.barcodeHeight}mm</strong></span>
           </div>
-          <div className="form-group" style={{ flex: 1 }}>
-            <label className="form-label">라벨 세로 크기 (mm)</label>
-            <input
-              type="number"
-              className="form-input"
-              value={labelHeight}
-              onChange={e => setLabelHeight(Number(e.target.value))}
-            />
-          </div>
-          <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-            <button className="btn btn-primary" onClick={handlePrint}>
-              <Printer size={16} />
-              프린터로 라벨 인쇄 ({items.length}매)
-            </button>
-          </div>
+
+          <button className="btn btn-primary" onClick={handlePrint} style={{ padding: '6px 12px', fontSize: '0.8rem' }}>
+            <Printer size={14} /> 인쇄 출력 시작 ({items.length}매)
+          </button>
         </div>
 
         {/* Live Preview Area */}
-        <p style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '10px' }}>
-          [이미지 1] 실물 라벨 서식 1:1 미리보기 (Code 39 바코드: *자산번호*)
+        <p style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '10px' }}>
+          [이미지 1] 1:1 실물 라벨 서식 미리보기 (Code 39 바코드: *자산번호*)
         </p>
 
         <div style={{
-          maxHeight: '400px',
+          maxHeight: '380px',
           overflowY: 'auto',
           backgroundColor: '#0f172a',
           padding: '20px',
@@ -78,8 +74,8 @@ export default function LabelPrintModal({ isOpen, onClose, items }) {
           gap: '16px'
         }}>
           {items.map((item, idx) => {
-            const assetNo = item.asset_no || item.assetNo || `11112222`;
-            const barcodeUrl = generateCode39DataUrl(assetNo);
+            const assetNo = item.asset_no || item.assetNo || `TEST0001`;
+            const barcodeUrl = generateCode39DataUrl(assetNo, { height: config.barcodeHeight * 3 });
 
             return (
               <div
@@ -90,53 +86,55 @@ export default function LabelPrintModal({ isOpen, onClose, items }) {
                   height: `${labelHeight}mm`,
                   backgroundColor: '#ffffff',
                   color: '#000000',
-                  padding: '10px 14px',
-                  borderRadius: '4px',
-                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3)',
+                  padding: '8px 12px',
+                  borderRadius: '3px',
+                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.4)',
                   display: 'flex',
                   flexDirection: 'column',
                   justify: 'space-between',
-                  boxSizing: 'border-box'
+                  boxSizing: 'border-box',
+                  transform: `translate(${config.offsetX * 2}px, ${config.offsetY * 2}px)`,
+                  transition: 'transform 0.2s ease'
                 }}
               >
-                {/* 4 Key-Value Rows Right Aligned (Image 1 Spec) */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '11px', fontWeight: 600 }}>
+                {/* 4 Key-Value Rows (Image 1 Spec) */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', fontSize: `${config.fontSize}px`, fontWeight: 600 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ width: '35%', textAlign: 'right', paddingRight: '10px', color: '#333' }}>관리번호</span>
-                    <span style={{ width: '65%', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700, fontSize: '12px' }}>
+                    <span style={{ width: '35%', textAlign: 'right', paddingRight: '8px', color: '#333' }}>관리번호</span>
+                    <span style={{ width: '65%', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700 }}>
                       {assetNo}
                     </span>
                   </div>
 
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ width: '35%', textAlign: 'right', paddingRight: '10px', color: '#333' }}>시리얼</span>
-                    <span style={{ width: '65%', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700, fontSize: '12px' }}>
-                      {item.serial_no || item.serialNo || 'R5KL60F0CZW'}
+                    <span style={{ width: '35%', textAlign: 'right', paddingRight: '8px', color: '#333' }}>시리얼</span>
+                    <span style={{ width: '65%', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700 }}>
+                      {item.serial_no || item.serialNo || '-'}
                     </span>
                   </div>
 
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ width: '35%', textAlign: 'right', paddingRight: '10px', color: '#333' }}>MAC</span>
-                    <span style={{ width: '65%', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700, fontSize: '12px' }}>
-                      {item.mac_address || item.macAddress || '4CEBB0B57A51'}
+                    <span style={{ width: '35%', textAlign: 'right', paddingRight: '8px', color: '#333' }}>MAC</span>
+                    <span style={{ width: '65%', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700 }}>
+                      {item.mac_address || item.macAddress || '-'}
                     </span>
                   </div>
 
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ width: '35%', textAlign: 'right', paddingRight: '10px', color: '#333' }}>IMEI</span>
-                    <span style={{ width: '65%', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700, fontSize: '12px' }}>
-                      {item.imei || '351379300225052'}
+                    <span style={{ width: '35%', textAlign: 'right', paddingRight: '8px', color: '#333' }}>IMEI</span>
+                    <span style={{ width: '65%', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700 }}>
+                      {item.imei || '-'}
                     </span>
                   </div>
                 </div>
 
                 {/* Bottom Code 39 Barcode */}
-                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginTop: '4px' }}>
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginTop: '2px' }}>
                   {barcodeUrl ? (
                     <img
                       src={barcodeUrl}
                       alt={`Code39 Barcode ${assetNo}`}
-                      style={{ height: '38px', maxWidth: '95%', objectFit: 'contain' }}
+                      style={{ height: `${config.barcodeHeight * 2.5}px`, maxWidth: '95%', objectFit: 'contain' }}
                     />
                   ) : (
                     <span style={{ fontSize: '9px', color: 'red' }}>바코드 생성 실패</span>
@@ -147,14 +145,23 @@ export default function LabelPrintModal({ isOpen, onClose, items }) {
           })}
         </div>
 
-        {/* Printable Section for Browser Print Dialog */}
+        {/* Printable Section for Browser Print Dialog with exact X/Y offset mm */}
         <div className="print-area" style={{ display: 'none' }}>
           {items.map((item, idx) => {
-            const assetNo = item.asset_no || item.assetNo || `11112222`;
-            const barcodeUrl = generateCode39DataUrl(assetNo);
+            const assetNo = item.asset_no || item.assetNo || `TEST0001`;
+            const barcodeUrl = generateCode39DataUrl(assetNo, { height: config.barcodeHeight * 3.5 });
             return (
-              <div key={`print_${item.id || idx}`} className="label-sticker" style={{ width: `${labelWidth}mm`, height: `${labelHeight}mm` }}>
-                <div className="label-rows">
+              <div
+                key={`print_${item.id || idx}`}
+                className="label-sticker"
+                style={{
+                  width: `${labelWidth}mm`,
+                  height: `${labelHeight}mm`,
+                  margin: `${config.offsetY}mm 0 0 ${config.offsetX}mm`,
+                  fontSize: `${config.fontSize}px`
+                }}
+              >
+                <div className="label-rows" style={{ fontSize: `${config.fontSize}px` }}>
                   <div className="label-row">
                     <span className="label-key">관리번호</span>
                     <span className="label-val">{assetNo}</span>
@@ -173,20 +180,27 @@ export default function LabelPrintModal({ isOpen, onClose, items }) {
                   </div>
                 </div>
                 <div className="label-barcode-container">
-                  {barcodeUrl && <img src={barcodeUrl} className="label-barcode-img" alt="barcode" />}
+                  {barcodeUrl && (
+                    <img
+                      src={barcodeUrl}
+                      className="label-barcode-img"
+                      style={{ height: `${config.barcodeHeight}mm` }}
+                      alt="barcode"
+                    />
+                  )}
                 </div>
               </div>
             );
           })}
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px', gap: '10px' }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px', gap: '10px' }}>
           <button className="btn btn-outline" onClick={onClose}>
             닫기
           </button>
           <button className="btn btn-primary" onClick={handlePrint}>
             <Printer size={16} />
-            프린터 인쇄 출력 시작
+            프린터 인쇄 시작
           </button>
         </div>
       </div>
