@@ -2,11 +2,17 @@ import React, { useState } from 'react';
 import PCDashboard from '../components/PCDashboard';
 import LabelOffsetController from '../components/LabelOffsetController';
 
-export default function PCDashboardView({ onError, onOpenExportModal, onOpenPrintModal, onOpenConfigModal, onOpenImportModal }) {
-  // Label Offset & Calibration state
+export default function PCDashboardView({
+  onError,
+  onOpenExportModal,
+  onOpenPrintModal,
+  onOpenConfigModal,
+  onOpenImportModal,
+  onOpenPrinterGuide
+}) {
   const [offsetConfig, setOffsetConfig] = useState({
-    offsetX: 0,       // mm (left/right)
-    offsetY: 0,       // mm (top/bottom)
+    offsetX: 0,       // mm
+    offsetY: 0,       // mm
     fontSize: 11,     // px
     barcodeHeight: 11 // mm
   });
@@ -40,6 +46,7 @@ export default function PCDashboardView({ onError, onOpenExportModal, onOpenPrin
         onChangeConfig={setOffsetConfig}
         onResetConfig={handleResetConfig}
         onTestPrint={handleTestPrint}
+        onOpenPrinterGuide={onOpenPrinterGuide}
       />
 
       {/* Main Production Dashboard */}

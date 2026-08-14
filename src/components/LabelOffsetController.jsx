@@ -1,11 +1,12 @@
 import React from 'react';
-import { Sliders, RotateCcw, Printer, Move, Type, BarChart2 } from 'lucide-react';
+import { Sliders, RotateCcw, Printer, Move, Type, BarChart2, HelpCircle } from 'lucide-react';
 
 export default function LabelOffsetController({
   offsetConfig,
   onChangeConfig,
   onResetConfig,
-  onTestPrint
+  onTestPrint,
+  onOpenPrinterGuide
 }) {
   const handleChange = (field, value) => {
     onChangeConfig({
@@ -38,12 +39,15 @@ export default function LabelOffsetController({
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button className="btn btn-outline" style={{ fontSize: '0.85rem', padding: '6px 12px' }} onClick={onResetConfig}>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          <button className="btn btn-outline" style={{ fontSize: '0.8rem', padding: '6px 10px', borderColor: '#38bdf8', color: '#7dd3fc' }} onClick={onOpenPrinterGuide}>
+            <HelpCircle size={14} /> 프린터 목록 확인 가이드
+          </button>
+          <button className="btn btn-outline" style={{ fontSize: '0.8rem', padding: '6px 10px' }} onClick={onResetConfig}>
             <RotateCcw size={14} /> 기본값 초기화
           </button>
-          <button className="btn btn-primary" style={{ fontSize: '0.85rem', padding: '6px 14px' }} onClick={onTestPrint}>
-            <Printer size={15} /> 테스트 라벨 1장 출력
+          <button className="btn btn-primary" style={{ fontSize: '0.8rem', padding: '6px 12px' }} onClick={onTestPrint}>
+            <Printer size={14} /> 테스트 라벨 1장 출력
           </button>
         </div>
       </div>
