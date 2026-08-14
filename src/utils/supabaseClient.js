@@ -4,15 +4,40 @@ const LOCAL_KEY_URL = 'IMAGE_SCAN_SUPABASE_URL';
 const LOCAL_KEY_ANON = 'IMAGE_SCAN_SUPABASE_ANON_KEY';
 const LOCAL_STORAGE_SCANS_KEY = 'IMAGE_SCAN_LOCAL_ITEMS';
 
+/**
+ * Normalizes user-input Supabase URL (Converts dashboard URLs like
+ * https://supabase.com/dashboard/project/tfgbpgutxxlhqbzewky
+ * into API URL: https://tfgbpgutxxlhqbzewky.supabase.co)
+ */
+export function normalizeSupabaseUrl(inputUrl) {
+  if (!inputUrl) return '';
+  const trimmed = inputUrl.trim();
+
+  // If user pasted dashboard URL: https://supabase.com/dashboard/project/tfgbpgutxxlhqbzewky
+  const dashboardMatch = trimmed.match(/project\/([a-zA-Z0-9]+)/i);
+  if (dashboardMatch && dashboardMatch[1]) {
+    return `https://${dashboardMatch[1]}.supabase.co`;
+  }
+
+  // Ensure https:// prefix if missing
+  if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+    return `https://${trimmed}`;
+  }
+
+  return trimmed;
+}
+
 export function getStoredConfig() {
-  const url = localStorage.getItem(LOCAL_KEY_URL) || import.meta.env.VITE_SUPABASE_URL || '';
+  const rawUrl = localStorage.getItem(LOCAL_KEY_URL) || import.meta.env.VITE_SUPABASE_URL || '';
   const anonKey = localStorage.getItem(LOCAL_KEY_ANON) || import.meta.env.VITE_SUPABASE_ANON_KEY || '';
-  return { url, anonKey };
+  return { url: normalizeSupabaseUrl(rawUrl), anonKey: anonKey.trim() };
 }
 
 export function saveStoredConfig(url, anonKey) {
-  if (url) localStorage.setItem(LOCAL_KEY_URL, url);
-  if (anonKey) localStorage.setItem(LOCAL_KEY_ANON, anonKey);
+  const cleanUrl = normalizeSupabaseUrl(url);
+  const cleanKey = anonKey ? anonKey.trim() : '';
+  if (cleanUrl) localStorage.setItem(LOCAL_KEY_URL, cleanUrl);
+  if (cleanKey) localStorage.setItem(LOCAL_KEY_ANON, cleanKey);
 }
 
 let supabaseInstance = null;
@@ -37,7 +62,9 @@ export function getSupabaseClient() {
 
 export async function testSupabaseConnection(url, anonKey) {
   try {
-    const tempClient = createClient(url, anonKey, { auth: { persistSession: false } });
+    const cleanUrl = normalizeSupabaseUrl(url);
+    const cleanKey = anonKey ? anonKey.trim() : '';
+    const tempClient = createClient(cleanUrl, cleanKey, { auth: { persistSession: false } });
     const { data, error } = await tempClient.from('imei_scans').select('count', { count: 'exact', head: true });
     if (error) throw error;
     return { success: true, message: 'Supabase DB 연동 성공!' };
@@ -50,7 +77,6 @@ export async function testSupabaseConnection(url, anonKey) {
 export async function fetchScansFromSupabase() {
   const client = getSupabaseClient();
   if (!client) {
-    // Return LocalStorage cached items if DB not configured
     try {
       const local = localStorage.getItem(LOCAL_STORAGE_SCANS_KEY);
       return local ? JSON.parse(local) : [];
@@ -83,9 +109,7 @@ export async function saveScansToSupabaseBatch(scans, onProgressCallback, import
     device_info: item.device_info || 'FILE_IMPORT'
   }));
 
-  // 1. If Supabase DB is connected
   if (client) {
-    // If replace mode, wipe existing records first
     if (importMode === 'replace') {
       if (onProgressCallback) onProgressCallback({ stage: 'wipe', percent: 5, message: '1단계: 기존 DB 데이터 전체 삭제 중...' });
       const { error: wipeErr } = await client.from('imei_scans').delete().neq('id', '00000000-0000-0000-0000-000000000000');
@@ -94,7 +118,6 @@ export async function saveScansToSupabaseBatch(scans, onProgressCallback, import
       }
     }
 
-    // Insert in chunks of 50
     const CHUNK_SIZE = 50;
     const totalCount = formattedPayload.length;
     let processedCount = 0;
@@ -122,7 +145,6 @@ export async function saveScansToSupabaseBatch(scans, onProgressCallback, import
         });
       }
 
-      // Small 50ms delay between chunks for UI reactivity
       await new Promise(res => setTimeout(res, 50));
     }
 
@@ -130,7 +152,7 @@ export async function saveScansToSupabaseBatch(scans, onProgressCallback, import
     return insertedResults;
   }
 
-  // 2. Local Fallback Mode (No Supabase DB credentials yet)
+  // Local Fallback Mode
   if (onProgressCallback) onProgressCallback({ stage: 'wipe', percent: 20, message: '로컬 데이터 처리 중...' });
   
   let currentLocal = [];
@@ -160,7 +182,6 @@ export async function saveScansToSupabase(scans) {
 export async function deleteScanFromSupabase(id) {
   const client = getSupabaseClient();
   if (!client) {
-    // Delete from LocalStorage
     try {
       const existing = localStorage.getItem(LOCAL_STORAGE_SCANS_KEY);
       if (existing) {

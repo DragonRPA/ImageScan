@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Database, CheckCircle, AlertCircle, X } from 'lucide-react';
-import { getStoredConfig, saveStoredConfig, testSupabaseConnection } from '../utils/supabaseClient';
+import { Database, CheckCircle, AlertCircle, X, Info } from 'lucide-react';
+import { getStoredConfig, saveStoredConfig, testSupabaseConnection, normalizeSupabaseUrl } from '../utils/supabaseClient';
 
 export default function SupabaseConfigModal({ isOpen, onClose, onSaveSuccess }) {
   const initial = getStoredConfig();
@@ -11,6 +11,12 @@ export default function SupabaseConfigModal({ isOpen, onClose, onSaveSuccess }) 
 
   if (!isOpen) return null;
 
+  const handleUrlChange = (e) => {
+    const val = e.target.value;
+    const normalized = normalizeSupabaseUrl(val);
+    setUrl(normalized);
+  };
+
   const handleTest = async () => {
     if (!url || !anonKey) {
       setTestResult({ success: false, message: 'URL과 Anon Key를 모두 입력해주세요.' });
@@ -19,7 +25,8 @@ export default function SupabaseConfigModal({ isOpen, onClose, onSaveSuccess }) 
     setTesting(true);
     setTestResult(null);
 
-    const result = await testSupabaseConnection(url, anonKey);
+    const cleanUrl = normalizeSupabaseUrl(url);
+    const result = await testSupabaseConnection(cleanUrl, anonKey);
     setTesting(false);
     setTestResult(result);
   };
@@ -29,14 +36,15 @@ export default function SupabaseConfigModal({ isOpen, onClose, onSaveSuccess }) 
       setTestResult({ success: false, message: 'URL과 Anon Key를 입력해주세요.' });
       return;
     }
-    saveStoredConfig(url, anonKey);
+    const cleanUrl = normalizeSupabaseUrl(url);
+    saveStoredConfig(cleanUrl, anonKey);
     if (onSaveSuccess) onSaveSuccess();
     onClose();
   };
 
   return (
     <div className="modal-overlay">
-      <div className="modal-content">
+      <div className="modal-content" style={{ maxWidth: '550px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--primary)' }}>
             <Database size={22} />
@@ -50,14 +58,29 @@ export default function SupabaseConfigModal({ isOpen, onClose, onSaveSuccess }) 
         {/* Vertical Stack Form Layout */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '20px' }}>
           <div className="form-group">
-            <label className="form-label">Supabase URL</label>
+            <label className="form-label">Supabase API URL</label>
             <input
               type="text"
               className="form-input"
-              placeholder="https://your-project.supabase.co"
+              placeholder="https://tfgbpgutxxlhqbzewky.supabase.co"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
+              onBlur={handleUrlChange}
             />
+            <div style={{
+              fontSize: '0.78rem',
+              color: '#38bdf8',
+              backgroundColor: 'rgba(56, 189, 248, 0.1)',
+              padding: '6px 10px',
+              borderRadius: '4px',
+              marginTop: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}>
+              <Info size={14} />
+              <span>올바른 형식: <strong>https://tfgbpgutxxlhqbzewky.supabase.co</strong></span>
+            </div>
           </div>
 
           <div className="form-group">
@@ -69,6 +92,9 @@ export default function SupabaseConfigModal({ isOpen, onClose, onSaveSuccess }) 
               value={anonKey}
               onChange={(e) => setAnonKey(e.target.value)}
             />
+            <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+              Project Settings ➔ API ➔ Project API keys 의 `anon` `public` Key
+            </span>
           </div>
 
           {testResult && (
