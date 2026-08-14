@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { Camera, UploadCloud, Play, Square, Plus, Volume2, ShieldCheck, Target, Zap, ZapOff, RefreshCw } from 'lucide-react';
+import { Camera, UploadCloud, Play, Square, Plus, Volume2, ShieldCheck, Target, Zap, ZapOff, RefreshCw, Smartphone } from 'lucide-react';
 import { getTesseractWorker, preprocessCanvasROI, parseFieldsFromTesseractResult } from '../utils/ocrWorker';
 import { triggerSuccessFeedback } from '../utils/soundFeedback';
 import { saveScansToSupabase, getStoredConfig } from '../utils/supabaseClient';
@@ -14,10 +14,13 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
   const [ocrStatus, setOcrStatus] = useState('기기 뒷면 전체를 편안하게 비추세요');
   const [detectedPulse, setDetectedPulse] = useState(false);
 
-  // Hardware Camera Features (Autofocus & Torch Flashlight)
+  // Galaxy S24 Multi-Lens State
+  const [videoDevices, setVideoDevices] = useState([]);
+  const [selectedDeviceId, setSelectedDeviceId] = useState('');
+
+  // Hardware Camera Features
   const [isTorchOn, setIsTorchOn] = useState(false);
   const [torchSupported, setTorchSupported] = useState(false);
-  const [autofocusSupported, setAutofocusSupported] = useState(false);
 
   // Pinpoint Highlight Box Coordinates
   const [pinpointBox, setPinpointBox] = useState(null);
@@ -37,40 +40,74 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
   const supabaseConfig = getStoredConfig();
   const isConfigured = Boolean(supabaseConfig.url && supabaseConfig.anonKey && !supabaseConfig.url.includes('your-supabase-project'));
 
-  // Start Camera Stream with Ultra-HD 4K/1080p + Continuous Focus Constraints
-  const startCamera = async () => {
+  // Enumerate all physical camera lenses (Main Wide, Ultra-Wide Macro, Telephoto)
+  const enumeratePhysicalCameras = async () => {
+    if (typeof window === 'undefined' || !('navigator' in window) || !('mediaDevices' in navigator)) return;
     try {
-      setCameraStatus('Ultra-HD 카메라 권한 요청 중...');
-      const constraints = {
-        video: {
-          facingMode: { ideal: 'environment' },
-          width: { ideal: 3840, min: 1920 },
-          height: { ideal: 2160, min: 1080 }
-        }
-      };
+      // Request initial permission to get device labels
+      await navigator.mediaDevices.getUserMedia({ video: true }).then(s => s.getTracks().forEach(t => t.stop())).catch(() => {});
+      
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoInputs = devices.filter(d => d.kind === 'videoinput');
 
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      // Categorize rear lenses with user friendly names for Galaxy S24
+      const formatted = videoInputs.map((d, index) => {
+        let label = d.label || `카메라 렌즈 #${index + 1}`;
+        const lower = label.toLowerCase();
+        
+        if (lower.includes('ultra') || lower.includes('wide') || index === 1) {
+          label = `📷 초광각 접사 렌즈 (5cm 초접사 특화)`;
+        } else if (lower.includes('tele') || lower.includes('zoom') || index === 2) {
+          label = `📷 3배/5배 망원 렌즈 (30cm 거리 줌 특화)`;
+        } else if (index === 0 || lower.includes('back') || lower.includes('0')) {
+          label = `📷 기본 메인 렌즈 (기본 광각)`;
+        }
+
+        return {
+          deviceId: d.deviceId,
+          label,
+          rawLabel: d.label
+        };
+      });
+
+      setVideoDevices(formatted);
+      if (formatted.length > 0 && !selectedDeviceId) {
+        // Prefer Ultra-Wide or Telephoto if available
+        const macroLens = formatted.find(f => f.label.includes('접사')) || formatted[0];
+        setSelectedDeviceId(macroLens.deviceId);
+      }
+    } catch (e) {
+      console.warn('Enumerate devices warning:', e);
+    }
+  };
+
+  // Start Camera Stream using Selected Physical Camera Lens
+  const startCamera = async (targetDeviceId) => {
+    const devId = targetDeviceId || selectedDeviceId;
+    try {
+      setCameraStatus('카메라 렌즈 연결 중...');
+
+      // Stop existing stream if running
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+
+      const videoConstraints = devId
+        ? { deviceId: { exact: devId }, width: { ideal: 3840, min: 1920 }, height: { ideal: 2160, min: 1080 } }
+        : { facingMode: { ideal: 'environment' }, width: { ideal: 3840, min: 1920 }, height: { ideal: 2160, min: 1080 } };
+
+      const stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints });
       streamRef.current = stream;
 
       const track = stream.getVideoTracks()[0];
       if (track && track.getCapabilities) {
         const capabilities = track.getCapabilities();
-
-        // 1. Check Torch (Flashlight)
-        if ('torch' in capabilities) {
-          setTorchSupported(true);
-        }
-
-        // 2. Check & Apply Continuous Macro Autofocus
+        if ('torch' in capabilities) setTorchSupported(true);
+        
         if (capabilities.focusMode && capabilities.focusMode.includes('continuous')) {
-          setAutofocusSupported(true);
           try {
-            await track.applyConstraints({
-              advanced: [{ focusMode: 'continuous' }]
-            });
-          } catch (e) {
-            console.warn('Autofocus constraint application warning:', e);
-          }
+            await track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] });
+          } catch (e) {}
         }
       }
 
@@ -79,24 +116,29 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
         await videoRef.current.play();
       }
       setIsScanning(true);
-      setCameraStatus('접사 자동초점 & 샤프닝 OCR 작동 중');
+      setCameraStatus('선명 접사/망원 OCR 가동 중');
     } catch (err) {
       console.error('Camera Access Error:', err);
-      setCameraStatus('카메라 연결 실패');
-      onError(`카메라 권한을 얻을 수 없습니다: ${err.message}`);
+      setCameraStatus('카메라 렌즈 연결 실패');
+      onError(`카메라 렌즈를 연결할 수 없습니다: ${err.message}`);
     }
   };
 
-  // Toggle LED Flashlight (Torch)
+  const handleDeviceChange = (e) => {
+    const newId = e.target.value;
+    setSelectedDeviceId(newId);
+    if (isScanning) {
+      startCamera(newId);
+    }
+  };
+
   const toggleTorch = async () => {
     if (!streamRef.current) return;
     const track = streamRef.current.getVideoTracks()[0];
     if (track && track.applyConstraints) {
       try {
         const nextState = !isTorchOn;
-        await track.applyConstraints({
-          advanced: [{ torch: nextState }]
-        });
+        await track.applyConstraints({ advanced: [{ torch: nextState }] });
         setIsTorchOn(nextState);
       } catch (e) {
         console.warn('Torch toggle error:', e);
@@ -104,25 +146,18 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
     }
   };
 
-  // Manual Trigger Refocus Action (Re-runs continuous focus lens drive)
   const triggerRefocus = async () => {
     if (!streamRef.current) return;
     const track = streamRef.current.getVideoTracks()[0];
     if (track && track.applyConstraints) {
       try {
-        setOcrStatus('🎯 초점 재조정(Refocus) 진행 중...');
-        await track.applyConstraints({
-          advanced: [{ focusMode: 'manual' }]
-        });
+        setOcrStatus('🎯 렌즈 초점 재조정 진행 중...');
+        await track.applyConstraints({ advanced: [{ focusMode: 'manual' }] });
         setTimeout(async () => {
-          await track.applyConstraints({
-            advanced: [{ focusMode: 'continuous' }]
-          });
-          setOcrStatus('🎯 초점 재조정 완료! 기기 뒷면을 비추세요.');
+          await track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] });
+          setOcrStatus('🎯 렌즈 초점 재조정 완료!');
         }, 200);
-      } catch (e) {
-        console.warn('Refocus error:', e);
-      }
+      } catch (e) {}
     }
   };
 
@@ -139,7 +174,7 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
     setCameraStatus('카메라 정지됨');
   };
 
-  // Broad-Field Auto-Localization Scanning Loop
+  // Scanning Loop
   useEffect(() => {
     if (!isScanning) return;
 
@@ -162,7 +197,6 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
           return;
         }
 
-        // Broad Scanning Area (85% Width x 70% Height)
         const roiWidth = Math.floor(vWidth * 0.85);
         const roiHeight = Math.floor(vHeight * 0.70);
         const roiX = Math.floor((vWidth - roiWidth) / 2);
@@ -171,12 +205,11 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
         // Preprocess High-Res Broad Canvas Frame with Laplacian Sharpening Filter
         const roiCanvas = preprocessCanvasROI(video, { x: roiX, y: roiY, width: roiWidth, height: roiHeight });
 
-        // Tesseract OCR with Sparse Text Auto Detection (PSM 11)
         const worker = await getTesseractWorker();
         const tesseractResult = await worker.recognize(roiCanvas);
 
         const rawText = tesseractResult.data.text || '';
-        setOcrStatus(rawText.trim() ? `선명 탐색: ${rawText.slice(0, 30)}...` : '기기 뒷면 전체를 편안하게 비추세요...');
+        setOcrStatus(rawText.trim() ? `선명 탐색: ${rawText.slice(0, 30)}...` : '기기 뒷면을 비추세요...');
 
         const parsed = parseFieldsFromTesseractResult(tesseractResult);
 
@@ -241,6 +274,7 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
   }, [isScanning, lastScannedImei, scannedItems, isConfigured]);
 
   useEffect(() => {
+    enumeratePhysicalCameras();
     startCamera();
     return () => stopCamera();
   }, []);
@@ -296,47 +330,56 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
       gap: '10px',
       position: 'relative'
     }}>
-      {/* Top Mobile Controls Bar: Refocus & Flashlight Torch */}
+      {/* Galaxy S24 Multi-Lens Selection Toolbar */}
       <div style={{
-        display: 'flex',
-        justify: 'space-between',
-        alignItems: 'center',
         backgroundColor: '#1e293b',
-        padding: '8px 12px',
+        padding: '10px 12px',
         borderRadius: '8px',
-        border: '1px solid #334155'
+        border: '1px solid #334155',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '8px'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <ShieldCheck size={16} style={{ color: isConfigured ? '#10b981' : '#f59e0b' }} />
-          <span style={{ fontSize: '0.78rem', fontWeight: 600, color: isConfigured ? '#6ee7b7' : '#fef08a' }}>
-            {isConfigured ? 'DB 실시간 자동 저장 중' : '로컬 스캔 모드'}
-          </span>
-        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Smartphone size={16} style={{ color: '#38bdf8' }} />
+            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#f8fafc' }}>
+              카메라 물리 렌즈 선택 (S24/아이폰 전용)
+            </span>
+          </div>
 
-        {/* Refocus & Flashlight Controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <button
-            className="btn btn-outline"
-            style={{ padding: '3px 8px', fontSize: '0.75rem', borderColor: '#38bdf8', color: '#7dd3fc' }}
-            onClick={triggerRefocus}
-          >
-            <RefreshCw size={13} /> 초점 재조정
-          </button>
-
-          {torchSupported && (
-            <button
-              className={`btn ${isTorchOn ? 'btn-success' : 'btn-outline'}`}
-              style={{ padding: '3px 8px', fontSize: '0.75rem' }}
-              onClick={toggleTorch}
-            >
-              {isTorchOn ? <Zap size={13} /> : <ZapOff size={13} />}
-              {isTorchOn ? '플래시 ON' : '플래시 OFF'}
+          <div style={{ display: 'flex', gap: '6px' }}>
+            <button className="btn btn-outline" style={{ padding: '3px 8px', fontSize: '0.73rem', borderColor: '#38bdf8', color: '#7dd3fc' }} onClick={triggerRefocus}>
+              <RefreshCw size={12} /> 초점 리셋
             </button>
-          )}
+
+            {torchSupported && (
+              <button className={`btn ${isTorchOn ? 'btn-success' : 'btn-outline'}`} style={{ padding: '3px 8px', fontSize: '0.73rem' }} onClick={toggleTorch}>
+                {isTorchOn ? <Zap size={12} /> : <ZapOff size={12} />}
+                {isTorchOn ? '플래시 ON' : '플래시 OFF'}
+              </button>
+            )}
+          </div>
         </div>
+
+        {/* Device Select Dropdown */}
+        {videoDevices.length > 0 && (
+          <select
+            className="form-input"
+            style={{ fontSize: '0.78rem', padding: '6px 10px', backgroundColor: '#0f172a', borderColor: '#38bdf8', color: '#38bdf8', fontWeight: 700 }}
+            value={selectedDeviceId}
+            onChange={handleDeviceChange}
+          >
+            {videoDevices.map((dev) => (
+              <option key={dev.deviceId} value={dev.deviceId}>
+                {dev.label}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
 
-      {/* Main Full-Frame Viewfinder Screen */}
+      {/* Main Viewfinder Screen */}
       <div style={{
         flex: 1,
         position: 'relative',
@@ -381,7 +424,7 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
             borderRadius: '4px',
             whiteSpace: 'nowrap'
           }}>
-            기기 뒷면 전체를 편안하게 비추세요
+            선택한 물리 렌즈로 비추세요
           </div>
         </div>
 
@@ -485,7 +528,7 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
         <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '2px' }}>
           {scannedItems.length === 0 ? (
             <span style={{ fontSize: '0.72rem', color: '#64748b', padding: '2px 0' }}>
-              아직 감지된 항목이 없습니다. 기기 뒷면 전체를 편안하게 비추세요.
+              아직 감지된 항목이 없습니다. 물리 렌즈를 전환하며 비추세요.
             </span>
           ) : (
             scannedItems.slice(0, 5).map((item) => (
