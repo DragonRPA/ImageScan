@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { Camera, ZoomIn, ZoomOut, UploadCloud, Play, Square, Plus, Trash2, Volume2, ShieldCheck, Eye } from 'lucide-react';
-import { getTesseractWorker, preprocessCanvasROI, parseFieldsFromText } from '../utils/ocrWorker';
+import { Camera, UploadCloud, Play, Square, Plus, Volume2, ShieldCheck, Target } from 'lucide-react';
+import { getTesseractWorker, preprocessCanvasROI, parseFieldsFromTesseractResult } from '../utils/ocrWorker';
 import { triggerSuccessFeedback } from '../utils/soundFeedback';
 import { saveScansToSupabase, getStoredConfig } from '../utils/supabaseClient';
 
@@ -8,16 +8,14 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const scanTimerRef = useRef(null);
-  const magnifierCanvasRef = useRef(null);
 
   const [isScanning, setIsScanning] = useState(false);
   const [cameraStatus, setCameraStatus] = useState('카메라 준비 중');
-  const [ocrStatus, setOcrStatus] = useState('3mm 각인 부위에 마이크로 타겟을 맞추세요');
+  const [ocrStatus, setOcrStatus] = useState('기기 뒷면 전체를 편안하게 비추세요');
   const [detectedPulse, setDetectedPulse] = useState(false);
 
-  // Zoom Level (1.0x to 5.0x)
-  const [zoomLevel, setZoomLevel] = useState(3.0);
-  const [hardwareZoomSupported, setHardwareZoomSupported] = useState(false);
+  // Pinpoint Highlight Box Coordinates (relative to camera container %)
+  const [pinpointBox, setPinpointBox] = useState(null);
 
   // Recent scanned items list
   const [scannedItems, setScannedItems] = useState([]);
@@ -34,7 +32,7 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
   const supabaseConfig = getStoredConfig();
   const isConfigured = Boolean(supabaseConfig.url && supabaseConfig.anonKey && !supabaseConfig.url.includes('your-supabase-project'));
 
-  // Start Camera Stream with Zoom Capabilities
+  // Start Camera Stream (Full 1080p High-Res)
   const startCamera = async () => {
     try {
       setCameraStatus('카메라 권한 요청 중...');
@@ -48,51 +46,17 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
 
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
-      
-      const track = stream.getVideoTracks()[0];
-      if (track && track.getCapabilities) {
-        const capabilities = track.getCapabilities();
-        if (capabilities.zoom) {
-          setHardwareZoomSupported(true);
-          try {
-            await track.applyConstraints({ advanced: [{ zoom: zoomLevel }] });
-          } catch (e) {
-            console.warn('Hardware zoom constrain failed:', e);
-          }
-        }
-      }
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
       }
       setIsScanning(true);
-      setCameraStatus(`3mm 미세 각인 OCR 줌 ${zoomLevel}x 감지 중`);
+      setCameraStatus('광역 자동 텍스트 영역 추적 중');
     } catch (err) {
       console.error('Camera Access Error:', err);
       setCameraStatus('카메라 연결 실패');
       onError(`카메라 권한을 얻을 수 없습니다: ${err.message}`);
-    }
-  };
-
-  // Change Hardware / Software Zoom
-  const applyZoom = async (newZoom) => {
-    const clamped = Math.max(1.0, Math.min(5.0, newZoom));
-    setZoomLevel(clamped);
-
-    if (streamRef.current) {
-      const track = streamRef.current.getVideoTracks()[0];
-      if (track && track.getCapabilities) {
-        const cap = track.getCapabilities();
-        if (cap.zoom) {
-          try {
-            const target = Math.min(cap.zoom.max, Math.max(cap.zoom.min, clamped));
-            await track.applyConstraints({ advanced: [{ zoom: target }] });
-          } catch (e) {
-            // Ignore
-          }
-        }
-      }
     }
   };
 
@@ -109,7 +73,7 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
     setCameraStatus('카메라 정지됨');
   };
 
-  // Continuous Micro-Text OCR Scan Loop
+  // Broad-Field Auto-Localization Scanning Loop
   useEffect(() => {
     if (!isScanning) return;
 
@@ -132,32 +96,37 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
           return;
         }
 
-        // Narrow Micro-Reticle for 3mm Etched Text
-        const baseRoiWidth = Math.floor(vWidth * 0.75 / zoomLevel);
-        const baseRoiHeight = Math.floor(vHeight * 0.15 / zoomLevel);
-        const roiX = Math.floor((vWidth - baseRoiWidth) / 2);
-        const roiY = Math.floor((vHeight - baseRoiHeight) / 2);
+        // Broad Scanning Area (85% Width x 70% Height for comfortable user holding)
+        const roiWidth = Math.floor(vWidth * 0.85);
+        const roiHeight = Math.floor(vHeight * 0.70);
+        const roiX = Math.floor((vWidth - roiWidth) / 2);
+        const roiY = Math.floor((vHeight - roiHeight) / 2);
 
-        // Preprocess High-Res ROI with 3x Upscaling
-        const roiCanvas = preprocessCanvasROI(video, { x: roiX, y: roiY, width: baseRoiWidth, height: baseRoiHeight });
+        // Preprocess High-Res Broad Canvas Frame
+        const roiCanvas = preprocessCanvasROI(video, { x: roiX, y: roiY, width: roiWidth, height: roiHeight });
 
-        // Update Magnifier Preview Canvas
-        if (magnifierCanvasRef.current) {
-          const mCtx = magnifierCanvasRef.current.getContext('2d');
-          magnifierCanvasRef.current.width = roiCanvas.width;
-          magnifierCanvasRef.current.height = roiCanvas.height;
-          mCtx.drawImage(roiCanvas, 0, 0);
-        }
-
-        // Tesseract OCR
+        // Tesseract OCR with Sparse Text Auto Detection (PSM 11)
         const worker = await getTesseractWorker();
-        const { data: { text } } = await worker.recognize(roiCanvas);
+        const tesseractResult = await worker.recognize(roiCanvas);
 
-        setOcrStatus(text.trim() ? `3mm 감지: ${text.slice(0, 25)}...` : `3mm 각인 감지 중 (${zoomLevel.toFixed(1)}x 줌)...`);
+        const rawText = tesseractResult.data.text || '';
+        setOcrStatus(rawText.trim() ? `탐색 텍스트: ${rawText.slice(0, 30)}...` : '기기 뒷면 전체를 편안하게 비추세요...');
 
-        const parsed = parseFieldsFromText(text);
+        const parsed = parseFieldsFromTesseractResult(tesseractResult);
 
         if (parsed && parsed.imei) {
+          // Compute pinpoint bounding box coordinates on camera screen %
+          if (parsed.bbox) {
+            const relX = ((roiX + parsed.bbox.x0) / vWidth) * 100;
+            const relY = ((roiY + parsed.bbox.y0) / vHeight) * 100;
+            const relW = ((parsed.bbox.x1 - parsed.bbox.x0) / vWidth) * 100;
+            const relH = ((parsed.bbox.y1 - parsed.bbox.y0) / vHeight) * 100;
+            setPinpointBox({ x: relX, y: relY, w: Math.max(20, relW), h: Math.max(8, relH) });
+          } else {
+            // Default center pinpoint
+            setPinpointBox({ x: 15, y: 40, w: 70, h: 20 });
+          }
+
           const exists = scannedItems.some(item => item.imei === parsed.imei);
           if (!exists && parsed.imei !== lastScannedImei) {
             lastScanTime = now;
@@ -177,7 +146,10 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
 
             triggerSuccessFeedback();
             setDetectedPulse(true);
-            setTimeout(() => setDetectedPulse(false), 900);
+            setTimeout(() => {
+              setDetectedPulse(false);
+              setPinpointBox(null);
+            }, 1200);
 
             if (isConfigured) {
               try {
@@ -189,11 +161,11 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
             }
 
             setScannedItems(prev => [newItem, ...prev]);
-            setOcrStatus(`★ 3mm 감지 성공! IMEI: ${parsed.imei}`);
+            setOcrStatus(`★ 자동 텍스트 영역 추적 성공! IMEI: ${parsed.imei}`);
           }
         }
       } catch (err) {
-        console.error('OCR Loop Error:', err);
+        console.error('OCR Broad Loop Error:', err);
       } finally {
         isProcessing = false;
       }
@@ -202,7 +174,7 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
     return () => {
       if (scanTimerRef.current) clearInterval(scanTimerRef.current);
     };
-  }, [isScanning, lastScannedImei, scannedItems, isConfigured, zoomLevel]);
+  }, [isScanning, lastScannedImei, scannedItems, isConfigured]);
 
   useEffect(() => {
     startCamera();
@@ -273,27 +245,19 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <ShieldCheck size={16} style={{ color: isConfigured ? '#10b981' : '#f59e0b' }} />
           <span style={{ fontSize: '0.78rem', fontWeight: 600, color: isConfigured ? '#6ee7b7' : '#fef08a' }}>
-            {isConfigured ? 'DB 실시간 저장 중' : 'DB 설정 필요'}
+            {isConfigured ? 'DB 실시간 자동 저장 중' : '로컬 스캔 모드'}
           </span>
         </div>
 
-        {/* Zoom Quick Selector */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          <span style={{ fontSize: '0.75rem', color: '#94a3b8', marginRight: '4px' }}>3mm 각인 줌:</span>
-          {[1.5, 2.5, 3.5, 5.0].map(z => (
-            <button
-              key={z}
-              className={`btn ${zoomLevel === z ? 'btn-primary' : 'btn-outline'}`}
-              style={{ padding: '2px 6px', fontSize: '0.72rem', border: '1px solid #334155' }}
-              onClick={() => applyZoom(z)}
-            >
-              {z}x
-            </button>
-          ))}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Volume2 size={15} style={{ color: '#38bdf8' }} />
+          <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#38bdf8' }}>
+            누적 {scannedItems.length}건
+          </span>
         </div>
       </div>
 
-      {/* Main Viewfinder Screen with 3mm Magnifier */}
+      {/* Main Full-Frame Viewfinder Screen */}
       <div style={{
         flex: 1,
         position: 'relative',
@@ -312,63 +276,69 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
         />
 
-        {/* Live Magnifier Window Overlay (3mm Text Super-Magnified) */}
-        <div style={{
-          position: 'absolute',
-          top: '10px',
-          left: '10px',
-          backgroundColor: 'rgba(15, 23, 42, 0.92)',
-          border: '2px solid #38bdf8',
-          borderRadius: '8px',
-          padding: '6px',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '4px',
-          boxShadow: '0 4px 10px rgba(0,0,0,0.6)'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.7rem', color: '#38bdf8', fontWeight: 700 }}>
-            <Eye size={12} /> 3mm 미세 각인 돋보기 ({zoomLevel.toFixed(1)}x)
-          </div>
-          <canvas
-            ref={magnifierCanvasRef}
-            style={{
-              width: '140px',
-              height: '40px',
-              borderRadius: '4px',
-              border: '1px solid #334155',
-              backgroundColor: '#fff'
-            }}
-          />
-        </div>
-
-        {/* Slim Micro-Reticle Box for 3mm Etched Text */}
+        {/* Comfortable Broad Scanning Area Overlay (85% x 70%) */}
         <div style={{
           position: 'absolute',
           top: '50%',
           left: '50%',
           transform: 'translate(-50%, -50%)',
-          width: '80%',
-          height: '14%',
-          border: `2px dashed ${detectedPulse ? '#10b981' : '#38bdf8'}`,
-          borderRadius: '8px',
-          boxShadow: detectedPulse ? '0 0 30px rgba(16, 185, 129, 0.9)' : '0 0 0 9999px rgba(0, 0, 0, 0.6)',
-          display: 'flex',
-          alignItems: 'center',
-          justify: 'center',
-          transition: 'all 0.2s ease'
+          width: '85%',
+          height: '70%',
+          border: '1px dashed rgba(56, 189, 248, 0.5)',
+          borderRadius: '12px',
+          boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.45)',
+          pointerEvents: 'none'
         }}>
-          <span style={{
-            fontSize: '0.75rem',
-            color: detectedPulse ? '#6ee7b7' : '#e0f2fe',
-            fontWeight: 800,
+          <div style={{
+            position: 'absolute',
+            top: '8px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            fontSize: '0.72rem',
+            color: '#e0f2fe',
+            fontWeight: 700,
             backgroundColor: 'rgba(15, 23, 42, 0.85)',
-            padding: '2px 8px',
-            borderRadius: '4px'
+            padding: '3px 8px',
+            borderRadius: '4px',
+            whiteSpace: 'nowrap'
           }}>
-            {detectedPulse ? '★ 3mm IMEI 감지 성공!' : '3mm 레이저 각인 조준'}
-          </span>
+            기기 뒷면 전체를 편안하게 비추세요
+          </div>
         </div>
+
+        {/* Live Pinpoint Bounding Box Highlight on Detected Text Location */}
+        {pinpointBox && (
+          <div style={{
+            position: 'absolute',
+            left: `${pinpointBox.x}%`,
+            top: `${pinpointBox.y}%`,
+            width: `${pinpointBox.w}%`,
+            height: `${pinpointBox.h}%`,
+            border: '3px solid #10b981',
+            backgroundColor: 'rgba(16, 185, 129, 0.25)',
+            borderRadius: '6px',
+            boxShadow: '0 0 20px rgba(16, 185, 129, 0.9)',
+            display: 'flex',
+            alignItems: 'center',
+            justify: 'center',
+            zIndex: 10,
+            transition: 'all 0.15s ease'
+          }}>
+            <span style={{
+              fontSize: '0.7rem',
+              color: '#ffffff',
+              fontWeight: 800,
+              backgroundColor: '#10b981',
+              padding: '2px 6px',
+              borderRadius: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}>
+              <Target size={12} /> IMEI 포착!
+            </span>
+          </div>
+        )}
 
         {/* Floating Controls over Camera */}
         <div style={{
@@ -390,18 +360,10 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
             {cameraStatus}
           </div>
 
-          <div style={{ display: 'flex', gap: '6px' }}>
-            <button className="btn btn-outline" style={{ padding: '6px 10px', fontSize: '0.75rem', backgroundColor: 'rgba(15,23,42,0.8)' }} onClick={() => applyZoom(zoomLevel - 0.5)}>
-              <ZoomOut size={14} />
-            </button>
-            <button className="btn btn-outline" style={{ padding: '6px 10px', fontSize: '0.75rem', backgroundColor: 'rgba(15,23,42,0.8)' }} onClick={() => applyZoom(zoomLevel + 0.5)}>
-              <ZoomIn size={14} />
-            </button>
-            <button className={`btn ${isScanning ? 'btn-danger' : 'btn-primary'}`} style={{ padding: '6px 12px', fontSize: '0.78rem' }} onClick={isScanning ? stopCamera : startCamera}>
-              {isScanning ? <Square size={13} /> : <Play size={13} />}
-              {isScanning ? '정지' : '시작'}
-            </button>
-          </div>
+          <button className={`btn ${isScanning ? 'btn-danger' : 'btn-primary'}`} style={{ padding: '6px 14px', fontSize: '0.78rem' }} onClick={isScanning ? stopCamera : startCamera}>
+            {isScanning ? <Square size={13} /> : <Play size={13} />}
+            {isScanning ? '스캔 정지' : '스캔 시작'}
+          </button>
         </div>
       </div>
 
@@ -444,7 +406,7 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
         <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '2px' }}>
           {scannedItems.length === 0 ? (
             <span style={{ fontSize: '0.72rem', color: '#64748b', padding: '2px 0' }}>
-              아직 감지된 항목이 없습니다. 3mm 각인에 조준하세요.
+              아직 감지된 항목이 없습니다. 기기 뒷면 전체를 편안하게 비추세요.
             </span>
           ) : (
             scannedItems.slice(0, 5).map((item) => (
