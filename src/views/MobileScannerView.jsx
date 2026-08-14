@@ -1,13 +1,15 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { Camera, UploadCloud, Play, Square, Plus, Volume2, ShieldCheck, Target, Zap, ZapOff, RefreshCw, Smartphone, Eye } from 'lucide-react';
+import { Camera, UploadCloud, Play, Square, Plus, Volume2, ShieldCheck, Target, Zap, ZapOff, RefreshCw, Smartphone, Eye, Mic, MicOff } from 'lucide-react';
 import { getTesseractWorker, preprocessCanvasROI, parseFieldsFromTesseractResult } from '../utils/ocrWorker';
 import { triggerSuccessFeedback } from '../utils/soundFeedback';
 import { saveScansToSupabase, getStoredConfig } from '../utils/supabaseClient';
+import { isSpeechRecognitionSupported, createSpeechRecognizer, convertKoreanSpeechToDigits } from '../utils/speechRecognition';
 
 export default function MobileScannerView({ onError, onOpenConfigModal }) {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const scanTimerRef = useRef(null);
+  const recognizerRef = useRef(null);
 
   const [isScanning, setIsScanning] = useState(false);
   const [cameraStatus, setCameraStatus] = useState('카메라 준비 중');
@@ -18,8 +20,11 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
   const [videoDevices, setVideoDevices] = useState([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState('');
 
-  // Hardware Camera Features (Always Allow Flashlight Toggle)
+  // Hardware Camera Features & Voice Recognition
   const [isTorchOn, setIsTorchOn] = useState(false);
+  const [isVoiceOn, setIsVoiceOn] = useState(false);
+  const [voiceStatus, setVoiceStatus] = useState('');
+  const [lastVoiceDigits, setLastVoiceDigits] = useState('');
 
   // Real-Time OCR Text Region Bounding Boxes
   const [liveBoxes, setLiveBoxes] = useState([]);
@@ -92,7 +97,7 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
-      await new Promise(r => setTimeout(r, 100));
+      await new Promise(r => setTimeout(r, 150));
     }
 
     let stream = null;
@@ -151,7 +156,7 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
       await videoRef.current.play();
     }
     setIsScanning(true);
-    setCameraStatus('실시간 OCR 탐색 중');
+    setCameraStatus('카메라+음성 하이브리드 OCR 가동 중');
   };
 
   const handleDeviceChange = (e) => {
@@ -160,6 +165,7 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
     startCamera(newId);
   };
 
+  // Always Allow Flashlight Torch Toggle Action
   const toggleTorch = async () => {
     if (!streamRef.current) {
       alert('카메라가 정지되어 있습니다. 스캔 시작 후 플래시를 켜주세요.');
@@ -177,6 +183,52 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
       } catch (e) {
         console.warn('Torch toggle error:', e);
         alert('현재 선택된 카메라 렌즈는 LED 플래시 조명을 직접 지원하지 않습니다. 기본 메인 렌즈로 전환해 보세요.');
+      }
+    }
+  };
+
+  // Voice Recognition Toggle Action
+  const toggleVoice = () => {
+    if (!isSpeechRecognitionSupported()) {
+      alert('현재 브라우저 환경에서는 음성 인식(Speech API)을 지원하지 않습니다. 최신 크롬 또는 삼성 인터넷 브라우저를 사용해 주세요.');
+      return;
+    }
+
+    if (isVoiceOn) {
+      if (recognizerRef.current) {
+        try { recognizerRef.current.stop(); } catch (e) {}
+        recognizerRef.current = null;
+      }
+      setIsVoiceOn(false);
+      setVoiceStatus('');
+      setOcrStatus('🎙️ 음성 보조 인식이 꺼졌습니다');
+    } else {
+      const recognizer = createSpeechRecognizer({
+        onResult: ({ transcript, digits }) => {
+          setVoiceStatus(`🎙️ 음성: "${transcript}" -> [${digits || '숫자탐색'}]`);
+          if (digits && digits.length >= 4) {
+            setLastVoiceDigits(digits.slice(-4));
+          }
+        },
+        onError: (err) => {
+          console.warn('Voice recognition error:', err);
+        },
+        onEnd: () => {
+          if (isVoiceOn && recognizerRef.current) {
+            try { recognizerRef.current.start(); } catch (e) {}
+          }
+        }
+      });
+
+      if (recognizer) {
+        try {
+          recognizer.start();
+          recognizerRef.current = recognizer;
+          setIsVoiceOn(true);
+          setOcrStatus('🎙️ 음성 보조 인식 가동! IMEI 끝 4자리(예: "오공이" 또는 "5052")를 불러주세요.');
+        } catch (e) {
+          console.error('Voice start error:', e);
+        }
       }
     }
   };
@@ -201,18 +253,23 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
       clearInterval(scanTimerRef.current);
       scanTimerRef.current = null;
     }
+    if (recognizerRef.current) {
+      try { recognizerRef.current.stop(); } catch (e) {}
+      recognizerRef.current = null;
+    }
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
     }
     setIsScanning(false);
     setIsTorchOn(false);
+    setIsVoiceOn(false);
     setLiveBoxes([]);
     setPinpointBox(null);
     setCameraStatus('카메라 정지됨');
   };
 
-  // Scanning Loop with Real-Time Bounding Box Visualization
+  // Scanning Loop with Real-Time Bounding Box & Voice Digit Matching
   useEffect(() => {
     if (!isScanning) return;
 
@@ -248,7 +305,7 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
 
         const { parsed, candidateBoxes } = parseFieldsFromTesseractResult(tesseractResult);
 
-        // Convert Candidate Text Bounding Boxes into % relative to video container for real-time visualization
+        // Convert Candidate Text Bounding Boxes into % relative to video container
         if (candidateBoxes && candidateBoxes.length > 0) {
           const mappedLiveBoxes = candidateBoxes.slice(0, 8).map((cb, idx) => {
             const relX = ((roiX + cb.bbox.x0) / vWidth) * 100;
@@ -267,14 +324,33 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
           setLiveBoxes(mappedLiveBoxes);
 
           const readWords = candidateBoxes.map(c => c.text).join(' | ');
-          setOcrStatus(`🔍 탐색 중 (${candidateBoxes.length}개 발견): ${readWords.slice(0, 45)}...`);
+          const displayMsg = voiceStatus ? `${voiceStatus} | 🔍 ${readWords.slice(0, 30)}` : `🔍 탐색 중: ${readWords.slice(0, 45)}...`;
+          setOcrStatus(displayMsg);
         } else {
           setLiveBoxes([]);
-          setOcrStatus('기기 뒷면 텍스트 탐색 중...');
+          setOcrStatus(voiceStatus || '기기 뒷면 텍스트 탐색 중...');
         }
 
-        if (parsed && parsed.imei) {
-          if (parsed.bbox) {
+        // Check if Voice Spoken Digits (e.g. 5052) matches partial OCR candidate digits!
+        let targetImei = parsed?.imei;
+
+        if (!targetImei && lastVoiceDigits && candidateBoxes && candidateBoxes.length > 0) {
+          // Find any numeric word ending with lastVoiceDigits or containing it
+          const voiceMatchedWord = candidateBoxes.find(c => {
+            const numStr = c.text.replace(/\D/g, '');
+            return numStr.length >= 10 && numStr.endsWith(lastVoiceDigits);
+          });
+
+          if (voiceMatchedWord) {
+            const digitsOnly = voiceMatchedWord.text.replace(/\D/g, '');
+            if (digitsOnly.length >= 14) {
+              targetImei = digitsOnly.slice(0, 15);
+            }
+          }
+        }
+
+        if (targetImei && targetImei.length >= 15) {
+          if (parsed && parsed.bbox) {
             const relX = ((roiX + parsed.bbox.x0) / vWidth) * 100;
             const relY = ((roiY + parsed.bbox.y0) / vHeight) * 100;
             const relW = ((parsed.bbox.x1 - parsed.bbox.x0) / vWidth) * 100;
@@ -284,19 +360,19 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
             setPinpointBox({ x: 15, y: 40, w: 70, h: 20 });
           }
 
-          const exists = scannedItems.some(item => item.imei === parsed.imei);
-          if (!exists && parsed.imei !== lastScannedImei) {
+          const exists = scannedItems.some(item => item.imei === targetImei);
+          if (!exists && targetImei !== lastScannedImei) {
             lastScanTime = now;
-            setLastScannedImei(parsed.imei);
+            setLastScannedImei(targetImei);
 
-            const autoAssetNo = parsed.asset_no || `${Date.now().toString().slice(-8)}`;
+            const autoAssetNo = parsed?.asset_no || `${Date.now().toString().slice(-8)}`;
 
             const newItem = {
               id: `scanned_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
               asset_no: autoAssetNo,
-              imei: parsed.imei,
-              mac_address: parsed.mac_address || '',
-              serial_no: parsed.serial_no || '',
+              imei: targetImei,
+              mac_address: parsed?.mac_address || '',
+              serial_no: parsed?.serial_no || '',
               scanned_at: new Date().toLocaleTimeString('ko-KR'),
               status: 'COMPLETED'
             };
@@ -318,7 +394,7 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
             }
 
             setScannedItems(prev => [newItem, ...prev]);
-            setOcrStatus(`★ 금속 각인 감지 성공! IMEI: ${parsed.imei}`);
+            setOcrStatus(`★ 카메라+음성 감지 성공! IMEI: ${targetImei}`);
           }
         }
       } catch (err) {
@@ -331,7 +407,7 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
     return () => {
       if (scanTimerRef.current) clearInterval(scanTimerRef.current);
     };
-  }, [isScanning, lastScannedImei, scannedItems, isConfigured]);
+  }, [isScanning, lastScannedImei, scannedItems, isConfigured, lastVoiceDigits, voiceStatus]);
 
   useEffect(() => {
     enumeratePhysicalCameras();
@@ -424,7 +500,7 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
           display: 'flex',
           justify: 'space-between',
           alignItems: 'center',
-          gap: '8px',
+          gap: '6px',
           zIndex: 20,
           border: '1px solid rgba(255,255,255,0.15)'
         }}>
@@ -432,14 +508,14 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
           {videoDevices.length > 0 ? (
             <select
               style={{
-                fontSize: '0.72rem',
-                padding: '4px 8px',
+                fontSize: '0.7rem',
+                padding: '4px 6px',
                 backgroundColor: '#0f172a',
                 borderColor: '#38bdf8',
                 color: '#38bdf8',
                 fontWeight: 700,
                 borderRadius: '6px',
-                maxWidth: '60%'
+                maxWidth: '45%'
               }}
               value={selectedDeviceId}
               onChange={handleDeviceChange}
@@ -451,18 +527,23 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
               ))}
             </select>
           ) : (
-            <span style={{ fontSize: '0.72rem', color: '#38bdf8', fontWeight: 700 }}>후면 접사 렌즈</span>
+            <span style={{ fontSize: '0.7rem', color: '#38bdf8', fontWeight: 700 }}>후면 접사 렌즈</span>
           )}
 
-          {/* Unconditional Focus & Flashlight Torch Buttons */}
-          <div style={{ display: 'flex', gap: '4px' }}>
-            <button className="btn btn-outline" style={{ padding: '4px 8px', fontSize: '0.72rem', borderColor: '#38bdf8', color: '#7dd3fc', backgroundColor: 'rgba(15,23,42,0.6)' }} onClick={triggerRefocus}>
-              <RefreshCw size={12} /> 초점
+          {/* Controls: Focus, Torch, and Voice Recognition */}
+          <div style={{ display: 'flex', gap: '3px' }}>
+            <button className="btn btn-outline" style={{ padding: '3px 5px', fontSize: '0.68rem', borderColor: '#38bdf8', color: '#7dd3fc', backgroundColor: 'rgba(15,23,42,0.6)' }} onClick={triggerRefocus}>
+              <RefreshCw size={11} /> 초점
             </button>
 
-            <button className={`btn ${isTorchOn ? 'btn-success' : 'btn-outline'}`} style={{ padding: '4px 8px', fontSize: '0.72rem', backgroundColor: isTorchOn ? '#10b981' : 'rgba(15,23,42,0.6)' }} onClick={toggleTorch}>
-              {isTorchOn ? <Zap size={12} /> : <ZapOff size={12} />}
-              {isTorchOn ? '플래시 ON' : '플래시 OFF'}
+            <button className={`btn ${isTorchOn ? 'btn-success' : 'btn-outline'}`} style={{ padding: '3px 5px', fontSize: '0.68rem', backgroundColor: isTorchOn ? '#10b981' : 'rgba(15,23,42,0.6)' }} onClick={toggleTorch}>
+              {isTorchOn ? <Zap size={11} /> : <ZapOff size={11} />}
+              {isTorchOn ? '플래시ON' : '플래시OFF'}
+            </button>
+
+            <button className={`btn ${isVoiceOn ? 'btn-success' : 'btn-outline'}`} style={{ padding: '3px 5px', fontSize: '0.68rem', backgroundColor: isVoiceOn ? '#8b5cf6' : 'rgba(15,23,42,0.6)', borderColor: '#a78bfa', color: '#c4b5fd' }} onClick={toggleVoice}>
+              {isVoiceOn ? <Mic size={11} /> : <MicOff size={11} />}
+              {isVoiceOn ? '음성ON' : '음성OFF'}
             </button>
           </div>
         </div>
@@ -493,7 +574,7 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
             borderRadius: '4px',
             whiteSpace: 'nowrap'
           }}>
-            기기 뒷면을 비추세요 (자동 실시간 텍스트 영역 가이드)
+            {isVoiceOn ? '💡 카메라를 비추고 IMEI 끝 4자리(예: "5052")를 말씀해 보세요!' : '기기 뒷면을 비추세요 (자동 실시간 텍스트 영역 가이드)'}
           </div>
         </div>
 
@@ -602,16 +683,16 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
         padding: '6px 10px',
         borderRadius: '6px',
         fontSize: '0.78rem',
-        color: detectedPulse ? '#6ee7b7' : '#38bdf8',
+        color: detectedPulse ? '#6ee7b7' : isVoiceOn ? '#c4b5fd' : '#38bdf8',
         fontWeight: detectedPulse ? 700 : 500,
         textAlign: 'center',
         border: '1px solid #334155',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'center',
+        justify: 'center',
         gap: '6px'
       }}>
-        <Eye size={14} style={{ color: '#38bdf8' }} />
+        {isVoiceOn ? <Mic size={14} style={{ color: '#a78bfa' }} /> : <Eye size={14} style={{ color: '#38bdf8' }} />}
         <span>{ocrStatus}</span>
       </div>
 
