@@ -72,64 +72,93 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
 
       setVideoDevices(formatted);
       if (formatted.length > 0 && !selectedDeviceId) {
-        // Prefer Ultra-Wide or Telephoto if available
-        const macroLens = formatted.find(f => f.label.includes('접사')) || formatted[0];
-        setSelectedDeviceId(macroLens.deviceId);
+        setSelectedDeviceId(formatted[0].deviceId);
       }
     } catch (e) {
       console.warn('Enumerate devices warning:', e);
     }
   };
 
-  // Start Camera Stream using Selected Physical Camera Lens
+  // Start Camera Stream with Robust Multi-Level Fallback (Zero OverconstrainedError)
   const startCamera = async (targetDeviceId) => {
     const devId = targetDeviceId || selectedDeviceId;
-    try {
-      setCameraStatus('카메라 렌즈 연결 중...');
+    setCameraStatus('카메라 렌즈 연결 중...');
 
-      // Stop existing stream if running
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
-      }
-
-      const videoConstraints = devId
-        ? { deviceId: { exact: devId }, width: { ideal: 3840, min: 1920 }, height: { ideal: 2160, min: 1080 } }
-        : { facingMode: { ideal: 'environment' }, width: { ideal: 3840, min: 1920 }, height: { ideal: 2160, min: 1080 } };
-
-      const stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints });
-      streamRef.current = stream;
-
-      const track = stream.getVideoTracks()[0];
-      if (track && track.getCapabilities) {
-        const capabilities = track.getCapabilities();
-        if ('torch' in capabilities) setTorchSupported(true);
-        
-        if (capabilities.focusMode && capabilities.focusMode.includes('continuous')) {
-          try {
-            await track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] });
-          } catch (e) {}
-        }
-      }
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-      }
-      setIsScanning(true);
-      setCameraStatus('선명 접사/망원 OCR 가동 중');
-    } catch (err) {
-      console.error('Camera Access Error:', err);
-      setCameraStatus('카메라 렌즈 연결 실패');
-      onError(`카메라 렌즈를 연결할 수 없습니다: ${err.message}`);
+    // 1. Cleanly stop existing stream & wait 100ms for Android hardware release
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+      await new Promise(r => setTimeout(r, 100));
     }
+
+    let stream = null;
+
+    // Strategy A: Ideal resolution with specified deviceId
+    if (devId) {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            deviceId: { ideal: devId },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 }
+          }
+        });
+      } catch (errA) {
+        console.warn('Strategy A failed, trying Strategy B:', errA);
+      }
+    }
+
+    // Strategy B: Basic deviceId without resolution constraints
+    if (!stream && devId) {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { deviceId: devId }
+        });
+      } catch (errB) {
+        console.warn('Strategy B failed, trying Strategy C:', errB);
+      }
+    }
+
+    // Strategy C: Fallback to environment facing camera
+    if (!stream) {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }
+        });
+      } catch (errC) {
+        console.error('All camera strategies failed:', errC);
+        setCameraStatus('카메라 렌즈 연결 실패');
+        onError(`카메라를 실행할 수 없습니다: ${errC.message || '장치가 사용 중이거나 지원되지 않습니다.'}`);
+        return;
+      }
+    }
+
+    streamRef.current = stream;
+
+    const track = stream.getVideoTracks()[0];
+    if (track && track.getCapabilities) {
+      const capabilities = track.getCapabilities();
+      if ('torch' in capabilities) setTorchSupported(true);
+      
+      if (capabilities.focusMode && capabilities.focusMode.includes('continuous')) {
+        try {
+          await track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] });
+        } catch (e) {}
+      }
+    }
+
+    if (videoRef.current) {
+      videoRef.current.srcObject = stream;
+      await videoRef.current.play();
+    }
+    setIsScanning(true);
+    setCameraStatus('접사/망원 OCR 가동 중');
   };
 
   const handleDeviceChange = (e) => {
     const newId = e.target.value;
     setSelectedDeviceId(newId);
-    if (isScanning) {
-      startCamera(newId);
-    }
+    startCamera(newId);
   };
 
   const toggleTorch = async () => {
@@ -482,7 +511,7 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
             {cameraStatus}
           </div>
 
-          <button className={`btn ${isScanning ? 'btn-danger' : 'btn-primary'}`} style={{ padding: '6px 14px', fontSize: '0.78rem' }} onClick={isScanning ? stopCamera : startCamera}>
+          <button className={`btn ${isScanning ? 'btn-danger' : 'btn-primary'}`} style={{ padding: '6px 14px', fontSize: '0.78rem' }} onClick={isScanning ? stopCamera : () => startCamera()}>
             {isScanning ? <Square size={13} /> : <Play size={13} />}
             {isScanning ? '스캔 정지' : '스캔 시작'}
           </button>

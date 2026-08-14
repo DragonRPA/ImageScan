@@ -82,7 +82,7 @@ export default function App() {
               {deviceMode === 'mobile' ? 'S24 멀티렌즈 접사 스캐너' : 'PC 라벨 프린터 ZPL 직통 출력 대시보드'}
             </h1>
             <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
-              버전: v1.0.0.Build.13 | 2026-08-14
+              버전: v1.0.0.Build.14 | 2026-08-14
             </span>
           </div>
         </div>
