@@ -40,26 +40,31 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
   const supabaseConfig = getStoredConfig();
   const isConfigured = Boolean(supabaseConfig.url && supabaseConfig.anonKey && !supabaseConfig.url.includes('your-supabase-project'));
 
-  // Enumerate all physical camera lenses (Main Wide, Ultra-Wide Macro, Telephoto)
+  // Enumerate REAR physical camera lenses ONLY (Strictly Filter Out Front Selfie Cameras!)
   const enumeratePhysicalCameras = async () => {
     if (typeof window === 'undefined' || !('navigator' in window) || !('mediaDevices' in navigator)) return;
     try {
-      // Request initial permission to get device labels
       await navigator.mediaDevices.getUserMedia({ video: true }).then(s => s.getTracks().forEach(t => t.stop())).catch(() => {});
       
       const devices = await navigator.mediaDevices.enumerateDevices();
       const videoInputs = devices.filter(d => d.kind === 'videoinput');
 
-      // Categorize rear lenses with user friendly names for Galaxy S24
-      const formatted = videoInputs.map((d, index) => {
-        let label = d.label || `카메라 렌즈 #${index + 1}`;
+      // Strictly filter out FRONT / SELFIE cameras
+      const rearLensesOnly = videoInputs.filter(d => {
+        const lbl = (d.label || '').toLowerCase();
+        const isFront = lbl.includes('front') || lbl.includes('user') || lbl.includes('selfie') || lbl.includes('전면') || lbl.includes('내면');
+        return !isFront;
+      });
+
+      const formatted = rearLensesOnly.map((d, index) => {
+        let label = d.label || `후면 렌즈 #${index + 1}`;
         const lower = label.toLowerCase();
         
         if (lower.includes('ultra') || lower.includes('wide') || index === 1) {
           label = `📷 초광각 접사 렌즈 (5cm 초접사 특화)`;
         } else if (lower.includes('tele') || lower.includes('zoom') || index === 2) {
           label = `📷 3배/5배 망원 렌즈 (30cm 거리 줌 특화)`;
-        } else if (index === 0 || lower.includes('back') || lower.includes('0')) {
+        } else {
           label = `📷 기본 메인 렌즈 (기본 광각)`;
         }
 
@@ -79,12 +84,11 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
     }
   };
 
-  // Start Camera Stream with Robust Multi-Level Fallback (Zero OverconstrainedError)
+  // Start Camera Stream with Robust Multi-Level Fallback
   const startCamera = async (targetDeviceId) => {
     const devId = targetDeviceId || selectedDeviceId;
     setCameraStatus('카메라 렌즈 연결 중...');
 
-    // 1. Cleanly stop existing stream & wait 100ms for Android hardware release
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
@@ -93,7 +97,6 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
 
     let stream = null;
 
-    // Strategy A: Ideal resolution with specified deviceId
     if (devId) {
       try {
         stream = await navigator.mediaDevices.getUserMedia({
@@ -108,7 +111,6 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
       }
     }
 
-    // Strategy B: Basic deviceId without resolution constraints
     if (!stream && devId) {
       try {
         stream = await navigator.mediaDevices.getUserMedia({
@@ -119,7 +121,6 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
       }
     }
 
-    // Strategy C: Fallback to environment facing camera
     if (!stream) {
       try {
         stream = await navigator.mediaDevices.getUserMedia({
@@ -373,7 +374,7 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <Smartphone size={16} style={{ color: '#38bdf8' }} />
             <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#f8fafc' }}>
-              카메라 물리 렌즈 선택 (S24/아이폰 전용)
+              후면 카메라 물리 렌즈 선택 (S24/아이폰 전용)
             </span>
           </div>
 
@@ -453,7 +454,7 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
             borderRadius: '4px',
             whiteSpace: 'nowrap'
           }}>
-            선택한 물리 렌즈로 비추세요
+            선택한 후면 물리 렌즈로 비추세요
           </div>
         </div>
 
