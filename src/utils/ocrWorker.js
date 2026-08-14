@@ -104,12 +104,27 @@ export function preprocessCanvasROI(sourceVideo, roiBounds) {
 
 /**
  * Parse OCR raw output (with Fault-Tolerant OCR error normalization) into structured fields
+ * Also returns ALL candidate text word bounding boxes currently detected by OCR engine!
  */
 export function parseFieldsFromTesseractResult(tesseractResult) {
-  if (!tesseractResult || !tesseractResult.data) return null;
+  if (!tesseractResult || !tesseractResult.data) return { parsed: null, candidateBoxes: [] };
 
   const { text, words, lines } = tesseractResult.data;
-  if (!text) return null;
+
+  // Extract ALL candidate text word boxes for real-time visual feedback overlay
+  const candidateBoxes = [];
+  if (words && words.length > 0) {
+    words.forEach(w => {
+      if (w.text && w.text.trim().length >= 2 && w.bbox) {
+        candidateBoxes.push({
+          text: w.text.trim(),
+          bbox: w.bbox
+        });
+      }
+    });
+  }
+
+  if (!text) return { parsed: null, candidateBoxes };
 
   // 1. Normalize OCR text misreads for IMEI label prefixes: (1MEI, lMEI, |MEI, ;MEI, I.M.E.I -> IMEI)
   const cleanText = text
@@ -171,8 +186,9 @@ export function parseFieldsFromTesseractResult(tesseractResult) {
     }
   }
 
+  let parsed = null;
   if (imei) {
-    return {
+    parsed = {
       imei,
       mac_address: mac_address || '',
       serial_no: serial_no || '',
@@ -181,7 +197,7 @@ export function parseFieldsFromTesseractResult(tesseractResult) {
     };
   }
 
-  return null;
+  return { parsed, candidateBoxes };
 }
 
 export function parseFieldsFromText(text) {

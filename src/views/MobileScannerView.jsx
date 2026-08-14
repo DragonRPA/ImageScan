@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { Camera, UploadCloud, Play, Square, Plus, Volume2, ShieldCheck, Target, Zap, ZapOff, RefreshCw, Smartphone } from 'lucide-react';
+import { Camera, UploadCloud, Play, Square, Plus, Volume2, ShieldCheck, Target, Zap, ZapOff, RefreshCw, Smartphone, Eye } from 'lucide-react';
 import { getTesseractWorker, preprocessCanvasROI, parseFieldsFromTesseractResult } from '../utils/ocrWorker';
 import { triggerSuccessFeedback } from '../utils/soundFeedback';
 import { saveScansToSupabase, getStoredConfig } from '../utils/supabaseClient';
@@ -21,7 +21,8 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
   // Hardware Camera Features (Always Allow Flashlight Toggle)
   const [isTorchOn, setIsTorchOn] = useState(false);
 
-  // Pinpoint Highlight Box Coordinates
+  // Real-Time OCR Text Region Bounding Boxes
+  const [liveBoxes, setLiveBoxes] = useState([]);
   const [pinpointBox, setPinpointBox] = useState(null);
 
   // Recent scanned items list
@@ -150,7 +151,7 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
       await videoRef.current.play();
     }
     setIsScanning(true);
-    setCameraStatus('접사/망원 OCR 가동 중');
+    setCameraStatus('실시간 OCR 탐색 중');
   };
 
   const handleDeviceChange = (e) => {
@@ -159,7 +160,6 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
     startCamera(newId);
   };
 
-  // Always Allow Flashlight Torch Toggle Action
   const toggleTorch = async () => {
     if (!streamRef.current) {
       alert('카메라가 정지되어 있습니다. 스캔 시작 후 플래시를 켜주세요.');
@@ -176,7 +176,6 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
         setOcrStatus(nextState ? '🔦 플래시 조명이 켜졌습니다 (금속 각인 음영 극대화)' : '🔦 플래시 조명이 꺼졌습니다');
       } catch (e) {
         console.warn('Torch toggle error:', e);
-        // Fallback alert for non-torch sub-lenses
         alert('현재 선택된 카메라 렌즈는 LED 플래시 조명을 직접 지원하지 않습니다. 기본 메인 렌즈로 전환해 보세요.');
       }
     }
@@ -208,10 +207,12 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
     }
     setIsScanning(false);
     setIsTorchOn(false);
+    setLiveBoxes([]);
+    setPinpointBox(null);
     setCameraStatus('카메라 정지됨');
   };
 
-  // Scanning Loop
+  // Scanning Loop with Real-Time Bounding Box Visualization
   useEffect(() => {
     if (!isScanning) return;
 
@@ -221,7 +222,7 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
     scanTimerRef.current = setInterval(async () => {
       if (isProcessing || !videoRef.current || videoRef.current.readyState !== 4) return;
       const now = Date.now();
-      if (now - lastScanTime < 400) return;
+      if (now - lastScanTime < 350) return;
 
       isProcessing = true;
       try {
@@ -234,8 +235,8 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
           return;
         }
 
-        const roiWidth = Math.floor(vWidth * 0.85);
-        const roiHeight = Math.floor(vHeight * 0.70);
+        const roiWidth = Math.floor(vWidth * 0.88);
+        const roiHeight = Math.floor(vHeight * 0.75);
         const roiX = Math.floor((vWidth - roiWidth) / 2);
         const roiY = Math.floor((vHeight - roiHeight) / 2);
 
@@ -245,10 +246,32 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
         const worker = await getTesseractWorker();
         const tesseractResult = await worker.recognize(roiCanvas);
 
-        const rawText = tesseractResult.data.text || '';
-        setOcrStatus(rawText.trim() ? `선명 탐색: ${rawText.slice(0, 30)}...` : '기기 뒷면을 비추세요...');
+        const { parsed, candidateBoxes } = parseFieldsFromTesseractResult(tesseractResult);
 
-        const parsed = parseFieldsFromTesseractResult(tesseractResult);
+        // Convert Candidate Text Bounding Boxes into % relative to video container for real-time visualization
+        if (candidateBoxes && candidateBoxes.length > 0) {
+          const mappedLiveBoxes = candidateBoxes.slice(0, 8).map((cb, idx) => {
+            const relX = ((roiX + cb.bbox.x0) / vWidth) * 100;
+            const relY = ((roiY + cb.bbox.y0) / vHeight) * 100;
+            const relW = ((cb.bbox.x1 - cb.bbox.x0) / vWidth) * 100;
+            const relH = ((cb.bbox.y1 - cb.bbox.y0) / vHeight) * 100;
+            return {
+              id: `box_${idx}_${Date.now()}`,
+              text: cb.text,
+              x: Math.max(0, relX),
+              y: Math.max(0, relY),
+              w: Math.max(8, relW),
+              h: Math.max(4, relH)
+            };
+          });
+          setLiveBoxes(mappedLiveBoxes);
+
+          const readWords = candidateBoxes.map(c => c.text).join(' | ');
+          setOcrStatus(`🔍 탐색 중 (${candidateBoxes.length}개 발견): ${readWords.slice(0, 45)}...`);
+        } else {
+          setLiveBoxes([]);
+          setOcrStatus('기기 뒷면 텍스트 탐색 중...');
+        }
 
         if (parsed && parsed.imei) {
           if (parsed.bbox) {
@@ -470,11 +493,48 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
             borderRadius: '4px',
             whiteSpace: 'nowrap'
           }}>
-            기기 뒷면을 비추세요 (자동 텍스트 탐색)
+            기기 뒷면을 비추세요 (자동 실시간 텍스트 영역 가이드)
           </div>
         </div>
 
-        {/* Live Pinpoint Bounding Box Highlight on Detected Text Location */}
+        {/* REAL-TIME LIVE TEXT CANDIDATE BOUNDING BOXES (Yellow/Cyan Translucent Box for ALL detected words!) */}
+        {isScanning && liveBoxes.map((b) => (
+          <div
+            key={b.id}
+            style={{
+              position: 'absolute',
+              left: `${b.x}%`,
+              top: `${b.y}%`,
+              width: `${b.w}%`,
+              height: `${b.h}%`,
+              border: '1px solid #38bdf8',
+              backgroundColor: 'rgba(56, 189, 248, 0.2)',
+              borderRadius: '3px',
+              pointerEvents: 'none',
+              zIndex: 15,
+              transition: 'all 0.1s ease',
+              display: 'flex',
+              alignItems: 'flex-start',
+              padding: '1px'
+            }}
+          >
+            <span style={{
+              fontSize: '0.55rem',
+              color: '#38bdf8',
+              backgroundColor: 'rgba(15, 23, 42, 0.9)',
+              padding: '1px 3px',
+              borderRadius: '2px',
+              lineHeight: 1,
+              whiteSpace: 'nowrap',
+              transform: 'translateY(-12px)',
+              pointerEvents: 'none'
+            }}>
+              🔍 {b.text}
+            </span>
+          </div>
+        ))}
+
+        {/* Live Pinpoint Bounding Box Highlight on Matched Target IMEI Location (Glowing Green) */}
         {pinpointBox && (
           <div style={{
             position: 'absolute',
@@ -483,17 +543,17 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
             width: `${pinpointBox.w}%`,
             height: `${pinpointBox.h}%`,
             border: '3px solid #10b981',
-            backgroundColor: 'rgba(16, 185, 129, 0.25)',
+            backgroundColor: 'rgba(16, 185, 129, 0.3)',
             borderRadius: '6px',
-            boxShadow: '0 0 20px rgba(16, 185, 129, 0.9)',
+            boxShadow: '0 0 25px rgba(16, 185, 129, 1)',
             display: 'flex',
             alignItems: 'center',
             justify: 'center',
-            zIndex: 10,
+            zIndex: 30,
             transition: 'all 0.15s ease'
           }}>
             <span style={{
-              fontSize: '0.7rem',
+              fontSize: '0.72rem',
               color: '#ffffff',
               fontWeight: 800,
               backgroundColor: '#10b981',
@@ -503,7 +563,7 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
               alignItems: 'center',
               gap: '4px'
             }}>
-              <Target size={12} /> IMEI 포착!
+              <Target size={13} /> IMEI 포착!
             </span>
           </div>
         )}
@@ -536,18 +596,23 @@ export default function MobileScannerView({ onError, onOpenConfigModal }) {
         </div>
       </div>
 
-      {/* OCR Status Banner */}
+      {/* OCR Real-Time Text Subtitle / Log Banner */}
       <div style={{
         backgroundColor: '#1e293b',
         padding: '6px 10px',
         borderRadius: '6px',
         fontSize: '0.78rem',
-        color: detectedPulse ? '#6ee7b7' : '#94a3b8',
+        color: detectedPulse ? '#6ee7b7' : '#38bdf8',
         fontWeight: detectedPulse ? 700 : 500,
         textAlign: 'center',
-        border: '1px solid #334155'
+        border: '1px solid #334155',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '6px'
       }}>
-        {ocrStatus}
+        <Eye size={14} style={{ color: '#38bdf8' }} />
+        <span>{ocrStatus}</span>
       </div>
 
       {/* Bottom Compact Toolbar */}
