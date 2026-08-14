@@ -1,0 +1,3602 @@
+[
+  {
+    "id": "seed_1",
+    "asset_no": "TEST0001",
+    "imei": "351379300225052",
+    "mac_address": "4CEBB0B57A51",
+    "serial_no": "R5KL60F0CZW",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T19:03:17.561Z"
+  },
+  {
+    "id": "seed_2",
+    "asset_no": "TEST0002",
+    "imei": "351379300224790",
+    "mac_address": "4CEBB0B57A1D",
+    "serial_no": "R5KL60F0C6F",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T19:04:17.561Z"
+  },
+  {
+    "id": "seed_3",
+    "asset_no": "TEST0003",
+    "imei": "351379300224774",
+    "mac_address": "4CEBB0B57A19",
+    "serial_no": "R5KL60F0C4M",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T19:05:17.561Z"
+  },
+  {
+    "id": "seed_4",
+    "asset_no": "TEST0004",
+    "imei": "351379300224725",
+    "mac_address": "4CEBB0B57A0F",
+    "serial_no": "R5KL60F0BZE",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T19:06:17.561Z"
+  },
+  {
+    "id": "seed_5",
+    "asset_no": "TEST0005",
+    "imei": "351379300224592",
+    "mac_address": "4CEBB0B579F5",
+    "serial_no": "R5KL60F0BKV",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T19:07:17.561Z"
+  },
+  {
+    "id": "seed_6",
+    "asset_no": "TEST0006",
+    "imei": "351379300224568",
+    "mac_address": "4CEBB0B579EF",
+    "serial_no": "R5KL60F0BGY",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T19:08:17.561Z"
+  },
+  {
+    "id": "seed_7",
+    "asset_no": "TEST0007",
+    "imei": "351379300224352",
+    "mac_address": "4CEBB0B579C5",
+    "serial_no": "R5KL60F0AVR",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T19:09:17.561Z"
+  },
+  {
+    "id": "seed_8",
+    "asset_no": "TEST0008",
+    "imei": "351379300224337",
+    "mac_address": "4CEBB0B579C1",
+    "serial_no": "R5KL60F0ASW",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T19:10:17.561Z"
+  },
+  {
+    "id": "seed_9",
+    "asset_no": "TEST0009",
+    "imei": "351379300224287",
+    "mac_address": "4CEBB0B579B7",
+    "serial_no": "R5KL60F0AMD",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T19:11:17.561Z"
+  },
+  {
+    "id": "seed_10",
+    "asset_no": "TEST0010",
+    "imei": "351379300224238",
+    "mac_address": "4CEBB0B579AD",
+    "serial_no": "R5KL60F0AGV",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T19:12:17.561Z"
+  },
+  {
+    "id": "seed_11",
+    "asset_no": "TEST0011",
+    "imei": "351379300224170",
+    "mac_address": "4CEBB0B579A1",
+    "serial_no": "R5KL60F0AAE",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T19:13:17.561Z"
+  },
+  {
+    "id": "seed_12",
+    "asset_no": "TEST0012",
+    "imei": "351379300224154",
+    "mac_address": "4CEBB0B5799D",
+    "serial_no": "R5KL60F0A8J",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T19:14:17.561Z"
+  },
+  {
+    "id": "seed_13",
+    "asset_no": "TEST0013",
+    "imei": "351379300223099",
+    "mac_address": "4CEBB0B578C9",
+    "serial_no": "R5KL60F071E",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T19:15:17.561Z"
+  },
+  {
+    "id": "seed_14",
+    "asset_no": "TEST0014",
+    "imei": "351379300223180",
+    "mac_address": "4CEBB0B578DB",
+    "serial_no": "R5KL60F07AF",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T19:16:17.561Z"
+  },
+  {
+    "id": "seed_15",
+    "asset_no": "TEST0015",
+    "imei": "351379300223347",
+    "mac_address": "4CEBB0B578FB",
+    "serial_no": "R5KL60F07SV",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T19:17:17.561Z"
+  },
+  {
+    "id": "seed_16",
+    "asset_no": "TEST0016",
+    "imei": "351379300223412",
+    "mac_address": "4CEBB0B57909",
+    "serial_no": "R5KL60F080L",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T19:18:17.561Z"
+  },
+  {
+    "id": "seed_17",
+    "asset_no": "TEST0017",
+    "imei": "351379300223461",
+    "mac_address": "4CEBB0B57913",
+    "serial_no": "R5KL60F085X",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T19:19:17.561Z"
+  },
+  {
+    "id": "seed_18",
+    "asset_no": "TEST0018",
+    "imei": "351379300223503",
+    "mac_address": "4CEBB0B5791B",
+    "serial_no": "R5KL60F089T",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T19:20:17.561Z"
+  },
+  {
+    "id": "seed_19",
+    "asset_no": "TEST0019",
+    "imei": "351379300224147",
+    "mac_address": "4CEBB0B5799B",
+    "serial_no": "R5KL60F0A7W",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T19:21:17.561Z"
+  },
+  {
+    "id": "seed_20",
+    "asset_no": "TEST0020",
+    "imei": "351379300223974",
+    "mac_address": "4CEBB0B57979",
+    "serial_no": "R5KL60F09PW",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T19:22:17.561Z"
+  },
+  {
+    "id": "seed_21",
+    "asset_no": "TEST0021",
+    "imei": "351379300223958",
+    "mac_address": "4CEBB0B57975",
+    "serial_no": "R5KL60F09MB",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T19:23:17.561Z"
+  },
+  {
+    "id": "seed_22",
+    "asset_no": "TEST0022",
+    "imei": "351379300223644",
+    "mac_address": "4CEBB0B57937",
+    "serial_no": "R5KL60F08PE",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T19:24:17.561Z"
+  },
+  {
+    "id": "seed_23",
+    "asset_no": "TEST0023",
+    "imei": "351379300222711",
+    "mac_address": "4CEBB0B5787D",
+    "serial_no": "R5KL60F05WL",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T19:25:17.561Z"
+  },
+  {
+    "id": "seed_24",
+    "asset_no": "TEST0024",
+    "imei": "351379300228353",
+    "mac_address": "4CEBB0B57CE5",
+    "serial_no": "R5KL60F0NZT",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T19:26:17.561Z"
+  },
+  {
+    "id": "seed_25",
+    "asset_no": "TEST0025",
+    "imei": "351379300225136",
+    "mac_address": "4CEBB0B57A61",
+    "serial_no": "R5KL60F0D7M",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T19:27:17.561Z"
+  },
+  {
+    "id": "seed_26",
+    "asset_no": "TEST0026",
+    "imei": "351379300223826",
+    "mac_address": "4CEBB0B5795B",
+    "serial_no": "R5KL60F098X",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T19:28:17.561Z"
+  },
+  {
+    "id": "seed_27",
+    "asset_no": "TEST0027",
+    "imei": "351379300219014",
+    "mac_address": "4CEBB0B57599",
+    "serial_no": "R5KL60EZTNX",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T19:29:17.561Z"
+  },
+  {
+    "id": "seed_28",
+    "asset_no": "TEST0028",
+    "imei": "351379300219196",
+    "mac_address": "4CEBB0B575BD",
+    "serial_no": "R5KL60EZV7P",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T19:30:17.561Z"
+  },
+  {
+    "id": "seed_29",
+    "asset_no": "TEST0029",
+    "imei": "351379300219287",
+    "mac_address": "4CEBB0B575CF",
+    "serial_no": "R5KL60EZVGD",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T19:31:17.561Z"
+  },
+  {
+    "id": "seed_30",
+    "asset_no": "TEST0030",
+    "imei": "351379300219329",
+    "mac_address": "4CEBB0B575D7",
+    "serial_no": "R5KL60EZVLL",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T19:32:17.561Z"
+  },
+  {
+    "id": "seed_31",
+    "asset_no": "TEST0031",
+    "imei": "351379300219493",
+    "mac_address": "4CEBB0B575F9",
+    "serial_no": "R5KL60EZW4L",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T19:33:17.561Z"
+  },
+  {
+    "id": "seed_32",
+    "asset_no": "TEST0032",
+    "imei": "351379300219808",
+    "mac_address": "4CEBB0B57637",
+    "serial_no": "R5KL60EZX2N",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T19:34:17.561Z"
+  },
+  {
+    "id": "seed_33",
+    "asset_no": "TEST0033",
+    "imei": "351379300219824",
+    "mac_address": "4CEBB0B5763B",
+    "serial_no": "R5KL60EZX4A",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T19:35:17.561Z"
+  },
+  {
+    "id": "seed_34",
+    "asset_no": "TEST0034",
+    "imei": "351379300220368",
+    "mac_address": "4CEBB0B576A7",
+    "serial_no": "R5KL60EZYRD",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T19:36:17.561Z"
+  },
+  {
+    "id": "seed_35",
+    "asset_no": "TEST0035",
+    "imei": "351379300220699",
+    "mac_address": "4CEBB0B576E9",
+    "serial_no": "R5KL60EZZRH",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T19:37:17.561Z"
+  },
+  {
+    "id": "seed_36",
+    "asset_no": "TEST0036",
+    "imei": "351379300220806",
+    "mac_address": "4CEBB0B576FF",
+    "serial_no": "R5KL60F003K",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T19:38:17.561Z"
+  },
+  {
+    "id": "seed_37",
+    "asset_no": "TEST0037",
+    "imei": "351379300221275",
+    "mac_address": "4CEBB0B5775D",
+    "serial_no": "R5KL60F01HL",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T19:39:17.561Z"
+  },
+  {
+    "id": "seed_38",
+    "asset_no": "TEST0038",
+    "imei": "351379300221390",
+    "mac_address": "4CEBB0B57775",
+    "serial_no": "R5KL60F01WH",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T19:40:17.561Z"
+  },
+  {
+    "id": "seed_39",
+    "asset_no": "TEST0039",
+    "imei": "351379300221705",
+    "mac_address": "4CEBB0B577B3",
+    "serial_no": "R5KL60F02TY",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T19:41:17.561Z"
+  },
+  {
+    "id": "seed_40",
+    "asset_no": "TEST0040",
+    "imei": "351379300221770",
+    "mac_address": "4CEBB0B577C1",
+    "serial_no": "R5KL60F031A",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T19:42:17.561Z"
+  },
+  {
+    "id": "seed_41",
+    "asset_no": "TEST0041",
+    "imei": "351379300222141",
+    "mac_address": "4CEBB0B5780B",
+    "serial_no": "R5KL60F045Z",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T19:43:17.561Z"
+  },
+  {
+    "id": "seed_42",
+    "asset_no": "TEST0042",
+    "imei": "351379300222158",
+    "mac_address": "4CEBB0B5780D",
+    "serial_no": "R5KL60F046B",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T19:44:17.561Z"
+  },
+  {
+    "id": "seed_43",
+    "asset_no": "TEST0043",
+    "imei": "351379300222174",
+    "mac_address": "4CEBB0B57811",
+    "serial_no": "R5KL60F048W",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T19:45:17.561Z"
+  },
+  {
+    "id": "seed_44",
+    "asset_no": "TEST0044",
+    "imei": "351379300222406",
+    "mac_address": "4CEBB0B5783F",
+    "serial_no": "R5KL60F04YX",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T19:46:17.561Z"
+  },
+  {
+    "id": "seed_45",
+    "asset_no": "TEST0045",
+    "imei": "351379300222430",
+    "mac_address": "4CEBB0B57845",
+    "serial_no": "R5KL60F051V",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T19:47:17.561Z"
+  },
+  {
+    "id": "seed_46",
+    "asset_no": "TEST0046",
+    "imei": "351379300222620",
+    "mac_address": "4CEBB0B5786B",
+    "serial_no": "R5KL60F05LV",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T19:48:17.561Z"
+  },
+  {
+    "id": "seed_47",
+    "asset_no": "TEST0047",
+    "imei": "351379300222695",
+    "mac_address": "4CEBB0B57879",
+    "serial_no": "R5KL60F05TZ",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T19:49:17.561Z"
+  },
+  {
+    "id": "seed_48",
+    "asset_no": "TEST0048",
+    "imei": "351379300222703",
+    "mac_address": "4CEBB0B5787B",
+    "serial_no": "R5KL60F05VB",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T19:50:17.561Z"
+  },
+  {
+    "id": "seed_49",
+    "asset_no": "TEST0049",
+    "imei": "351379300223800",
+    "mac_address": "4CEBB0B57957",
+    "serial_no": "R5KL60F096R",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T19:51:17.561Z"
+  },
+  {
+    "id": "seed_50",
+    "asset_no": "TEST0050",
+    "imei": "351379300225086",
+    "mac_address": "4CEBB0B57A57",
+    "serial_no": "R5KL60F0D2P",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T19:52:17.561Z"
+  },
+  {
+    "id": "seed_51",
+    "asset_no": "TEST0051",
+    "imei": "351379300223073",
+    "mac_address": "4CEBB0B578C5",
+    "serial_no": "R5KL60F06ZL",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T19:53:17.561Z"
+  },
+  {
+    "id": "seed_52",
+    "asset_no": "TEST0052",
+    "imei": "351379300228734",
+    "mac_address": "4CEBB0B57D31",
+    "serial_no": "R5KL60F0Q4F",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T19:54:17.561Z"
+  },
+  {
+    "id": "seed_53",
+    "asset_no": "TEST0053",
+    "imei": "351379300228692",
+    "mac_address": "4CEBB0B57D29",
+    "serial_no": "R5KL60F0Q0T",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T19:55:17.561Z"
+  },
+  {
+    "id": "seed_54",
+    "asset_no": "TEST0054",
+    "imei": "351379300228676",
+    "mac_address": "4CEBB0B57D25",
+    "serial_no": "R5KL60F0PYX",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T19:56:17.561Z"
+  },
+  {
+    "id": "seed_55",
+    "asset_no": "TEST0055",
+    "imei": "351379300228536",
+    "mac_address": "4CEBB0B57D09",
+    "serial_no": "R5KL60F0PHV",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T19:57:17.561Z"
+  },
+  {
+    "id": "seed_56",
+    "asset_no": "TEST0056",
+    "imei": "351379300225334",
+    "mac_address": "4CEBB0B57A89",
+    "serial_no": "R5KL60F0DTH",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T19:58:17.561Z"
+  },
+  {
+    "id": "seed_57",
+    "asset_no": "TEST0057",
+    "imei": "351379300225433",
+    "mac_address": "4CEBB0B57A9D",
+    "serial_no": "R5KL60F0E4X",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T19:59:17.561Z"
+  },
+  {
+    "id": "seed_58",
+    "asset_no": "TEST0058",
+    "imei": "351379300225441",
+    "mac_address": "4CEBB0B57A9F",
+    "serial_no": "R5KL60F0E5P",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:00:17.561Z"
+  },
+  {
+    "id": "seed_59",
+    "asset_no": "TEST0059",
+    "imei": "351379300225466",
+    "mac_address": "4CEBB0B57AA3",
+    "serial_no": "R5KL60F0E7K",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:01:17.561Z"
+  },
+  {
+    "id": "seed_60",
+    "asset_no": "TEST0060",
+    "imei": "351379300225474",
+    "mac_address": "4CEBB0B57AA5",
+    "serial_no": "R5KL60F0E8T",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:02:17.561Z"
+  },
+  {
+    "id": "seed_61",
+    "asset_no": "TEST0061",
+    "imei": "351379300225557",
+    "mac_address": "4CEBB0B57AB5",
+    "serial_no": "R5KL60F0EGZ",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:03:17.561Z"
+  },
+  {
+    "id": "seed_62",
+    "asset_no": "TEST0062",
+    "imei": "351379300225615",
+    "mac_address": "4CEBB0B57AC1",
+    "serial_no": "R5KL60F0ENE",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:04:17.561Z"
+  },
+  {
+    "id": "seed_63",
+    "asset_no": "TEST0063",
+    "imei": "351379300225623",
+    "mac_address": "4CEBB0B57AC3",
+    "serial_no": "R5KL60F0EPX",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:05:17.561Z"
+  },
+  {
+    "id": "seed_64",
+    "asset_no": "TEST0064",
+    "imei": "351379300225698",
+    "mac_address": "4CEBB0B57AD1",
+    "serial_no": "R5KL60F0EXH",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:06:17.561Z"
+  },
+  {
+    "id": "seed_65",
+    "asset_no": "TEST0065",
+    "imei": "351379300225748",
+    "mac_address": "4CEBB0B57ADB",
+    "serial_no": "R5KL60F0F2L",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:07:17.561Z"
+  },
+  {
+    "id": "seed_66",
+    "asset_no": "TEST0066",
+    "imei": "351379300225763",
+    "mac_address": "4CEBB0B57ADF",
+    "serial_no": "R5KL60F0F4J",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:08:17.561Z"
+  },
+  {
+    "id": "seed_67",
+    "asset_no": "TEST0067",
+    "imei": "351379300226019",
+    "mac_address": "4CEBB0B57B11",
+    "serial_no": "R5KL60F0FWK",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:09:17.561Z"
+  },
+  {
+    "id": "seed_68",
+    "asset_no": "TEST0068",
+    "imei": "351379300226068",
+    "mac_address": "4CEBB0B57B1B",
+    "serial_no": "R5KL60F0G1D",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:10:17.561Z"
+  },
+  {
+    "id": "seed_69",
+    "asset_no": "TEST0069",
+    "imei": "351379300226456",
+    "mac_address": "4CEBB0B57B69",
+    "serial_no": "R5KL60F0H7B",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:11:17.561Z"
+  },
+  {
+    "id": "seed_70",
+    "asset_no": "TEST0070",
+    "imei": "351379300226894",
+    "mac_address": "4CEBB0B57BC1",
+    "serial_no": "R5KL60F0JJY",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:12:17.562Z"
+  },
+  {
+    "id": "seed_71",
+    "asset_no": "TEST0071",
+    "imei": "351379300227058",
+    "mac_address": "4CEBB0B57BE1",
+    "serial_no": "R5KL60F0K1P",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:13:17.562Z"
+  },
+  {
+    "id": "seed_72",
+    "asset_no": "TEST0072",
+    "imei": "351379300227108",
+    "mac_address": "4CEBB0B57BEB",
+    "serial_no": "R5KL60F0K6M",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:14:17.562Z"
+  },
+  {
+    "id": "seed_73",
+    "asset_no": "TEST0073",
+    "imei": "351379300227157",
+    "mac_address": "4CEBB0B57BF5",
+    "serial_no": "R5KL60F0KBA",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:15:17.562Z"
+  },
+  {
+    "id": "seed_74",
+    "asset_no": "TEST0074",
+    "imei": "351379300227181",
+    "mac_address": "4CEBB0B57BFB",
+    "serial_no": "R5KL60F0KEL",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:16:17.562Z"
+  },
+  {
+    "id": "seed_75",
+    "asset_no": "TEST0075",
+    "imei": "351379300227215",
+    "mac_address": "4CEBB0B57C01",
+    "serial_no": "R5KL60F0KHR",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:17:17.562Z"
+  },
+  {
+    "id": "seed_76",
+    "asset_no": "TEST0076",
+    "imei": "351379300227348",
+    "mac_address": "4CEBB0B57C1B",
+    "serial_no": "R5KL60F0KXA",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:18:17.562Z"
+  },
+  {
+    "id": "seed_77",
+    "asset_no": "TEST0077",
+    "imei": "351379300227546",
+    "mac_address": "4CEBB0B57C43",
+    "serial_no": "R5KL60F0LHL",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:19:17.562Z"
+  },
+  {
+    "id": "seed_78",
+    "asset_no": "TEST0078",
+    "imei": "351379300227751",
+    "mac_address": "4CEBB0B57C6D",
+    "serial_no": "R5KL60F0M5E",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:20:17.562Z"
+  },
+  {
+    "id": "seed_79",
+    "asset_no": "TEST0079",
+    "imei": "351379300228155",
+    "mac_address": "4CEBB0B57CBD",
+    "serial_no": "R5KL60F0NCK",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:21:17.562Z"
+  },
+  {
+    "id": "seed_80",
+    "asset_no": "TEST0080",
+    "imei": "351379300223024",
+    "mac_address": "4CEBB0B578BB",
+    "serial_no": "R5KL60F06TN",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:22:17.562Z"
+  },
+  {
+    "id": "seed_81",
+    "asset_no": "TEST0081",
+    "imei": "351379300214544",
+    "mac_address": "4CEBB06B41CF",
+    "serial_no": "R5KL609FJVT",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:23:17.562Z"
+  },
+  {
+    "id": "seed_82",
+    "asset_no": "TEST0082",
+    "imei": "351379300214536",
+    "mac_address": "4CEBB06B41CD",
+    "serial_no": "R5KL609FJTK",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:24:17.562Z"
+  },
+  {
+    "id": "seed_83",
+    "asset_no": "TEST0083",
+    "imei": "351379300214353",
+    "mac_address": "4CEBB06B41A9",
+    "serial_no": "R5KL609FJ9T",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:25:17.562Z"
+  },
+  {
+    "id": "seed_84",
+    "asset_no": "TEST0084",
+    "imei": "351379300210088",
+    "mac_address": "4CEBB015A573",
+    "serial_no": "R5KL602F3WL",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:26:17.562Z"
+  },
+  {
+    "id": "seed_85",
+    "asset_no": "TEST0085",
+    "imei": "351379300210096",
+    "mac_address": "4CEBB015A575",
+    "serial_no": "R5KL602F3XW",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:27:17.562Z"
+  },
+  {
+    "id": "seed_86",
+    "asset_no": "TEST0086",
+    "imei": "351379300210286",
+    "mac_address": "4CEBB015A59B",
+    "serial_no": "R5KL602F4GR",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:28:17.562Z"
+  },
+  {
+    "id": "seed_87",
+    "asset_no": "TEST0087",
+    "imei": "351379300210492",
+    "mac_address": "4CEBB015A5C5",
+    "serial_no": "R5KL602F54Y",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:29:17.562Z"
+  },
+  {
+    "id": "seed_88",
+    "asset_no": "TEST0088",
+    "imei": "351379300210716",
+    "mac_address": "4CEBB015A5F1",
+    "serial_no": "R5KL602F5SV",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:30:17.562Z"
+  },
+  {
+    "id": "seed_89",
+    "asset_no": "TEST0089",
+    "imei": "351379300210765",
+    "mac_address": "4CEBB015A5FB",
+    "serial_no": "R5KL602F5YD",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:31:17.562Z"
+  },
+  {
+    "id": "seed_90",
+    "asset_no": "TEST0090",
+    "imei": "351379300210815",
+    "mac_address": "4CEBB015A605",
+    "serial_no": "R5KL602F63R",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:32:17.562Z"
+  },
+  {
+    "id": "seed_91",
+    "asset_no": "TEST0091",
+    "imei": "351379300210823",
+    "mac_address": "4CEBB015A607",
+    "serial_no": "R5KL602F64E",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:33:17.562Z"
+  },
+  {
+    "id": "seed_92",
+    "asset_no": "TEST0092",
+    "imei": "351379300210831",
+    "mac_address": "4CEBB015A609",
+    "serial_no": "R5KL602F65X",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:34:17.562Z"
+  },
+  {
+    "id": "seed_93",
+    "asset_no": "TEST0093",
+    "imei": "351379300210997",
+    "mac_address": "4CEBB015A629",
+    "serial_no": "R5KL602F6MJ",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:35:17.562Z"
+  },
+  {
+    "id": "seed_94",
+    "asset_no": "TEST0094",
+    "imei": "351379300211128",
+    "mac_address": "4CEBB020AA2F",
+    "serial_no": "R5KL602W51L",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:36:17.562Z"
+  },
+  {
+    "id": "seed_95",
+    "asset_no": "TEST0095",
+    "imei": "351379300211136",
+    "mac_address": "4CEBB020AA31",
+    "serial_no": "R5KL602W52W",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:37:17.562Z"
+  },
+  {
+    "id": "seed_96",
+    "asset_no": "TEST0096",
+    "imei": "351379300211169",
+    "mac_address": "4CEBB020AA37",
+    "serial_no": "R5KL602W55E",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:38:17.562Z"
+  },
+  {
+    "id": "seed_97",
+    "asset_no": "TEST0097",
+    "imei": "351379300211185",
+    "mac_address": "4CEBB020AA3B",
+    "serial_no": "R5KL602W57P",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:39:17.562Z"
+  },
+  {
+    "id": "seed_98",
+    "asset_no": "TEST0098",
+    "imei": "351379300211219",
+    "mac_address": "4CEBB020AA41",
+    "serial_no": "R5KL602W5AT",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:40:17.562Z"
+  },
+  {
+    "id": "seed_99",
+    "asset_no": "TEST0099",
+    "imei": "351379300211235",
+    "mac_address": "4CEBB020AA45",
+    "serial_no": "R5KL602W5CM",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:41:17.562Z"
+  },
+  {
+    "id": "seed_100",
+    "asset_no": "TEST0100",
+    "imei": "351379300211250",
+    "mac_address": "4CEBB020AA49",
+    "serial_no": "R5KL602W5EF",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:42:17.562Z"
+  },
+  {
+    "id": "seed_101",
+    "asset_no": "TEST0101",
+    "imei": "351379300211300",
+    "mac_address": "4CEBB020AA53",
+    "serial_no": "R5KL602W5KB",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:43:17.562Z"
+  },
+  {
+    "id": "seed_102",
+    "asset_no": "TEST0102",
+    "imei": "351379300211318",
+    "mac_address": "4CEBB020AA55",
+    "serial_no": "R5KL602W5LL",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:44:17.562Z"
+  },
+  {
+    "id": "seed_103",
+    "asset_no": "TEST0103",
+    "imei": "351379300211367",
+    "mac_address": "4CEBB020AA5F",
+    "serial_no": "R5KL602W5RX",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:45:17.562Z"
+  },
+  {
+    "id": "seed_104",
+    "asset_no": "TEST0104",
+    "imei": "351379300212134",
+    "mac_address": "4CEBB020AAF9",
+    "serial_no": "R5KL602W83H",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:46:17.562Z"
+  },
+  {
+    "id": "seed_105",
+    "asset_no": "TEST0105",
+    "imei": "351379300212126",
+    "mac_address": "4CEBB020AAF7",
+    "serial_no": "R5KL602W82M",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:47:17.562Z"
+  },
+  {
+    "id": "seed_106",
+    "asset_no": "TEST0106",
+    "imei": "351379300212100",
+    "mac_address": "4CEBB020AAF3",
+    "serial_no": "R5KL602W80T",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:48:17.562Z"
+  },
+  {
+    "id": "seed_107",
+    "asset_no": "TEST0107",
+    "imei": "351379300212092",
+    "mac_address": "4CEBB020AAF1",
+    "serial_no": "R5KL602W7ZP",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:49:17.562Z"
+  },
+  {
+    "id": "seed_108",
+    "asset_no": "TEST0108",
+    "imei": "351379300212076",
+    "mac_address": "4CEBB020AAED",
+    "serial_no": "R5KL602W7XE",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:50:17.562Z"
+  },
+  {
+    "id": "seed_109",
+    "asset_no": "TEST0109",
+    "imei": "351379300212043",
+    "mac_address": "4CEBB020AAE7",
+    "serial_no": "R5KL602W7TW",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:51:17.562Z"
+  },
+  {
+    "id": "seed_110",
+    "asset_no": "TEST0110",
+    "imei": "351379300212035",
+    "mac_address": "4CEBB020AAE5",
+    "serial_no": "R5KL602W7SL",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:52:17.562Z"
+  },
+  {
+    "id": "seed_111",
+    "asset_no": "TEST0111",
+    "imei": "351379300211995",
+    "mac_address": "4CEBB020AADD",
+    "serial_no": "R5KL602W7ND",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:53:17.562Z"
+  },
+  {
+    "id": "seed_112",
+    "asset_no": "TEST0112",
+    "imei": "351379300211987",
+    "mac_address": "4CEBB020AADB",
+    "serial_no": "R5KL602W7MN",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:54:17.562Z"
+  },
+  {
+    "id": "seed_113",
+    "asset_no": "TEST0113",
+    "imei": "351379300211912",
+    "mac_address": "4CEBB020AACD",
+    "serial_no": "R5KL602W7EY",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:55:17.562Z"
+  },
+  {
+    "id": "seed_114",
+    "asset_no": "TEST0114",
+    "imei": "351379300211540",
+    "mac_address": "4CEBB020AA83",
+    "serial_no": "R5KL602W6AP",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:56:17.562Z"
+  },
+  {
+    "id": "seed_115",
+    "asset_no": "TEST0115",
+    "imei": "351379300211573",
+    "mac_address": "4CEBB020AA89",
+    "serial_no": "R5KL602W6DT",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:57:17.562Z"
+  },
+  {
+    "id": "seed_116",
+    "asset_no": "TEST0116",
+    "imei": "351379300211581",
+    "mac_address": "4CEBB020AA8B",
+    "serial_no": "R5KL602W6EV",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:58:17.562Z"
+  },
+  {
+    "id": "seed_117",
+    "asset_no": "TEST0117",
+    "imei": "351379300211607",
+    "mac_address": "4CEBB020AA8F",
+    "serial_no": "R5KL602W6GH",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T20:59:17.562Z"
+  },
+  {
+    "id": "seed_118",
+    "asset_no": "TEST0118",
+    "imei": "351379300211623",
+    "mac_address": "4CEBB020AA93",
+    "serial_no": "R5KL602W6JN",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:00:17.562Z"
+  },
+  {
+    "id": "seed_119",
+    "asset_no": "TEST0119",
+    "imei": "351379300211631",
+    "mac_address": "4CEBB020AA95",
+    "serial_no": "R5KL602W6KD",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:01:17.562Z"
+  },
+  {
+    "id": "seed_120",
+    "asset_no": "TEST0120",
+    "imei": "351379300211888",
+    "mac_address": "4CEBB020AAC7",
+    "serial_no": "R5KL602W7BE",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:02:17.562Z"
+  },
+  {
+    "id": "seed_121",
+    "asset_no": "TEST0121",
+    "imei": "351379300211870",
+    "mac_address": "4CEBB020AAC5",
+    "serial_no": "R5KL602W7AR",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:03:17.562Z"
+  },
+  {
+    "id": "seed_122",
+    "asset_no": "TEST0122",
+    "imei": "351379300211839",
+    "mac_address": "4CEBB020AABD",
+    "serial_no": "R5KL602W76B",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:04:17.562Z"
+  },
+  {
+    "id": "seed_123",
+    "asset_no": "TEST0123",
+    "imei": "351379300211656",
+    "mac_address": "4CEBB020AA99",
+    "serial_no": "R5KL602W6MZ",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:05:17.562Z"
+  },
+  {
+    "id": "seed_124",
+    "asset_no": "TEST0124",
+    "imei": "351379300211680",
+    "mac_address": "4CEBB020AA9F",
+    "serial_no": "R5KL602W6QW",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:06:17.562Z"
+  },
+  {
+    "id": "seed_125",
+    "asset_no": "TEST0125",
+    "imei": "351379300211755",
+    "mac_address": "4CEBB020AAAD",
+    "serial_no": "R5KL602W6YK",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:07:17.562Z"
+  },
+  {
+    "id": "seed_126",
+    "asset_no": "TEST0126",
+    "imei": "351379300214296",
+    "mac_address": "4CEBB06B419D",
+    "serial_no": "R5KL609FJ3R",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:08:17.562Z"
+  },
+  {
+    "id": "seed_127",
+    "asset_no": "TEST0127",
+    "imei": "351379300214304",
+    "mac_address": "4CEBB06B419F",
+    "serial_no": "R5KL609FJ4E",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:09:17.562Z"
+  },
+  {
+    "id": "seed_128",
+    "asset_no": "TEST0128",
+    "imei": "351379300212506",
+    "mac_address": "4CEBB020AB43",
+    "serial_no": "R5KL602W97F",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:10:17.562Z"
+  },
+  {
+    "id": "seed_129",
+    "asset_no": "TEST0129",
+    "imei": "351379300212431",
+    "mac_address": "4CEBB020AB35",
+    "serial_no": "R5KL602W90P",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:11:17.562Z"
+  },
+  {
+    "id": "seed_130",
+    "asset_no": "TEST0130",
+    "imei": "351379300212423",
+    "mac_address": "4CEBB020AB33",
+    "serial_no": "R5KL602W8ZR",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:12:17.562Z"
+  },
+  {
+    "id": "seed_131",
+    "asset_no": "TEST0131",
+    "imei": "351379300212399",
+    "mac_address": "4CEBB020AB2D",
+    "serial_no": "R5KL602W8WL",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:13:17.562Z"
+  },
+  {
+    "id": "seed_132",
+    "asset_no": "TEST0132",
+    "imei": "351379300212324",
+    "mac_address": "4CEBB020AB1F",
+    "serial_no": "R5KL602W8NH",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:14:17.562Z"
+  },
+  {
+    "id": "seed_133",
+    "asset_no": "TEST0133",
+    "imei": "351379300212282",
+    "mac_address": "4CEBB020AB17",
+    "serial_no": "R5KL602W8JK",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:15:17.562Z"
+  },
+  {
+    "id": "seed_134",
+    "asset_no": "TEST0134",
+    "imei": "351379300212241",
+    "mac_address": "4CEBB020AB0F",
+    "serial_no": "R5KL602W8EE",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:16:17.562Z"
+  },
+  {
+    "id": "seed_135",
+    "asset_no": "TEST0135",
+    "imei": "351379300217083",
+    "mac_address": "4CEBB0837003",
+    "serial_no": "R5KL60C0FKY",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:17:17.562Z"
+  },
+  {
+    "id": "seed_136",
+    "asset_no": "TEST0136",
+    "imei": "351379300216937",
+    "mac_address": "4CEBB06B43AD",
+    "serial_no": "R5KL609FS3Z",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:18:17.562Z"
+  },
+  {
+    "id": "seed_137",
+    "asset_no": "TEST0137",
+    "imei": "351379300216788",
+    "mac_address": "4CEBB06B438F",
+    "serial_no": "R5KL609FRML",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:19:17.562Z"
+  },
+  {
+    "id": "seed_138",
+    "asset_no": "TEST0138",
+    "imei": "351379300216630",
+    "mac_address": "4CEBB06B4371",
+    "serial_no": "R5KL609FR6E",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:20:17.562Z"
+  },
+  {
+    "id": "seed_139",
+    "asset_no": "TEST0139",
+    "imei": "351379300216457",
+    "mac_address": "4CEBB06B434D",
+    "serial_no": "R5KL609FQMR",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:21:17.562Z"
+  },
+  {
+    "id": "seed_140",
+    "asset_no": "TEST0140",
+    "imei": "351379300216408",
+    "mac_address": "4CEBB06B4343",
+    "serial_no": "R5KL609FQGZ",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:22:17.562Z"
+  },
+  {
+    "id": "seed_141",
+    "asset_no": "TEST0141",
+    "imei": "351379300216309",
+    "mac_address": "4CEBB06B432F",
+    "serial_no": "R5KL609FQ6Y",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:23:17.562Z"
+  },
+  {
+    "id": "seed_142",
+    "asset_no": "TEST0142",
+    "imei": "351379300216143",
+    "mac_address": "4CEBB06B430F",
+    "serial_no": "R5KL609FPPK",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:24:17.562Z"
+  },
+  {
+    "id": "seed_143",
+    "asset_no": "TEST0143",
+    "imei": "351379300215988",
+    "mac_address": "4CEBB06B42EF",
+    "serial_no": "R5KL609FP7M",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:25:17.562Z"
+  },
+  {
+    "id": "seed_144",
+    "asset_no": "TEST0144",
+    "imei": "351379300215749",
+    "mac_address": "4CEBB06B42BF",
+    "serial_no": "R5KL609FNGE",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:26:17.562Z"
+  },
+  {
+    "id": "seed_145",
+    "asset_no": "TEST0145",
+    "imei": "351379300215715",
+    "mac_address": "4CEBB06B42B9",
+    "serial_no": "R5KL609FNDW",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:27:17.562Z"
+  },
+  {
+    "id": "seed_146",
+    "asset_no": "TEST0146",
+    "imei": "351379300215681",
+    "mac_address": "4CEBB06B42B3",
+    "serial_no": "R5KL609FNAZ",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:28:17.562Z"
+  },
+  {
+    "id": "seed_147",
+    "asset_no": "TEST0147",
+    "imei": "351379300215616",
+    "mac_address": "4CEBB06B42A5",
+    "serial_no": "R5KL609FN3V",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:29:17.562Z"
+  },
+  {
+    "id": "seed_148",
+    "asset_no": "TEST0148",
+    "imei": "351379300215202",
+    "mac_address": "4CEBB06B4253",
+    "serial_no": "R5KL609FLVR",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:30:17.562Z"
+  },
+  {
+    "id": "seed_149",
+    "asset_no": "TEST0149",
+    "imei": "351379300215186",
+    "mac_address": "4CEBB06B424F",
+    "serial_no": "R5KL609FLSW",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:31:17.562Z"
+  },
+  {
+    "id": "seed_150",
+    "asset_no": "TEST0150",
+    "imei": "351379300215137",
+    "mac_address": "4CEBB06B4245",
+    "serial_no": "R5KL609FLMD",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:32:17.562Z"
+  },
+  {
+    "id": "seed_151",
+    "asset_no": "TEST0151",
+    "imei": "351379300212712",
+    "mac_address": "4CEBB020AB6D",
+    "serial_no": "R5KL602W9VD",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:33:17.562Z"
+  },
+  {
+    "id": "seed_152",
+    "asset_no": "TEST0152",
+    "imei": "351379300212738",
+    "mac_address": "4CEBB020AB71",
+    "serial_no": "R5KL602W9XZ",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:34:17.562Z"
+  },
+  {
+    "id": "seed_153",
+    "asset_no": "TEST0153",
+    "imei": "351379300212761",
+    "mac_address": "4CEBB020AB77",
+    "serial_no": "R5KL602WA0R",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:35:17.562Z"
+  },
+  {
+    "id": "seed_154",
+    "asset_no": "TEST0154",
+    "imei": "351379300211375",
+    "mac_address": "4CEBB020AA61",
+    "serial_no": "R5KL602W5SP",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:36:17.562Z"
+  },
+  {
+    "id": "seed_155",
+    "asset_no": "TEST0155",
+    "imei": "351379300211391",
+    "mac_address": "4CEBB020AA65",
+    "serial_no": "R5KL602W5VK",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:37:17.562Z"
+  },
+  {
+    "id": "seed_156",
+    "asset_no": "TEST0156",
+    "imei": "351379300211441",
+    "mac_address": "4CEBB020AA6F",
+    "serial_no": "R5KL602W60D",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:38:17.562Z"
+  },
+  {
+    "id": "seed_157",
+    "asset_no": "TEST0157",
+    "imei": "351379300211474",
+    "mac_address": "4CEBB020AA75",
+    "serial_no": "R5KL602W63B",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:39:17.562Z"
+  },
+  {
+    "id": "seed_158",
+    "asset_no": "TEST0158",
+    "imei": "351379300211516",
+    "mac_address": "4CEBB020AA7D",
+    "serial_no": "R5KL602W67R",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:40:17.562Z"
+  },
+  {
+    "id": "seed_159",
+    "asset_no": "TEST0159",
+    "imei": "351379300214577",
+    "mac_address": "4CEBB06B41D5",
+    "serial_no": "R5KL609FJYH",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:41:17.562Z"
+  },
+  {
+    "id": "seed_160",
+    "asset_no": "TEST0160",
+    "imei": "351379300214619",
+    "mac_address": "4CEBB06B41DD",
+    "serial_no": "R5KL609FK2B",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:42:17.562Z"
+  },
+  {
+    "id": "seed_161",
+    "asset_no": "TEST0161",
+    "imei": "351379300214734",
+    "mac_address": "4CEBB06B41F5",
+    "serial_no": "R5KL609FKEM",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:43:17.562Z"
+  },
+  {
+    "id": "seed_162",
+    "asset_no": "TEST0162",
+    "imei": "351379300214767",
+    "mac_address": "4CEBB06B41FB",
+    "serial_no": "R5KL609FKHN",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:44:17.562Z"
+  },
+  {
+    "id": "seed_163",
+    "asset_no": "TEST0163",
+    "imei": "351379300214783",
+    "mac_address": "4CEBB06B41FF",
+    "serial_no": "R5KL609FKKA",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:45:17.562Z"
+  },
+  {
+    "id": "seed_164",
+    "asset_no": "TEST0164",
+    "imei": "351379300212233",
+    "mac_address": "4CEBB020AB0D",
+    "serial_no": "R5KL602W8DR",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:46:17.562Z"
+  },
+  {
+    "id": "seed_165",
+    "asset_no": "TEST0165",
+    "imei": "351379300212167",
+    "mac_address": "4CEBB020AAFF",
+    "serial_no": "R5KL602W86D",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:47:17.562Z"
+  },
+  {
+    "id": "seed_166",
+    "asset_no": "TEST0166",
+    "imei": "351379300212159",
+    "mac_address": "4CEBB020AAFD",
+    "serial_no": "R5KL602W85N",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:48:17.562Z"
+  },
+  {
+    "id": "seed_167",
+    "asset_no": "TEST0167",
+    "imei": "351379300214833",
+    "mac_address": "4CEBB06B4209",
+    "serial_no": "R5KL609FKQJ",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:49:17.562Z"
+  },
+  {
+    "id": "seed_168",
+    "asset_no": "TEST0168",
+    "imei": "351379300214932",
+    "mac_address": "4CEBB06B421D",
+    "serial_no": "R5KL609FL1N",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:50:17.562Z"
+  },
+  {
+    "id": "seed_169",
+    "asset_no": "TEST0169",
+    "imei": "351379300214999",
+    "mac_address": "4CEBB06B4229",
+    "serial_no": "R5KL609FL7W",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:51:17.562Z"
+  },
+  {
+    "id": "seed_170",
+    "asset_no": "TEST0170",
+    "imei": "351379300215061",
+    "mac_address": "4CEBB06B4237",
+    "serial_no": "R5KL609FLEK",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:52:17.562Z"
+  },
+  {
+    "id": "seed_171",
+    "asset_no": "TEST0171",
+    "imei": "351379300212704",
+    "mac_address": "4CEBB020AB6B",
+    "serial_no": "R5KL602W9TN",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:53:17.562Z"
+  },
+  {
+    "id": "seed_172",
+    "asset_no": "TEST0172",
+    "imei": "351379300212696",
+    "mac_address": "4CEBB020AB69",
+    "serial_no": "R5KL602W9SF",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:54:17.562Z"
+  },
+  {
+    "id": "seed_173",
+    "asset_no": "TEST0173",
+    "imei": "351379300212688",
+    "mac_address": "4CEBB020AB67",
+    "serial_no": "R5KL602W9RH",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:55:17.562Z"
+  },
+  {
+    "id": "seed_174",
+    "asset_no": "TEST0174",
+    "imei": "351379300212647",
+    "mac_address": "4CEBB020AB5F",
+    "serial_no": "R5KL602W9MK",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:56:17.562Z"
+  },
+  {
+    "id": "seed_175",
+    "asset_no": "TEST0175",
+    "imei": "351379300212621",
+    "mac_address": "4CEBB020AB5B",
+    "serial_no": "R5KL602W9KP",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:57:17.562Z"
+  },
+  {
+    "id": "seed_176",
+    "asset_no": "TEST0176",
+    "imei": "351379300212613",
+    "mac_address": "4CEBB020AB59",
+    "serial_no": "R5KL602W9JX",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:58:17.562Z"
+  },
+  {
+    "id": "seed_177",
+    "asset_no": "TEST0177",
+    "imei": "351379300212597",
+    "mac_address": "4CEBB020AB55",
+    "serial_no": "R5KL602W9GR",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T21:59:17.562Z"
+  },
+  {
+    "id": "seed_178",
+    "asset_no": "TEST0178",
+    "imei": "351379300212589",
+    "mac_address": "4CEBB020AB53",
+    "serial_no": "R5KL602W9FJ",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:00:17.562Z"
+  },
+  {
+    "id": "seed_179",
+    "asset_no": "TEST0179",
+    "imei": "351379300212571",
+    "mac_address": "4CEBB020AB51",
+    "serial_no": "R5KL602W9EW",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:01:17.562Z"
+  },
+  {
+    "id": "seed_180",
+    "asset_no": "TEST0180",
+    "imei": "351379300212522",
+    "mac_address": "4CEBB020AB47",
+    "serial_no": "R5KL602W99D",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:02:17.562Z"
+  },
+  {
+    "id": "seed_181",
+    "asset_no": "TEST0181",
+    "imei": "351379300211045",
+    "mac_address": "4CEBB015A633",
+    "serial_no": "R5KL602F6SY",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:03:17.562Z"
+  },
+  {
+    "id": "seed_182",
+    "asset_no": "TEST0182",
+    "imei": "351379300211946",
+    "mac_address": "4CEBB020AAD3",
+    "serial_no": "R5KL602W7HV",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:04:17.562Z"
+  },
+  {
+    "id": "seed_183",
+    "asset_no": "TEST0183",
+    "imei": "351379300211953",
+    "mac_address": "4CEBB020AAD5",
+    "serial_no": "R5KL602W7JM",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:05:17.562Z"
+  },
+  {
+    "id": "seed_184",
+    "asset_no": "TEST0184",
+    "imei": "351379300211961",
+    "mac_address": "4CEBB020AAD7",
+    "serial_no": "R5KL602W7KH",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:06:17.562Z"
+  },
+  {
+    "id": "seed_185",
+    "asset_no": "TEST0185",
+    "imei": "351379300212290",
+    "mac_address": "4CEBB020AB19",
+    "serial_no": "R5KL602W8KT",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:07:17.562Z"
+  },
+  {
+    "id": "seed_186",
+    "asset_no": "TEST0186",
+    "imei": "351379300212316",
+    "mac_address": "4CEBB020AB1D",
+    "serial_no": "R5KL602W8MM",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:08:17.562Z"
+  },
+  {
+    "id": "seed_187",
+    "asset_no": "TEST0187",
+    "imei": "351379300212373",
+    "mac_address": "4CEBB020AB29",
+    "serial_no": "R5KL602W8TZ",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:09:17.562Z"
+  },
+  {
+    "id": "seed_188",
+    "asset_no": "TEST0188",
+    "imei": "351379300212381",
+    "mac_address": "4CEBB020AB2B",
+    "serial_no": "R5KL602W8VB",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:10:17.562Z"
+  },
+  {
+    "id": "seed_189",
+    "asset_no": "TEST0189",
+    "imei": "351379300212407",
+    "mac_address": "4CEBB020AB2F",
+    "serial_no": "R5KL602W8XW",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:11:17.562Z"
+  },
+  {
+    "id": "seed_190",
+    "asset_no": "TEST0190",
+    "imei": "351379300212415",
+    "mac_address": "4CEBB020AB31",
+    "serial_no": "R5KL602W8YJ",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:12:17.562Z"
+  },
+  {
+    "id": "seed_191",
+    "asset_no": "TEST0191",
+    "imei": "351379300212464",
+    "mac_address": "4CEBB020AB3B",
+    "serial_no": "R5KL602W93T",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:13:17.562Z"
+  },
+  {
+    "id": "seed_192",
+    "asset_no": "TEST0192",
+    "imei": "351379300212472",
+    "mac_address": "4CEBB020AB3D",
+    "serial_no": "R5KL602W94V",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:14:17.562Z"
+  },
+  {
+    "id": "seed_193",
+    "asset_no": "TEST0193",
+    "imei": "351379300212480",
+    "mac_address": "4CEBB020AB3F",
+    "serial_no": "R5KL602W95M",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:15:17.562Z"
+  },
+  {
+    "id": "seed_194",
+    "asset_no": "TEST0194",
+    "imei": "351379300212498",
+    "mac_address": "4CEBB020AB41",
+    "serial_no": "R5KL602W96H",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:16:17.562Z"
+  },
+  {
+    "id": "seed_195",
+    "asset_no": "TEST0195",
+    "imei": "351379300212530",
+    "mac_address": "4CEBB020AB49",
+    "serial_no": "R5KL602W9AA",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:17:17.562Z"
+  },
+  {
+    "id": "seed_196",
+    "asset_no": "TEST0196",
+    "imei": "351379300212548",
+    "mac_address": "4CEBB020AB4B",
+    "serial_no": "R5KL602W9BZ",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:18:17.562Z"
+  },
+  {
+    "id": "seed_197",
+    "asset_no": "TEST0197",
+    "imei": "351379300212555",
+    "mac_address": "4CEBB020AB4D",
+    "serial_no": "R5KL602W9CB",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:19:17.562Z"
+  },
+  {
+    "id": "seed_198",
+    "asset_no": "TEST0198",
+    "imei": "351379300212563",
+    "mac_address": "4CEBB020AB4F",
+    "serial_no": "R5KL602W9DL",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:20:17.562Z"
+  },
+  {
+    "id": "seed_199",
+    "asset_no": "TEST0199",
+    "imei": "351379300212605",
+    "mac_address": "4CEBB020AB57",
+    "serial_no": "R5KL602W9HE",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:21:17.562Z"
+  },
+  {
+    "id": "seed_200",
+    "asset_no": "TEST0200",
+    "imei": "351379300212639",
+    "mac_address": "4CEBB020AB5D",
+    "serial_no": "R5KL602W9LY",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:22:17.562Z"
+  },
+  {
+    "id": "seed_201",
+    "asset_no": "TEST0201",
+    "imei": "351379300212654",
+    "mac_address": "4CEBB020AB61",
+    "serial_no": "R5KL602W9NT",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:23:17.562Z"
+  },
+  {
+    "id": "seed_202",
+    "asset_no": "TEST0202",
+    "imei": "351379300212670",
+    "mac_address": "4CEBB020AB65",
+    "serial_no": "R5KL602W9QM",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:24:17.562Z"
+  },
+  {
+    "id": "seed_203",
+    "asset_no": "TEST0203",
+    "imei": "351379300212753",
+    "mac_address": "4CEBB020AB75",
+    "serial_no": "R5KL602W9ZL",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:25:17.562Z"
+  },
+  {
+    "id": "seed_204",
+    "asset_no": "TEST0204",
+    "imei": "351379300212985",
+    "mac_address": "4CEBB03402CD",
+    "serial_no": "R5KL604DAJP",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:26:17.562Z"
+  },
+  {
+    "id": "seed_205",
+    "asset_no": "TEST0205",
+    "imei": "351379300211011",
+    "mac_address": "4CEBB015A62D",
+    "serial_no": "R5KL602F6PE",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:27:17.562Z"
+  },
+  {
+    "id": "seed_206",
+    "asset_no": "TEST0206",
+    "imei": "351379300211052",
+    "mac_address": "4CEBB015A635",
+    "serial_no": "R5KL602F6TK",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:28:17.562Z"
+  },
+  {
+    "id": "seed_207",
+    "asset_no": "TEST0207",
+    "imei": "351379300211078",
+    "mac_address": "4CEBB015A639",
+    "serial_no": "R5KL602F6WV",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:29:17.562Z"
+  },
+  {
+    "id": "seed_208",
+    "asset_no": "TEST0208",
+    "imei": "351379300211151",
+    "mac_address": "4CEBB020AA35",
+    "serial_no": "R5KL602W54R",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:30:17.562Z"
+  },
+  {
+    "id": "seed_209",
+    "asset_no": "TEST0209",
+    "imei": "351379300211193",
+    "mac_address": "4CEBB020AA3D",
+    "serial_no": "R5KL602W58Y",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:31:17.562Z"
+  },
+  {
+    "id": "seed_210",
+    "asset_no": "TEST0210",
+    "imei": "351379300211201",
+    "mac_address": "4CEBB020AA3F",
+    "serial_no": "R5KL602W59K",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:32:17.562Z"
+  },
+  {
+    "id": "seed_211",
+    "asset_no": "TEST0211",
+    "imei": "351379300211227",
+    "mac_address": "4CEBB020AA43",
+    "serial_no": "R5KL602W5BV",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:33:17.562Z"
+  },
+  {
+    "id": "seed_212",
+    "asset_no": "TEST0212",
+    "imei": "351379300211268",
+    "mac_address": "4CEBB020AA4B",
+    "serial_no": "R5KL602W5FN",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:34:17.562Z"
+  },
+  {
+    "id": "seed_213",
+    "asset_no": "TEST0213",
+    "imei": "351379300211276",
+    "mac_address": "4CEBB020AA4D",
+    "serial_no": "R5KL602W5GD",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:35:17.562Z"
+  },
+  {
+    "id": "seed_214",
+    "asset_no": "TEST0214",
+    "imei": "351379300211284",
+    "mac_address": "4CEBB020AA4F",
+    "serial_no": "R5KL602W5HA",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:36:17.562Z"
+  },
+  {
+    "id": "seed_215",
+    "asset_no": "TEST0215",
+    "imei": "351379300211292",
+    "mac_address": "4CEBB020AA51",
+    "serial_no": "R5KL602W5JZ",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:37:17.562Z"
+  },
+  {
+    "id": "seed_216",
+    "asset_no": "TEST0216",
+    "imei": "351379300211862",
+    "mac_address": "4CEBB020AAC3",
+    "serial_no": "R5KL602W79J",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:38:17.562Z"
+  },
+  {
+    "id": "seed_217",
+    "asset_no": "TEST0217",
+    "imei": "351379300211730",
+    "mac_address": "4CEBB020AAA9",
+    "serial_no": "R5KL602W6WP",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:39:17.562Z"
+  },
+  {
+    "id": "seed_218",
+    "asset_no": "TEST0218",
+    "imei": "351379300211714",
+    "mac_address": "4CEBB020AAA5",
+    "serial_no": "R5KL602W6TE",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:40:17.562Z"
+  },
+  {
+    "id": "seed_219",
+    "asset_no": "TEST0219",
+    "imei": "351379300211615",
+    "mac_address": "4CEBB020AA91",
+    "serial_no": "R5KL602W6HF",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:41:17.562Z"
+  },
+  {
+    "id": "seed_220",
+    "asset_no": "TEST0220",
+    "imei": "351379300211557",
+    "mac_address": "4CEBB020AA85",
+    "serial_no": "R5KL602W6BY",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:42:17.562Z"
+  },
+  {
+    "id": "seed_221",
+    "asset_no": "TEST0221",
+    "imei": "351379300211524",
+    "mac_address": "4CEBB020AA7F",
+    "serial_no": "R5KL602W68E",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:43:17.562Z"
+  },
+  {
+    "id": "seed_222",
+    "asset_no": "TEST0222",
+    "imei": "351379300211334",
+    "mac_address": "4CEBB020AA59",
+    "serial_no": "R5KL602W5NJ",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:44:17.562Z"
+  },
+  {
+    "id": "seed_223",
+    "asset_no": "TEST0223",
+    "imei": "351379300211342",
+    "mac_address": "4CEBB020AA5B",
+    "serial_no": "R5KL602W5PR",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:45:17.562Z"
+  },
+  {
+    "id": "seed_224",
+    "asset_no": "TEST0224",
+    "imei": "351379300211359",
+    "mac_address": "4CEBB020AA5D",
+    "serial_no": "R5KL602W5QE",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:46:17.562Z"
+  },
+  {
+    "id": "seed_225",
+    "asset_no": "TEST0225",
+    "imei": "351379300211417",
+    "mac_address": "4CEBB020AA69",
+    "serial_no": "R5KL602W5XV",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:47:17.562Z"
+  },
+  {
+    "id": "seed_226",
+    "asset_no": "TEST0226",
+    "imei": "351379300211409",
+    "mac_address": "4CEBB020AA67",
+    "serial_no": "R5KL602W5WT",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:48:17.562Z"
+  },
+  {
+    "id": "seed_227",
+    "asset_no": "TEST0227",
+    "imei": "351379300211383",
+    "mac_address": "4CEBB020AA63",
+    "serial_no": "R5KL602W5TY",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:49:17.562Z"
+  },
+  {
+    "id": "seed_228",
+    "asset_no": "TEST0228",
+    "imei": "351379300210880",
+    "mac_address": "4CEBB015A613",
+    "serial_no": "R5KL602F6AV",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:50:17.562Z"
+  },
+  {
+    "id": "seed_229",
+    "asset_no": "TEST0229",
+    "imei": "351379300210856",
+    "mac_address": "4CEBB015A60D",
+    "serial_no": "R5KL602F67Y",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:51:17.562Z"
+  },
+  {
+    "id": "seed_230",
+    "asset_no": "TEST0230",
+    "imei": "351379300210849",
+    "mac_address": "4CEBB015A60B",
+    "serial_no": "R5KL602F66P",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:52:17.562Z"
+  },
+  {
+    "id": "seed_231",
+    "asset_no": "TEST0231",
+    "imei": "351379300210104",
+    "mac_address": "4CEBB015A577",
+    "serial_no": "R5KL602F3YJ",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:53:17.562Z"
+  },
+  {
+    "id": "seed_232",
+    "asset_no": "TEST0232",
+    "imei": "351379300210799",
+    "mac_address": "4CEBB015A601",
+    "serial_no": "R5KL602F61W",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:54:17.562Z"
+  },
+  {
+    "id": "seed_233",
+    "asset_no": "TEST0233",
+    "imei": "351379300210781",
+    "mac_address": "4CEBB015A5FF",
+    "serial_no": "R5KL602F60L",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:55:17.562Z"
+  },
+  {
+    "id": "seed_234",
+    "asset_no": "TEST0234",
+    "imei": "351379300210617",
+    "mac_address": "4CEBB015A5DD",
+    "serial_no": "R5KL602F5GL",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:56:17.562Z"
+  },
+  {
+    "id": "seed_235",
+    "asset_no": "TEST0235",
+    "imei": "351379300210625",
+    "mac_address": "4CEBB015A5DF",
+    "serial_no": "R5KL602F5HW",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:57:17.562Z"
+  },
+  {
+    "id": "seed_236",
+    "asset_no": "TEST0236",
+    "imei": "351379300210633",
+    "mac_address": "4CEBB015A5E1",
+    "serial_no": "R5KL602F5JJ",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:58:17.562Z"
+  },
+  {
+    "id": "seed_237",
+    "asset_no": "TEST0237",
+    "imei": "351379300210658",
+    "mac_address": "4CEBB015A5E5",
+    "serial_no": "R5KL602F5LE",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T22:59:17.562Z"
+  },
+  {
+    "id": "seed_238",
+    "asset_no": "TEST0238",
+    "imei": "351379300210674",
+    "mac_address": "4CEBB015A5E9",
+    "serial_no": "R5KL602F5NP",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:00:17.562Z"
+  },
+  {
+    "id": "seed_239",
+    "asset_no": "TEST0239",
+    "imei": "351379300210682",
+    "mac_address": "4CEBB015A5EB",
+    "serial_no": "R5KL602F5PY",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:01:17.562Z"
+  },
+  {
+    "id": "seed_240",
+    "asset_no": "TEST0240",
+    "imei": "351379300210690",
+    "mac_address": "4CEBB015A5ED",
+    "serial_no": "R5KL602F5QK",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:02:17.562Z"
+  },
+  {
+    "id": "seed_241",
+    "asset_no": "TEST0241",
+    "imei": "351379300210724",
+    "mac_address": "4CEBB015A5F3",
+    "serial_no": "R5KL602F5TM",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:03:17.562Z"
+  },
+  {
+    "id": "seed_242",
+    "asset_no": "TEST0242",
+    "imei": "351379300210732",
+    "mac_address": "4CEBB015A5F5",
+    "serial_no": "R5KL602F5VH",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:04:17.562Z"
+  },
+  {
+    "id": "seed_243",
+    "asset_no": "TEST0243",
+    "imei": "351379300210740",
+    "mac_address": "4CEBB015A5F7",
+    "serial_no": "R5KL602F5WF",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:05:17.562Z"
+  },
+  {
+    "id": "seed_244",
+    "asset_no": "TEST0244",
+    "imei": "351379300210401",
+    "mac_address": "4CEBB015A5B3",
+    "serial_no": "R5KL602F4VD",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:06:17.562Z"
+  },
+  {
+    "id": "seed_245",
+    "asset_no": "TEST0245",
+    "imei": "351379300210419",
+    "mac_address": "4CEBB015A5B5",
+    "serial_no": "R5KL602F4WA",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:07:17.562Z"
+  },
+  {
+    "id": "seed_246",
+    "asset_no": "TEST0246",
+    "imei": "351379300210484",
+    "mac_address": "4CEBB015A5C3",
+    "serial_no": "R5KL602F53P",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:08:17.562Z"
+  },
+  {
+    "id": "seed_247",
+    "asset_no": "TEST0247",
+    "imei": "351379300210542",
+    "mac_address": "4CEBB015A5CF",
+    "serial_no": "R5KL602F59H",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:09:17.562Z"
+  },
+  {
+    "id": "seed_248",
+    "asset_no": "TEST0248",
+    "imei": "351379300210559",
+    "mac_address": "4CEBB015A5D1",
+    "serial_no": "R5KL602F5AF",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:10:17.562Z"
+  },
+  {
+    "id": "seed_249",
+    "asset_no": "TEST0249",
+    "imei": "351379300210575",
+    "mac_address": "4CEBB015A5D5",
+    "serial_no": "R5KL602F5CD",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:11:17.562Z"
+  },
+  {
+    "id": "seed_250",
+    "asset_no": "TEST0250",
+    "imei": "351379300210757",
+    "mac_address": "4CEBB015A5F9",
+    "serial_no": "R5KL602F5XN",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:12:17.562Z"
+  },
+  {
+    "id": "seed_251",
+    "asset_no": "TEST0251",
+    "imei": "351379300210773",
+    "mac_address": "4CEBB015A5FD",
+    "serial_no": "R5KL602F5ZA",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:13:17.562Z"
+  },
+  {
+    "id": "seed_252",
+    "asset_no": "TEST0252",
+    "imei": "351379300211938",
+    "mac_address": "4CEBB020AAD1",
+    "serial_no": "R5KL602W7GT",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:14:17.562Z"
+  },
+  {
+    "id": "seed_253",
+    "asset_no": "TEST0253",
+    "imei": "351379300210583",
+    "mac_address": "4CEBB015A5D7",
+    "serial_no": "R5KL602F5DA",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:15:17.562Z"
+  },
+  {
+    "id": "seed_254",
+    "asset_no": "TEST0254",
+    "imei": "351379300210591",
+    "mac_address": "4CEBB015A5D9",
+    "serial_no": "R5KL602F5EZ",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:16:17.562Z"
+  },
+  {
+    "id": "seed_255",
+    "asset_no": "TEST0255",
+    "imei": "351379300211896",
+    "mac_address": "4CEBB020AAC9",
+    "serial_no": "R5KL602W7CX",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:17:17.562Z"
+  },
+  {
+    "id": "seed_256",
+    "asset_no": "TEST0256",
+    "imei": "351379300211037",
+    "mac_address": "4CEBB015A631",
+    "serial_no": "R5KL602F6RP",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:18:17.562Z"
+  },
+  {
+    "id": "seed_257",
+    "asset_no": "TEST0257",
+    "imei": "351379300210807",
+    "mac_address": "4CEBB015A603",
+    "serial_no": "R5KL602F62J",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:19:17.562Z"
+  },
+  {
+    "id": "seed_258",
+    "asset_no": "TEST0258",
+    "imei": "351379300210377",
+    "mac_address": "4CEBB015A5AD",
+    "serial_no": "R5KL602F4RH",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:20:17.562Z"
+  },
+  {
+    "id": "seed_259",
+    "asset_no": "TEST0259",
+    "imei": "351379300210369",
+    "mac_address": "4CEBB015A5AB",
+    "serial_no": "R5KL602F4QM",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:21:17.562Z"
+  },
+  {
+    "id": "seed_260",
+    "asset_no": "TEST0260",
+    "imei": "351379300210351",
+    "mac_address": "4CEBB015A5A9",
+    "serial_no": "R5KL602F4PV",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:22:17.562Z"
+  },
+  {
+    "id": "seed_261",
+    "asset_no": "TEST0261",
+    "imei": "351379300210336",
+    "mac_address": "4CEBB015A5A5",
+    "serial_no": "R5KL602F4MK",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:23:17.562Z"
+  },
+  {
+    "id": "seed_262",
+    "asset_no": "TEST0262",
+    "imei": "351379300210310",
+    "mac_address": "4CEBB015A5A1",
+    "serial_no": "R5KL602F4KP",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:24:17.562Z"
+  },
+  {
+    "id": "seed_263",
+    "asset_no": "TEST0263",
+    "imei": "351379300210302",
+    "mac_address": "4CEBB015A59F",
+    "serial_no": "R5KL602F4JX",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:25:17.562Z"
+  },
+  {
+    "id": "seed_264",
+    "asset_no": "TEST0264",
+    "imei": "351379300210294",
+    "mac_address": "4CEBB015A59D",
+    "serial_no": "R5KL602F4HE",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:26:17.562Z"
+  },
+  {
+    "id": "seed_265",
+    "asset_no": "TEST0265",
+    "imei": "351379300210245",
+    "mac_address": "4CEBB015A593",
+    "serial_no": "R5KL602F4CB",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:27:17.562Z"
+  },
+  {
+    "id": "seed_266",
+    "asset_no": "TEST0266",
+    "imei": "351379300210237",
+    "mac_address": "4CEBB015A591",
+    "serial_no": "R5KL602F4BZ",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:28:17.562Z"
+  },
+  {
+    "id": "seed_267",
+    "asset_no": "TEST0267",
+    "imei": "351379300210229",
+    "mac_address": "4CEBB015A58F",
+    "serial_no": "R5KL602F4AA",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:29:17.562Z"
+  },
+  {
+    "id": "seed_268",
+    "asset_no": "TEST0268",
+    "imei": "351379300210203",
+    "mac_address": "4CEBB015A58B",
+    "serial_no": "R5KL602F48N",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:30:17.562Z"
+  },
+  {
+    "id": "seed_269",
+    "asset_no": "TEST0269",
+    "imei": "351379300210187",
+    "mac_address": "4CEBB015A587",
+    "serial_no": "R5KL602F46H",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:31:17.562Z"
+  },
+  {
+    "id": "seed_270",
+    "asset_no": "TEST0270",
+    "imei": "351379300210161",
+    "mac_address": "4CEBB015A583",
+    "serial_no": "R5KL602F44V",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:32:17.562Z"
+  },
+  {
+    "id": "seed_271",
+    "asset_no": "TEST0271",
+    "imei": "351379300210146",
+    "mac_address": "4CEBB015A57F",
+    "serial_no": "R5KL602F42K",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:33:17.562Z"
+  },
+  {
+    "id": "seed_272",
+    "asset_no": "TEST0272",
+    "imei": "351379300210138",
+    "mac_address": "4CEBB015A57D",
+    "serial_no": "R5KL602F41Y",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:34:17.562Z"
+  },
+  {
+    "id": "seed_273",
+    "asset_no": "TEST0273",
+    "imei": "351379300210120",
+    "mac_address": "4CEBB015A57B",
+    "serial_no": "R5KL602F40P",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:35:17.562Z"
+  },
+  {
+    "id": "seed_274",
+    "asset_no": "TEST0274",
+    "imei": "351379300210914",
+    "mac_address": "4CEBB015A619",
+    "serial_no": "R5KL602F6DF",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:36:17.562Z"
+  },
+  {
+    "id": "seed_275",
+    "asset_no": "TEST0275",
+    "imei": "351379300210922",
+    "mac_address": "4CEBB015A61B",
+    "serial_no": "R5KL602F6EN",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:37:17.562Z"
+  },
+  {
+    "id": "seed_276",
+    "asset_no": "TEST0276",
+    "imei": "351379300210955",
+    "mac_address": "4CEBB015A621",
+    "serial_no": "R5KL602F6HZ",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:38:17.562Z"
+  },
+  {
+    "id": "seed_277",
+    "asset_no": "TEST0277",
+    "imei": "351379300210963",
+    "mac_address": "4CEBB015A623",
+    "serial_no": "R5KL602F6JB",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:39:17.562Z"
+  },
+  {
+    "id": "seed_278",
+    "asset_no": "TEST0278",
+    "imei": "351379300210971",
+    "mac_address": "4CEBB015A625",
+    "serial_no": "R5KL602F6KL",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:40:17.562Z"
+  },
+  {
+    "id": "seed_279",
+    "asset_no": "TEST0279",
+    "imei": "351379300210989",
+    "mac_address": "4CEBB015A627",
+    "serial_no": "R5KL602F6LW",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:41:17.562Z"
+  },
+  {
+    "id": "seed_280",
+    "asset_no": "TEST0280",
+    "imei": "351379300211003",
+    "mac_address": "4CEBB015A62B",
+    "serial_no": "R5KL602F6NR",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:42:17.562Z"
+  },
+  {
+    "id": "seed_281",
+    "asset_no": "TEST0281",
+    "imei": "351379300210708",
+    "mac_address": "4CEBB015A5EF",
+    "serial_no": "R5KL602F5RT",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:43:17.562Z"
+  },
+  {
+    "id": "seed_282",
+    "asset_no": "TEST0282",
+    "imei": "351379300210864",
+    "mac_address": "4CEBB015A60F",
+    "serial_no": "R5KL602F68K",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:44:17.562Z"
+  },
+  {
+    "id": "seed_283",
+    "asset_no": "TEST0283",
+    "imei": "351379300210872",
+    "mac_address": "4CEBB015A611",
+    "serial_no": "R5KL602F69T",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:45:17.562Z"
+  },
+  {
+    "id": "seed_284",
+    "asset_no": "TEST0284",
+    "imei": "351379300210898",
+    "mac_address": "4CEBB015A615",
+    "serial_no": "R5KL602F6BM",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:46:17.562Z"
+  },
+  {
+    "id": "seed_285",
+    "asset_no": "TEST0285",
+    "imei": "351379300210906",
+    "mac_address": "4CEBB015A617",
+    "serial_no": "R5KL602F6CH",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:47:17.562Z"
+  },
+  {
+    "id": "seed_286",
+    "asset_no": "TEST0286",
+    "imei": "351379300210930",
+    "mac_address": "4CEBB015A61D",
+    "serial_no": "R5KL602F6FD",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:48:17.562Z"
+  },
+  {
+    "id": "seed_287",
+    "asset_no": "TEST0287",
+    "imei": "351379300210948",
+    "mac_address": "4CEBB015A61F",
+    "serial_no": "R5KL602F6GA",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:49:17.562Z"
+  },
+  {
+    "id": "seed_288",
+    "asset_no": "TEST0288",
+    "imei": "351379300211029",
+    "mac_address": "4CEBB015A62F",
+    "serial_no": "R5KL602F6QX",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:50:17.562Z"
+  },
+  {
+    "id": "seed_289",
+    "asset_no": "TEST0289",
+    "imei": "351379300211060",
+    "mac_address": "4CEBB015A637",
+    "serial_no": "R5KL602F6VT",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:51:17.562Z"
+  },
+  {
+    "id": "seed_290",
+    "asset_no": "TEST0290",
+    "imei": "351379300211086",
+    "mac_address": "4CEBB020AA27",
+    "serial_no": "R5KL602W4XF",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:52:17.562Z"
+  },
+  {
+    "id": "seed_291",
+    "asset_no": "TEST0291",
+    "imei": "351379300211094",
+    "mac_address": "4CEBB020AA29",
+    "serial_no": "R5KL602W4YN",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:53:17.562Z"
+  },
+  {
+    "id": "seed_292",
+    "asset_no": "TEST0292",
+    "imei": "351379300211102",
+    "mac_address": "4CEBB020AA2B",
+    "serial_no": "R5KL602W4ZD",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:54:17.562Z"
+  },
+  {
+    "id": "seed_293",
+    "asset_no": "TEST0293",
+    "imei": "351379300211144",
+    "mac_address": "4CEBB020AA33",
+    "serial_no": "R5KL602W53J",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:55:17.562Z"
+  },
+  {
+    "id": "seed_294",
+    "asset_no": "TEST0294",
+    "imei": "351379300211177",
+    "mac_address": "4CEBB020AA39",
+    "serial_no": "R5KL602W56X",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:56:17.562Z"
+  },
+  {
+    "id": "seed_295",
+    "asset_no": "TEST0295",
+    "imei": "351379300211326",
+    "mac_address": "4CEBB020AA57",
+    "serial_no": "R5KL602W5MW",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:57:17.562Z"
+  },
+  {
+    "id": "seed_296",
+    "asset_no": "TEST0296",
+    "imei": "351379300211425",
+    "mac_address": "4CEBB020AA6B",
+    "serial_no": "R5KL602W5YM",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:58:17.562Z"
+  },
+  {
+    "id": "seed_297",
+    "asset_no": "TEST0297",
+    "imei": "351379300211458",
+    "mac_address": "4CEBB020AA71",
+    "serial_no": "R5KL602W61A",
+    "status": "COMPLETED",
+    "created_at": "2026-08-13T23:59:17.562Z"
+  },
+  {
+    "id": "seed_298",
+    "asset_no": "TEST0298",
+    "imei": "351379300211466",
+    "mac_address": "4CEBB020AA73",
+    "serial_no": "R5KL602W62Z",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:00:17.562Z"
+  },
+  {
+    "id": "seed_299",
+    "asset_no": "TEST0299",
+    "imei": "351379300211482",
+    "mac_address": "4CEBB020AA77",
+    "serial_no": "R5KL602W64L",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:01:17.562Z"
+  },
+  {
+    "id": "seed_300",
+    "asset_no": "TEST0300",
+    "imei": "351379300211490",
+    "mac_address": "4CEBB020AA79",
+    "serial_no": "R5KL602W65W",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:02:17.562Z"
+  },
+  {
+    "id": "seed_301",
+    "asset_no": "TEST0301",
+    "imei": "351379300211508",
+    "mac_address": "4CEBB020AA7B",
+    "serial_no": "R5KL602W66J",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:03:17.562Z"
+  },
+  {
+    "id": "seed_302",
+    "asset_no": "TEST0302",
+    "imei": "351379300211532",
+    "mac_address": "4CEBB020AA81",
+    "serial_no": "R5KL602W69X",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:04:17.562Z"
+  },
+  {
+    "id": "seed_303",
+    "asset_no": "TEST0303",
+    "imei": "351379300211565",
+    "mac_address": "4CEBB020AA87",
+    "serial_no": "R5KL602W6CK",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:05:17.562Z"
+  },
+  {
+    "id": "seed_304",
+    "asset_no": "TEST0304",
+    "imei": "351379300211599",
+    "mac_address": "4CEBB020AA8D",
+    "serial_no": "R5KL602W6FM",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:06:17.562Z"
+  },
+  {
+    "id": "seed_305",
+    "asset_no": "TEST0305",
+    "imei": "351379300211649",
+    "mac_address": "4CEBB020AA97",
+    "serial_no": "R5KL602W6LA",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:07:17.562Z"
+  },
+  {
+    "id": "seed_306",
+    "asset_no": "TEST0306",
+    "imei": "351379300210153",
+    "mac_address": "4CEBB015A581",
+    "serial_no": "R5KL602F43T",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:08:17.562Z"
+  },
+  {
+    "id": "seed_307",
+    "asset_no": "TEST0307",
+    "imei": "351379300210179",
+    "mac_address": "4CEBB015A585",
+    "serial_no": "R5KL602F45M",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:09:17.562Z"
+  },
+  {
+    "id": "seed_308",
+    "asset_no": "TEST0308",
+    "imei": "351379300210195",
+    "mac_address": "4CEBB015A589",
+    "serial_no": "R5KL602F47F",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:10:17.562Z"
+  },
+  {
+    "id": "seed_309",
+    "asset_no": "TEST0309",
+    "imei": "351379300210211",
+    "mac_address": "4CEBB015A58D",
+    "serial_no": "R5KL602F49D",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:11:17.562Z"
+  },
+  {
+    "id": "seed_310",
+    "asset_no": "TEST0310",
+    "imei": "351379300210252",
+    "mac_address": "4CEBB015A595",
+    "serial_no": "R5KL602F4DL",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:12:17.562Z"
+  },
+  {
+    "id": "seed_311",
+    "asset_no": "TEST0311",
+    "imei": "351379300210260",
+    "mac_address": "4CEBB015A597",
+    "serial_no": "R5KL602F4EW",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:13:17.562Z"
+  },
+  {
+    "id": "seed_312",
+    "asset_no": "TEST0312",
+    "imei": "351379300210278",
+    "mac_address": "4CEBB015A599",
+    "serial_no": "R5KL602F4FJ",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:14:17.562Z"
+  },
+  {
+    "id": "seed_313",
+    "asset_no": "TEST0313",
+    "imei": "351379300210328",
+    "mac_address": "4CEBB015A5A3",
+    "serial_no": "R5KL602F4LY",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:15:17.562Z"
+  },
+  {
+    "id": "seed_314",
+    "asset_no": "TEST0314",
+    "imei": "351379300210344",
+    "mac_address": "4CEBB015A5A7",
+    "serial_no": "R5KL602F4NT",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:16:17.562Z"
+  },
+  {
+    "id": "seed_315",
+    "asset_no": "TEST0315",
+    "imei": "351379300210385",
+    "mac_address": "4CEBB015A5AF",
+    "serial_no": "R5KL602F4SF",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:17:17.562Z"
+  },
+  {
+    "id": "seed_316",
+    "asset_no": "TEST0316",
+    "imei": "351379300210393",
+    "mac_address": "4CEBB015A5B1",
+    "serial_no": "R5KL602F4TN",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:18:17.562Z"
+  },
+  {
+    "id": "seed_317",
+    "asset_no": "TEST0317",
+    "imei": "351379300210427",
+    "mac_address": "4CEBB015A5B7",
+    "serial_no": "R5KL602F4XZ",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:19:17.562Z"
+  },
+  {
+    "id": "seed_318",
+    "asset_no": "TEST0318",
+    "imei": "351379300210435",
+    "mac_address": "4CEBB015A5B9",
+    "serial_no": "R5KL602F4YB",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:20:17.562Z"
+  },
+  {
+    "id": "seed_319",
+    "asset_no": "TEST0319",
+    "imei": "351379300210443",
+    "mac_address": "4CEBB015A5BB",
+    "serial_no": "R5KL602F4ZL",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:21:17.562Z"
+  },
+  {
+    "id": "seed_320",
+    "asset_no": "TEST0320",
+    "imei": "351379300210450",
+    "mac_address": "4CEBB015A5BD",
+    "serial_no": "R5KL602F50R",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:22:17.562Z"
+  },
+  {
+    "id": "seed_321",
+    "asset_no": "TEST0321",
+    "imei": "351379300210468",
+    "mac_address": "4CEBB015A5BF",
+    "serial_no": "R5KL602F51E",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:23:17.562Z"
+  },
+  {
+    "id": "seed_322",
+    "asset_no": "TEST0322",
+    "imei": "351379300210476",
+    "mac_address": "4CEBB015A5C1",
+    "serial_no": "R5KL602F52X",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:24:17.562Z"
+  },
+  {
+    "id": "seed_323",
+    "asset_no": "TEST0323",
+    "imei": "351379300210500",
+    "mac_address": "4CEBB015A5C7",
+    "serial_no": "R5KL602F55K",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:25:17.562Z"
+  },
+  {
+    "id": "seed_324",
+    "asset_no": "TEST0324",
+    "imei": "351379300210518",
+    "mac_address": "4CEBB015A5C9",
+    "serial_no": "R5KL602F56T",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:26:17.562Z"
+  },
+  {
+    "id": "seed_325",
+    "asset_no": "TEST0325",
+    "imei": "351379300210526",
+    "mac_address": "4CEBB015A5CB",
+    "serial_no": "R5KL602F57V",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:27:17.562Z"
+  },
+  {
+    "id": "seed_326",
+    "asset_no": "TEST0326",
+    "imei": "351379300210534",
+    "mac_address": "4CEBB015A5CD",
+    "serial_no": "R5KL602F58M",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:28:17.562Z"
+  },
+  {
+    "id": "seed_327",
+    "asset_no": "TEST0327",
+    "imei": "351379300210567",
+    "mac_address": "4CEBB015A5D3",
+    "serial_no": "R5KL602F5BN",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:29:17.562Z"
+  },
+  {
+    "id": "seed_328",
+    "asset_no": "TEST0328",
+    "imei": "351379300212662",
+    "mac_address": "4CEBB020AB63",
+    "serial_no": "R5KL602W9PV",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:30:17.562Z"
+  },
+  {
+    "id": "seed_329",
+    "asset_no": "TEST0329",
+    "imei": "351379300212449",
+    "mac_address": "4CEBB020AB37",
+    "serial_no": "R5KL602W91Y",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:31:17.562Z"
+  },
+  {
+    "id": "seed_330",
+    "asset_no": "TEST0330",
+    "imei": "351379300212365",
+    "mac_address": "4CEBB020AB27",
+    "serial_no": "R5KL602W8SA",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:32:17.562Z"
+  },
+  {
+    "id": "seed_331",
+    "asset_no": "TEST0331",
+    "imei": "351379300212340",
+    "mac_address": "4CEBB020AB23",
+    "serial_no": "R5KL602W8QN",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:33:17.562Z"
+  },
+  {
+    "id": "seed_332",
+    "asset_no": "TEST0332",
+    "imei": "351379300212332",
+    "mac_address": "4CEBB020AB21",
+    "serial_no": "R5KL602W8PF",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:34:17.562Z"
+  },
+  {
+    "id": "seed_333",
+    "asset_no": "TEST0333",
+    "imei": "351379300210666",
+    "mac_address": "4CEBB015A5E7",
+    "serial_no": "R5KL602F5MX",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:35:17.562Z"
+  },
+  {
+    "id": "seed_334",
+    "asset_no": "TEST0334",
+    "imei": "351379300210641",
+    "mac_address": "4CEBB015A5E3",
+    "serial_no": "R5KL602F5KR",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:36:17.562Z"
+  },
+  {
+    "id": "seed_335",
+    "asset_no": "TEST0335",
+    "imei": "351379300210609",
+    "mac_address": "4CEBB015A5DB",
+    "serial_no": "R5KL602F5FB",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:37:17.562Z"
+  },
+  {
+    "id": "seed_336",
+    "asset_no": "TEST0336",
+    "imei": "351379300212308",
+    "mac_address": "4CEBB020AB1B",
+    "serial_no": "R5KL602W8LV",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:38:17.562Z"
+  },
+  {
+    "id": "seed_337",
+    "asset_no": "TEST0337",
+    "imei": "351379300212274",
+    "mac_address": "4CEBB020AB15",
+    "serial_no": "R5KL602W8HY",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:39:17.562Z"
+  },
+  {
+    "id": "seed_338",
+    "asset_no": "TEST0338",
+    "imei": "351379300212266",
+    "mac_address": "4CEBB020AB13",
+    "serial_no": "R5KL602W8GP",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:40:17.562Z"
+  },
+  {
+    "id": "seed_339",
+    "asset_no": "TEST0339",
+    "imei": "351379300212258",
+    "mac_address": "4CEBB020AB11",
+    "serial_no": "R5KL602W8FX",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:41:17.562Z"
+  },
+  {
+    "id": "seed_340",
+    "asset_no": "TEST0340",
+    "imei": "351379300212225",
+    "mac_address": "4CEBB020AB0B",
+    "serial_no": "R5KL602W8CJ",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:42:17.562Z"
+  },
+  {
+    "id": "seed_341",
+    "asset_no": "TEST0341",
+    "imei": "351379300212217",
+    "mac_address": "4CEBB020AB09",
+    "serial_no": "R5KL602W8BW",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:43:17.562Z"
+  },
+  {
+    "id": "seed_342",
+    "asset_no": "TEST0342",
+    "imei": "351379300212209",
+    "mac_address": "4CEBB020AB07",
+    "serial_no": "R5KL602W8AL",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:44:17.562Z"
+  },
+  {
+    "id": "seed_343",
+    "asset_no": "TEST0343",
+    "imei": "351379300212191",
+    "mac_address": "4CEBB020AB05",
+    "serial_no": "R5KL602W89B",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:45:17.562Z"
+  },
+  {
+    "id": "seed_344",
+    "asset_no": "TEST0344",
+    "imei": "351379300212183",
+    "mac_address": "4CEBB020AB03",
+    "serial_no": "R5KL602W88Z",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:46:17.562Z"
+  },
+  {
+    "id": "seed_345",
+    "asset_no": "TEST0345",
+    "imei": "351379300212142",
+    "mac_address": "4CEBB020AAFB",
+    "serial_no": "R5KL602W84F",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:47:17.562Z"
+  },
+  {
+    "id": "seed_346",
+    "asset_no": "TEST0346",
+    "imei": "351379300212118",
+    "mac_address": "4CEBB020AAF5",
+    "serial_no": "R5KL602W81V",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:48:17.562Z"
+  },
+  {
+    "id": "seed_347",
+    "asset_no": "TEST0347",
+    "imei": "351379300212084",
+    "mac_address": "4CEBB020AAEF",
+    "serial_no": "R5KL602W7YX",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:49:17.562Z"
+  },
+  {
+    "id": "seed_348",
+    "asset_no": "TEST0348",
+    "imei": "351379300212068",
+    "mac_address": "4CEBB020AAEB",
+    "serial_no": "R5KL602W7WR",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:50:17.562Z"
+  },
+  {
+    "id": "seed_349",
+    "asset_no": "TEST0349",
+    "imei": "351379300212050",
+    "mac_address": "4CEBB020AAE9",
+    "serial_no": "R5KL602W7VJ",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:51:17.562Z"
+  },
+  {
+    "id": "seed_350",
+    "asset_no": "TEST0350",
+    "imei": "351379300211920",
+    "mac_address": "4CEBB020AACF",
+    "serial_no": "R5KL602W7FK",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:52:17.562Z"
+  },
+  {
+    "id": "seed_351",
+    "asset_no": "TEST0351",
+    "imei": "351379300211904",
+    "mac_address": "4CEBB020AACB",
+    "serial_no": "R5KL602W7DP",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:53:17.562Z"
+  },
+  {
+    "id": "seed_352",
+    "asset_no": "TEST0352",
+    "imei": "351379300211805",
+    "mac_address": "4CEBB020AAB7",
+    "serial_no": "R5KL602W73D",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:54:17.562Z"
+  },
+  {
+    "id": "seed_353",
+    "asset_no": "TEST0353",
+    "imei": "351379300211797",
+    "mac_address": "4CEBB020AAB5",
+    "serial_no": "R5KL602W72N",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:55:17.562Z"
+  },
+  {
+    "id": "seed_354",
+    "asset_no": "TEST0354",
+    "imei": "351379300211789",
+    "mac_address": "4CEBB020AAB3",
+    "serial_no": "R5KL602W71F",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:56:17.562Z"
+  },
+  {
+    "id": "seed_355",
+    "asset_no": "TEST0355",
+    "imei": "351379300211771",
+    "mac_address": "4CEBB020AAB1",
+    "serial_no": "R5KL602W70H",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:57:17.562Z"
+  },
+  {
+    "id": "seed_356",
+    "asset_no": "TEST0356",
+    "imei": "351379300211748",
+    "mac_address": "4CEBB020AAAB",
+    "serial_no": "R5KL602W6XY",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:58:17.562Z"
+  },
+  {
+    "id": "seed_357",
+    "asset_no": "TEST0357",
+    "imei": "351379300211706",
+    "mac_address": "4CEBB020AAA3",
+    "serial_no": "R5KL602W6SR",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T00:59:17.562Z"
+  },
+  {
+    "id": "seed_358",
+    "asset_no": "TEST0358",
+    "imei": "351379300211698",
+    "mac_address": "4CEBB020AAA1",
+    "serial_no": "R5KL602W6RJ",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T01:00:17.562Z"
+  },
+  {
+    "id": "seed_359",
+    "asset_no": "TEST0359",
+    "imei": "351379300211672",
+    "mac_address": "4CEBB020AA9D",
+    "serial_no": "R5KL602W6PL",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T01:01:17.562Z"
+  },
+  {
+    "id": "seed_360",
+    "asset_no": "TEST0360",
+    "imei": "351379300211664",
+    "mac_address": "4CEBB020AA9B",
+    "serial_no": "R5KL602W6NB",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T01:02:17.562Z"
+  },
+  {
+    "id": "seed_361",
+    "asset_no": "TEST0361",
+    "imei": "351379300228064",
+    "mac_address": "4CEBB0B57CAB",
+    "serial_no": "R5KL60F0N3B",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T01:03:17.562Z"
+  },
+  {
+    "id": "seed_362",
+    "asset_no": "TEST0362",
+    "imei": "351379300228056",
+    "mac_address": "4CEBB0B57CA9",
+    "serial_no": "R5KL60F0N2Z",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T01:04:17.562Z"
+  },
+  {
+    "id": "seed_363",
+    "asset_no": "TEST0363",
+    "imei": "351379300227454",
+    "mac_address": "4CEBB0B57C31",
+    "serial_no": "R5KL60F0L8V",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T01:05:17.562Z"
+  },
+  {
+    "id": "seed_364",
+    "asset_no": "TEST0364",
+    "imei": "351379300226407",
+    "mac_address": "4CEBB0B57B5F",
+    "serial_no": "R5KL60F0H2F",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T01:06:17.562Z"
+  },
+  {
+    "id": "seed_365",
+    "asset_no": "TEST0365",
+    "imei": "351379300225706",
+    "mac_address": "4CEBB0B57AD3",
+    "serial_no": "R5KL60F0EYF",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T01:07:17.562Z"
+  },
+  {
+    "id": "seed_366",
+    "asset_no": "TEST0366",
+    "imei": "351379300225326",
+    "mac_address": "4CEBB0B57A87",
+    "serial_no": "R5KL60F0DSM",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T01:08:17.562Z"
+  },
+  {
+    "id": "seed_367",
+    "asset_no": "TEST0367",
+    "imei": "351379300224931",
+    "mac_address": "4CEBB0B57A39",
+    "serial_no": "R5KL60F0CLK",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T01:09:17.562Z"
+  },
+  {
+    "id": "seed_368",
+    "asset_no": "TEST0368",
+    "imei": "351379300224808",
+    "mac_address": "4CEBB0B57A1F",
+    "serial_no": "R5KL60F0C7N",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T01:10:17.562Z"
+  },
+  {
+    "id": "seed_369",
+    "asset_no": "TEST0369",
+    "imei": "351379300223131",
+    "mac_address": "4CEBB0B578D1",
+    "serial_no": "R5KL60F075K",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T01:11:17.562Z"
+  },
+  {
+    "id": "seed_370",
+    "asset_no": "TEST0370",
+    "imei": "351379300222984",
+    "mac_address": "4CEBB0B578B3",
+    "serial_no": "R5KL60F06PV",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T01:12:17.562Z"
+  },
+  {
+    "id": "seed_371",
+    "asset_no": "TEST0371",
+    "imei": "351379300222398",
+    "mac_address": "4CEBB0B5783D",
+    "serial_no": "R5KL60F04XE",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T01:13:17.562Z"
+  },
+  {
+    "id": "seed_372",
+    "asset_no": "TEST0372",
+    "imei": "351379300220764",
+    "mac_address": "4CEBB0B576F7",
+    "serial_no": "R5KL60EZZZL",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T01:14:17.562Z"
+  },
+  {
+    "id": "seed_373",
+    "asset_no": "TEST0373",
+    "imei": "351379300220640",
+    "mac_address": "4CEBB0B576DF",
+    "serial_no": "R5KL60EZZLY",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T01:15:17.562Z"
+  },
+  {
+    "id": "seed_374",
+    "asset_no": "TEST0374",
+    "imei": "351379300220566",
+    "mac_address": "4CEBB0B576CF",
+    "serial_no": "R5KL60EZZCB",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T01:16:17.562Z"
+  },
+  {
+    "id": "seed_375",
+    "asset_no": "TEST0375",
+    "imei": "351379300220129",
+    "mac_address": "4CEBB0B57677",
+    "serial_no": "R5KL60EZY1V",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T01:17:17.562Z"
+  },
+  {
+    "id": "seed_376",
+    "asset_no": "TEST0376",
+    "imei": "351379300220095",
+    "mac_address": "4CEBB0B57671",
+    "serial_no": "R5KL60EZXYX",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T01:18:17.562Z"
+  },
+  {
+    "id": "seed_377",
+    "asset_no": "TEST0377",
+    "imei": "351379300219980",
+    "mac_address": "4CEBB0B5765B",
+    "serial_no": "R5KL60EZXLF",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T01:19:17.562Z"
+  },
+  {
+    "id": "seed_378",
+    "asset_no": "TEST0378",
+    "imei": "351379300219865",
+    "mac_address": "4CEBB0B57643",
+    "serial_no": "R5KL60EZX8W",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T01:20:17.562Z"
+  },
+  {
+    "id": "seed_379",
+    "asset_no": "TEST0379",
+    "imei": "351379300219436",
+    "mac_address": "4CEBB0B575ED",
+    "serial_no": "R5KL60EZVYM",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T01:21:17.562Z"
+  },
+  {
+    "id": "seed_380",
+    "asset_no": "TEST0380",
+    "imei": "351379300219212",
+    "mac_address": "4CEBB0B575C1",
+    "serial_no": "R5KL60EZV9K",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T01:22:17.562Z"
+  },
+  {
+    "id": "seed_381",
+    "asset_no": "TEST0381",
+    "imei": "351379300215038",
+    "mac_address": "4CEBB06B4231",
+    "serial_no": "R5KL609FLBX",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T01:23:17.562Z"
+  },
+  {
+    "id": "seed_382",
+    "asset_no": "TEST0382",
+    "imei": "351379300214973",
+    "mac_address": "4CEBB06B4225",
+    "serial_no": "R5KL609FL5B",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T01:24:17.562Z"
+  },
+  {
+    "id": "seed_383",
+    "asset_no": "TEST0383",
+    "imei": "351379300214494",
+    "mac_address": "4CEBB06B41C5",
+    "serial_no": "R5KL609FJPE",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T01:25:17.562Z"
+  },
+  {
+    "id": "seed_384",
+    "asset_no": "TEST0384",
+    "imei": "351379300212977",
+    "mac_address": "4CEBB0336591",
+    "serial_no": "R5KL603ZGHT",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T01:26:17.562Z"
+  },
+  {
+    "id": "seed_385",
+    "asset_no": "TEST0385",
+    "imei": "351379300212746",
+    "mac_address": "4CEBB020AB73",
+    "serial_no": "R5KL602W9YB",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T01:27:17.562Z"
+  },
+  {
+    "id": "seed_386",
+    "asset_no": "TEST0386",
+    "imei": "351379300212456",
+    "mac_address": "4CEBB020AB39",
+    "serial_no": "R5KL602W92K",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T01:28:17.562Z"
+  },
+  {
+    "id": "seed_387",
+    "asset_no": "TEST0387",
+    "imei": "351379300215152",
+    "mac_address": "4CEBB06B4249",
+    "serial_no": "R5KL609FLPZ",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T01:29:17.562Z"
+  },
+  {
+    "id": "seed_388",
+    "asset_no": "TEST0388",
+    "imei": "351379300215632",
+    "mac_address": "4CEBB06B42A9",
+    "serial_no": "R5KL609FN5H",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T01:30:17.562Z"
+  },
+  {
+    "id": "seed_389",
+    "asset_no": "TEST0389",
+    "imei": "351379300215657",
+    "mac_address": "4CEBB06B42AD",
+    "serial_no": "R5KL609FN7N",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T01:31:17.562Z"
+  },
+  {
+    "id": "seed_390",
+    "asset_no": "TEST0390",
+    "imei": "351379300215897",
+    "mac_address": "4CEBB06B42DD",
+    "serial_no": "R5KL609FNYL",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T01:32:17.562Z"
+  },
+  {
+    "id": "seed_391",
+    "asset_no": "TEST0391",
+    "imei": "351379300215970",
+    "mac_address": "4CEBB06B42ED",
+    "serial_no": "R5KL609FP6V",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T01:33:17.562Z"
+  },
+  {
+    "id": "seed_392",
+    "asset_no": "TEST0392",
+    "imei": "351379300216036",
+    "mac_address": "4CEBB06B42F9",
+    "serial_no": "R5KL609FPCA",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T01:34:17.562Z"
+  },
+  {
+    "id": "seed_393",
+    "asset_no": "TEST0393",
+    "imei": "351379300220384",
+    "mac_address": "4CEBB0B576AB",
+    "serial_no": "R5KL60EZYTZ",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T01:35:17.562Z"
+  },
+  {
+    "id": "seed_394",
+    "asset_no": "TEST0394",
+    "imei": "351379300222901",
+    "mac_address": "4CEBB0B578A3",
+    "serial_no": "R5KL60F06FJ",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T01:36:17.562Z"
+  },
+  {
+    "id": "seed_395",
+    "asset_no": "TEST0395",
+    "imei": "351379300228882",
+    "mac_address": "4CEBB0B57D4F",
+    "serial_no": "R5KL60F0QKT",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T01:37:17.562Z"
+  },
+  {
+    "id": "seed_396",
+    "asset_no": "TEST0396",
+    "imei": "351379300228833",
+    "mac_address": "4CEBB0B57D45",
+    "serial_no": "R5KL60F0QEE",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T01:38:17.562Z"
+  },
+  {
+    "id": "seed_397",
+    "asset_no": "TEST0397",
+    "imei": "351379300224881",
+    "mac_address": "4CEBB0B57A2F",
+    "serial_no": "R5KL60F0CFR",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T01:39:17.562Z"
+  },
+  {
+    "id": "seed_398",
+    "asset_no": "TEST0398",
+    "imei": "351379300224600",
+    "mac_address": "4CEBB0B579F7",
+    "serial_no": "R5KL60F0BLM",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T01:40:17.562Z"
+  },
+  {
+    "id": "seed_399",
+    "asset_no": "TEST0399",
+    "imei": "351379300224311",
+    "mac_address": "4CEBB0B579BD",
+    "serial_no": "R5KL60F0AQB",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T01:41:17.562Z"
+  },
+  {
+    "id": "seed_400",
+    "asset_no": "TEST0400",
+    "imei": "351379300222943",
+    "mac_address": "4CEBB0B578AB",
+    "serial_no": "R5KL60F06KP",
+    "status": "COMPLETED",
+    "created_at": "2026-08-14T01:42:17.562Z"
+  }
+]

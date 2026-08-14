@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { RefreshCw, Download, Printer, Search, Plus, Trash2, Edit3, CheckCircle, Database, Zap } from 'lucide-react';
 import { fetchScansFromSupabase, subscribeRealtimeScans, deleteScanFromSupabase } from '../utils/supabaseClient';
+import initialData from '../data/initialData.json';
 
 export default function PCDashboard({ onError, onOpenExportModal, onOpenPrintModal, onOpenConfigModal }) {
   const [items, setItems] = useState([]);
@@ -16,7 +17,7 @@ export default function PCDashboard({ onError, onOpenExportModal, onOpenPrintMod
     autoPrintRef.current = autoPrintEnabled;
   }, [autoPrintEnabled]);
 
-  // Load initial scans from Supabase
+  // Load initial scans from Supabase or default 400 seed items
   const loadData = async () => {
     setLoading(true);
     try {
@@ -24,11 +25,12 @@ export default function PCDashboard({ onError, onOpenExportModal, onOpenPrintMod
       if (data && data.length > 0) {
         setItems(data);
       } else {
-        setItems(sampleData);
+        // Fallback 400 default items
+        setItems(initialData);
       }
     } catch (err) {
-      console.warn('Realtime fetch warning:', err);
-      setItems(sampleData);
+      console.warn('Realtime fetch warning, using 400 default items:', err);
+      setItems(initialData);
     } finally {
       setLoading(false);
     }
@@ -300,11 +302,3 @@ export default function PCDashboard({ onError, onOpenExportModal, onOpenPrintMod
     </div>
   );
 }
-
-const sampleData = [
-  { id: 'sample_1', asset_no: '11112222', imei: '351379300225052', mac_address: '4CEBB0B57A51', serial_no: 'R5KL60F0CZW', status: 'COMPLETED', created_at: new Date().toISOString() },
-  { id: 'sample_2', asset_no: '22223333', imei: '351379300224790', mac_address: '4CEBB0B57A1D', serial_no: 'R5KL60F0C6F', status: 'COMPLETED', created_at: new Date().toISOString() },
-  { id: 'sample_3', asset_no: '33334444', imei: '351379300224774', mac_address: '4CEBB0B57A19', serial_no: 'R5KL60F0C4M', status: 'COMPLETED', created_at: new Date().toISOString() },
-  { id: 'sample_4', asset_no: '44445555', imei: '351379300224725', mac_address: '4CEBB0B57A0F', serial_no: 'R5KL60F0BZE', status: 'COMPLETED', created_at: new Date().toISOString() },
-  { id: 'sample_5', asset_no: '55556666', imei: '351379300224592', mac_address: '4CEBB0B579F5', serial_no: 'R5KL60F0BKV', status: 'COMPLETED', created_at: new Date().toISOString() }
-];
