@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { Smartphone, Monitor, Database, Settings } from 'lucide-react';
-import AutoCameraScanner from './components/AutoCameraScanner';
-import PCDashboard from './components/PCDashboard';
+import React, { useState, useEffect } from 'react';
+import { Smartphone, Monitor, Database } from 'lucide-react';
+import MobileScannerView from './views/MobileScannerView';
+import PCDashboardView from './views/PCDashboardView';
 import FileExportModal from './components/FileExportModal';
 import LabelPrintModal from './components/LabelPrintModal';
 import DataImportModal from './components/DataImportModal';
@@ -10,8 +10,15 @@ import ErrorModal from './components/ErrorModal';
 import { getStoredConfig, saveScansToSupabase, deleteAllScansFromSupabase } from './utils/supabaseClient';
 
 export default function App() {
-  const isMobileInitial = typeof window !== 'undefined' && window.innerWidth < 768;
-  const [mode, setMode] = useState(isMobileInitial ? 'mobile' : 'pc');
+  // Auto detect mobile device via userAgent or screen width
+  const [deviceMode, setDeviceMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      const isSmallScreen = window.innerWidth < 768;
+      return (isMobileUA || isSmallScreen) ? 'mobile' : 'pc';
+    }
+    return 'pc';
+  });
 
   // Modals state
   const [errorMessage, setErrorMessage] = useState(null);
@@ -27,11 +34,8 @@ export default function App() {
   const handleImportExecution = async (parsedRows, importMode) => {
     try {
       if (importMode === 'replace') {
-        // Wipe existing DB records
         await deleteAllScansFromSupabase();
       }
-
-      // Save new parsed rows to Supabase DB
       await saveScansToSupabase(parsedRows);
       alert(`성공적으로 DB에 ${parsedRows.length}건의 데이터를 ${importMode === 'replace' ? '전체 덮어쓰기' : '추가'}하였습니다!`);
     } catch (err) {
@@ -41,49 +45,49 @@ export default function App() {
   };
 
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '16px' }}>
+    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '12px' }}>
       {/* Header Bar */}
       <header style={{
         display: 'flex',
         flexWrap: 'wrap',
         justify: 'space-between',
         alignItems: 'center',
-        padding: '16px 20px',
+        padding: '12px 16px',
         backgroundColor: '#1e293b',
         borderRadius: '12px',
         border: '1px solid #334155',
-        marginBottom: '20px',
-        gap: '12px'
+        marginBottom: '16px',
+        gap: '10px'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div style={{
             backgroundColor: 'var(--primary)',
             color: '#fff',
-            padding: '8px 12px',
+            padding: '6px 10px',
             borderRadius: '8px',
             fontWeight: 800,
-            fontSize: '1.1rem',
+            fontSize: '1rem',
             letterSpacing: '0.5px'
           }}>
             IMEI SCANNER
           </div>
           <div>
-            <h1 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, color: '#f8fafc' }}>
-              모바일 카메라 OCR & PC 라벨 프린터 수집 시스템
+            <h1 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: '#f8fafc' }}>
+              {deviceMode === 'mobile' ? '모바일 전용 실시간 OCR 카메라 스캐너' : 'PC 전용 수집 대시보드 & 라벨 프린터 수식'}
             </h1>
-            <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
-              버전: v1.0.0.Build.4 | 2026-08-14
+            <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
+              버전: v1.0.0.Build.6 | 2026-08-14
             </span>
           </div>
         </div>
 
         {/* Mode Switcher & DB Config Status */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <button
             className="btn btn-outline"
             style={{
-              padding: '6px 12px',
-              fontSize: '0.8rem',
+              padding: '4px 10px',
+              fontSize: '0.75rem',
               borderColor: isConfigured ? 'var(--accent-green)' : '#f59e0b',
               color: isConfigured ? '#6ee7b7' : '#fef08a'
             }}
@@ -93,29 +97,29 @@ export default function App() {
             {isConfigured ? 'Supabase 연동됨' : 'DB 연동 필요'}
           </button>
 
-          {/* Mode Switcher Tabs */}
+          {/* Device View Switcher Tabs */}
           <div style={{
             backgroundColor: '#0f172a',
-            padding: '4px',
+            padding: '3px',
             borderRadius: '8px',
             display: 'flex',
-            gap: '4px'
+            gap: '3px'
           }}>
             <button
-              className={`btn ${mode === 'mobile' ? 'btn-primary' : 'btn-outline'}`}
-              style={{ padding: '6px 12px', fontSize: '0.8rem', border: 'none' }}
-              onClick={() => setMode('mobile')}
+              className={`btn ${deviceMode === 'mobile' ? 'btn-primary' : 'btn-outline'}`}
+              style={{ padding: '4px 10px', fontSize: '0.75rem', border: 'none' }}
+              onClick={() => setDeviceMode('mobile')}
             >
-              <Smartphone size={14} />
-              모바일 스캐너
+              <Smartphone size={13} />
+              모바일 뷰
             </button>
             <button
-              className={`btn ${mode === 'pc' ? 'btn-primary' : 'btn-outline'}`}
-              style={{ padding: '6px 12px', fontSize: '0.8rem', border: 'none' }}
-              onClick={() => setMode('pc')}
+              className={`btn ${deviceMode === 'pc' ? 'btn-primary' : 'btn-outline'}`}
+              style={{ padding: '4px 10px', fontSize: '0.75rem', border: 'none' }}
+              onClick={() => setDeviceMode('pc')}
             >
-              <Monitor size={14} />
-              PC 대시보드
+              <Monitor size={13} />
+              PC 대시보드 뷰
             </button>
           </div>
         </div>
@@ -123,10 +127,13 @@ export default function App() {
 
       {/* Main View Area */}
       <main>
-        {mode === 'mobile' ? (
-          <AutoCameraScanner onError={(msg) => setErrorMessage(msg)} />
+        {deviceMode === 'mobile' ? (
+          <MobileScannerView
+            onError={(msg) => setErrorMessage(msg)}
+            onOpenConfigModal={() => setIsConfigOpen(true)}
+          />
         ) : (
-          <PCDashboard
+          <PCDashboardView
             onError={(msg) => setErrorMessage(msg)}
             onOpenExportModal={(items) => setExportModalState({ isOpen: true, items })}
             onOpenPrintModal={(items) => setPrintModalState({ isOpen: true, items })}
