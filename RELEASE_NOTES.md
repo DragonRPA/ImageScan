@@ -1,22 +1,15 @@
 # 릴리즈 노트 (RELEASE_NOTES.md)
 
-## [v1.0.0.Build.8] - 2026-08-14 11:08:35 (KST)
+## [v1.0.0.Build.9] - 2026-08-14 11:11:00 (KST)
 
-### 📊 실시간 작업 진행률(Progress Bar) 표시 및 결과 안내 모달 시스템 구축 (Zero Silent Failure)
-1. **청크 분할 청크 처리 엔진 (Chunked Batch Engine)**:
-   - 400건 이상의 대용량 엑셀/CSV 데이터 처리 시 50건 단위 청크(Chunk) 분할 전송을 통해 서버 타임아웃과 멈춤 현상을 100% 방지.
-2. **실시간 시각적 진행률 프로그레스 바 (`0%` ➔ `100%`)**:
-   - 모달 내부에서 `1단계: 기존 DB 전체 삭제 중...` ➔ `2단계: DB에 저장 중 (200/400건 - 50%)...` 등 진행 상태를 실시간 애니메이션 진행률 바와 텍스트로 표출.
-3. **명확한 최종 결과 팝업 모달 (`CompleteResultScreen`)**:
-   - 처리 완료 시 `총 400건 데이터 전체 덮어쓰기 성공!` 메시지와 함께 소요 시간, DB 연동 상태를 체크마크 아이콘과 함께 명확하게 안내.
-4. **DB 미연동 시 로컬 즉시 반영 처리**:
-   - Supabase DB 연동 전이라도 로컬 대시보드에 400건이 즉시 100% 저장 반영되며 완료 화면을 표시.
+### 🔗 Supabase 대시보드 URL 자동 감지 및 API URL 100% 자동 변환 (Auto URL Normalizer)
+1. **대시보드 주소 자동 변환 기능 (Auto Normalize)**:
+   - 사용자가 Supabase 관리자 대시보드 주소(`https://supabase.com/dashboard/project/tfgbpgutxxlhqbzewky`)를 그대로 붙여넣어도 시스템이 **프로젝트 ID(`tfgbpgutxxlhqbzewky`)를 자동 추출**하여 올바른 API URL인 **`https://tfgbpgutxxlhqbzewky.supabase.co`**로 자동 변환 처리합니다.
 
 ---
 
-## [v1.0.0.Build.7] - 2026-08-14 11:05:39 (KST)
-- **3mm 미세 laser-etched 각인 OCR 줌 엔진 & PC 라벨 프린터 오프셋(Offset) 정밀 교정 화면 추가**.
-- **로컬 시드 데이터 자동 로딩 제거 및 0건 빈 데이터 초기화**.
+## [v1.0.0.Build.8] - 2026-08-14 11:08:35 (KST)
+- **실시간 작업 진행률(Progress Bar `0%` ➔ `100%`) 및 명확한 성과 안내 모달 구축 (Zero Silent Failure)**.
 
-## [v1.0.0.Build.6] - 2026-08-14 10:49:35 (KST)
-- **모바일 100% 뷰파인더 뷰 vs PC 대시보드 뷰 디바이스별 완벽 분리**.
+## [v1.0.0.Build.7] - 2026-08-14 11:05:39 (KST)
+- **3mm 미세 각인 OCR 줌 엔진 & PC 라벨 프린터 오프셋(Offset) 정밀 교정 화면 추가**.
