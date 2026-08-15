@@ -1,5 +1,14 @@
 # 릴리즈 노트 (RELEASE_NOTES.md)
 
+## [v1.7.0.Build.2] - 2026-08-16 01:20:00 (KST)
+
+### 🐛 [런타임 렌더링 긴급 패치] `FolderOpen` 아이콘 누락 임포트 수정
+
+1. **`PCDashboardView.jsx`의 `FolderOpen` 아이콘 임포트 누락 즉시 수정**
+   - 시스템 렌더링 복구 에러(`FolderOpen is not defined`) 완벽 해결
+
+---
+
 ## [v1.7.0.Build.1] - 2026-08-16 01:18:00 (KST)
 
 ### 🌟 [temp_asset 임시 데이터 관리 신설 & 스키마-엑셀-디자인-즉시출력 4단계 라이프사이클 완비]

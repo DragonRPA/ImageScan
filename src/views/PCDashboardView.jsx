@@ -10,7 +10,8 @@ import {
   Bot,
   Lock,
   Unlock,
-  FileText
+  FileText,
+  FolderOpen
 } from 'lucide-react';
 import DirectPrintTab from './DirectPrintTab';
 import PCDashboard from '../components/PCDashboard';
