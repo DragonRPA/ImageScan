@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   RefreshCw,
   Download,
@@ -35,7 +35,7 @@ export default function PCDashboard({
   const [filterStatus, setFilterStatus] = useState('ALL');
   const [searchGeneral, setSearchGeneral] = useState('');
 
-  // 선택된 항목 IDs
+  // 선택된 항목 IDs (자산번호 또는 ID)
   const [selectedIds, setSelectedIds] = useState([]);
 
   // 데이터 로드
@@ -92,55 +92,106 @@ export default function PCDashboard({
     setSelectedIds([]);
   };
 
-  // 필터링 적용된 목록 계산
-  const filteredItems = items.filter((item) => {
-    // 0. 대분류 필터 (IT, 측정기, DSLR 카메라)
-    if (filterCategory !== 'ALL') {
-      const targetCat = (item.category_major || '').trim().toLowerCase();
-      if (targetCat !== filterCategory.toLowerCase()) return false;
+  // ⭐️ [핵심] 클립보드 다중 키워드 파싱 및 복사 순서 100% 보존 필터링/정렬 엔진
+  const filteredItems = useMemo(() => {
+    const rawSearch = searchGeneral.trim();
+    // 줄바꿈(\n), 탭(\t), 쉼표(,)가 포함되었는지 감지
+    const isMultiSearch = /[\r\n\t,]/.test(rawSearch);
+    const searchTokens = rawSearch
+      ? rawSearch.split(/[\r\n\t,]+/).map(t => t.trim().toLowerCase()).filter(Boolean)
+      : [];
+
+    let result = items.filter((item) => {
+      // 0. 대분류 필터
+      if (filterCategory !== 'ALL') {
+        const targetCat = (item.category_major || '').trim().toLowerCase();
+        if (targetCat !== filterCategory.toLowerCase()) return false;
+      }
+
+      // 1. 모델명 필터
+      if (filterModel.trim()) {
+        const targetModel = (item.model_name || item.data?.model_name || '').toLowerCase();
+        if (!targetModel.includes(filterModel.trim().toLowerCase())) return false;
+      }
+
+      // 2. 제조번호(시리얼) 필터
+      if (filterSerial.trim()) {
+        const targetSerial = (item.serial_no || item.data?.serial_no || item.imei || '').toLowerCase();
+        if (!targetSerial.includes(filterSerial.trim().toLowerCase())) return false;
+      }
+
+      // 3. 자산상태 필터
+      if (filterStatus !== 'ALL') {
+        const targetStatus = (item.asset_status || item.data?.asset_status || item.status || 'AVAILABLE').toUpperCase();
+        if (targetStatus !== filterStatus.toUpperCase()) return false;
+      }
+
+      // 4. 통합 검색어 (다중 클립보드 복사 순서 일치 또는 단일 키워드 검색)
+      if (searchTokens.length > 0) {
+        const itemAssetNo = String(item.asset_no || '').toLowerCase();
+        const itemSerialNo = String(item.serial_no || '').toLowerCase();
+        const itemImei = String(item.imei || '').toLowerCase();
+        const itemProdName = String(item.product_name || '').toLowerCase();
+        const itemModelName = String(item.model_name || '').toLowerCase();
+        const itemCategory = String(item.category_major || '').toLowerCase();
+        const itemShelf = String(item.shelf_no || '').toLowerCase();
+        const itemMacWlan = String(item.mac_wlan || '').toLowerCase();
+        const itemMacLan = String(item.mac_lan || '').toLowerCase();
+        const itemComponents = String(item.components || '').toLowerCase();
+        const itemRemark = String(item.remark || '').toLowerCase();
+
+        if (isMultiSearch) {
+          // 다중 복사 검색 모드: 자산번호, 시리얼, IMEI 중 일치 검사
+          const matched = searchTokens.some(token => 
+            itemAssetNo === token || itemSerialNo === token || itemImei === token ||
+            itemAssetNo.includes(token) || itemSerialNo.includes(token)
+          );
+          if (!matched) return false;
+        } else {
+          // 단일 검색어 모드: 전체 필드 부분 검색
+          const q = searchTokens[0];
+          const matched =
+            itemAssetNo.includes(q) ||
+            itemCategory.includes(q) ||
+            itemProdName.includes(q) ||
+            itemModelName.includes(q) ||
+            itemSerialNo.includes(q) ||
+            itemImei.includes(q) ||
+            itemShelf.includes(q) ||
+            itemMacWlan.includes(q) ||
+            itemMacLan.includes(q) ||
+            itemComponents.includes(q) ||
+            itemRemark.includes(q);
+          if (!matched) return false;
+        }
+      }
+
+      return true;
+    });
+
+    // ⭐️ [클립보드 순서 보존 정렬] 엑셀에서 복사해온 줄 순서대로 1:1 강제 정렬!
+    if (isMultiSearch && searchTokens.length > 0) {
+      result.sort((a, b) => {
+        const aKey1 = String(a.asset_no || '').toLowerCase();
+        const aKey2 = String(a.serial_no || '').toLowerCase();
+        const bKey1 = String(b.asset_no || '').toLowerCase();
+        const bKey2 = String(b.serial_no || '').toLowerCase();
+
+        let idxA = searchTokens.findIndex(t => aKey1 === t || aKey2 === t || aKey1.includes(t) || aKey2.includes(t));
+        let idxB = searchTokens.findIndex(t => bKey1 === t || bKey2 === t || bKey1.includes(t) || bKey2.includes(t));
+        if (idxA === -1) idxA = 999999;
+        if (idxB === -1) idxB = 999999;
+        return idxA - idxB;
+      });
     }
 
-    // 1. 모델명 필터
-    if (filterModel.trim()) {
-      const targetModel = (item.model_name || item.data?.model_name || '').toLowerCase();
-      if (!targetModel.includes(filterModel.trim().toLowerCase())) return false;
-    }
-
-    // 2. 제조번호(시리얼) 필터
-    if (filterSerial.trim()) {
-      const targetSerial = (item.serial_no || item.data?.serial_no || item.imei || '').toLowerCase();
-      if (!targetSerial.includes(filterSerial.trim().toLowerCase())) return false;
-    }
-
-    // 3. 자산상태 필터
-    if (filterStatus !== 'ALL') {
-      const targetStatus = (item.asset_status || item.data?.asset_status || item.status || 'AVAILABLE').toUpperCase();
-      if (targetStatus !== filterStatus.toUpperCase()) return false;
-    }
-
-    // 4. 통합 검색어 (자산번호, 제품명, MAC, 비고, 구성요소 등)
-    if (searchGeneral.trim()) {
-      const q = searchGeneral.trim().toLowerCase();
-      const matchGeneral =
-        (item.asset_no && String(item.asset_no).toLowerCase().includes(q)) ||
-        (item.category_major && String(item.category_major).toLowerCase().includes(q)) ||
-        (item.product_name && String(item.product_name).toLowerCase().includes(q)) ||
-        (item.shelf_no && String(item.shelf_no).toLowerCase().includes(q)) ||
-        (item.mac_wlan && String(item.mac_wlan).toLowerCase().includes(q)) ||
-        (item.mac_lan && String(item.mac_lan).toLowerCase().includes(q)) ||
-        (item.components && String(item.components).toLowerCase().includes(q)) ||
-        (item.remark && String(item.remark).toLowerCase().includes(q)) ||
-        (item.key_value && String(item.key_value).toLowerCase().includes(q));
-      if (!matchGeneral) return false;
-    }
-
-    return true;
-  });
+    return result;
+  }, [items, filterCategory, filterModel, filterSerial, filterStatus, searchGeneral]);
 
   // 체크박스 선택/해제
   const handleSelectAll = (e) => {
     if (e.target.checked) {
-      setSelectedIds(filteredItems.map((i) => i.id));
+      setSelectedIds(filteredItems.map((i) => i.id || i.asset_no));
     } else {
       setSelectedIds([]);
     }
@@ -152,6 +203,27 @@ export default function PCDashboard({
     );
   };
 
+  // ⭐️ [라벨 출력] 화면에 정렬된 순서 100% 보존하여 인쇄 파이프라인 전달
+  const handlePrintSelected = () => {
+    if (selectedIds.length === 0) return;
+    const orderedSelectedItems = filteredItems.filter(item => 
+      selectedIds.includes(item.id || item.asset_no)
+    );
+    if (onOpenPrintModal) {
+      onOpenPrintModal(orderedSelectedItems);
+    }
+  };
+
+  // ⭐️ [엑셀 내보내기] 화면에 정렬된 순서 그대로 내보내기
+  const handleExportData = () => {
+    const exportTargets = selectedIds.length > 0
+      ? filteredItems.filter(item => selectedIds.includes(item.id || item.asset_no))
+      : filteredItems;
+    if (onOpenExportModal) {
+      onOpenExportModal(exportTargets);
+    }
+  };
+
   // 선택 삭제
   const handleDeleteSelected = async () => {
     if (selectedIds.length === 0) return;
@@ -161,7 +233,7 @@ export default function PCDashboard({
       for (const id of selectedIds) {
         await deleteScanFromSupabase(id);
       }
-      setItems((prev) => prev.filter((item) => !selectedIds.includes(item.id)));
+      setItems((prev) => prev.filter((item) => !selectedIds.includes(item.id || item.asset_no)));
       setSelectedIds([]);
     } catch (err) {
       if (onError) onError(err.message || '데이터 삭제 실패');
@@ -381,13 +453,31 @@ export default function PCDashboard({
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             {selectedIds.length > 0 && (
-              <button
-                onClick={handleDeleteSelected}
-                className="btn btn-outline"
-                style={{ fontSize: '0.72rem', padding: '3px 8px', borderColor: '#ef4444', color: '#fca5a5' }}
-              >
-                <Trash2 size={12} /> 선택 삭제 ({selectedIds.length})
-              </button>
+              <>
+                <button
+                  onClick={handlePrintSelected}
+                  className="btn btn-primary"
+                  style={{
+                    fontSize: '0.72rem',
+                    padding: '3px 10px',
+                    backgroundColor: '#0284c7',
+                    borderColor: '#38bdf8',
+                    color: '#ffffff',
+                    fontWeight: 700,
+                    boxShadow: '0 0 8px rgba(56, 189, 248, 0.4)'
+                  }}
+                  title="선택된 자산을 화면에 조회된 순서대로 Zebra 라벨 출력"
+                >
+                  <Printer size={12} /> 라벨 출력 ({selectedIds.length})
+                </button>
+                <button
+                  onClick={handleDeleteSelected}
+                  className="btn btn-outline"
+                  style={{ fontSize: '0.72rem', padding: '3px 8px', borderColor: '#ef4444', color: '#fca5a5' }}
+                >
+                  <Trash2 size={12} /> 선택 삭제 ({selectedIds.length})
+                </button>
+              </>
             )}
             <button
               onClick={loadData}
@@ -405,7 +495,7 @@ export default function PCDashboard({
               <Upload size={12} /> 엑셀 업로드
             </button>
             <button
-              onClick={onOpenExportModal}
+              onClick={handleExportData}
               className="btn btn-primary"
               style={{ fontSize: '0.72rem', padding: '3px 10px' }}
             >
