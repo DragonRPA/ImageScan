@@ -42,44 +42,7 @@ import {
   getLocalSchemaDef
 } from '../utils/dynamicSchema';
 
-const DEFAULT_SAMPLE_ASSET = {
-  asset_no: '224011319',
-  category_major: 'IT',
-  product_name: '아이패드 9세대',
-  model_name: 'A2602',
-  serial_no: 'QHJ66F6V0X',
-  asset_status: '임대중',
-  earning_ratio: '88.2',
-  shelf_no: 'A-01-02',
-  asset_option: '64GB Wi-Fi',
-  calibration_date: '2026-08-15',
-  repair_date: '2026-08-15',
-  mac_wlan: '4C:EB:B0:B5:7A:51',
-  mac_lan: '00:1A:2B:3C:4D:5E',
-  imei: '351379300225052',
-  components: '본체, 케이스, 충전기',
-  spec: '64GB Wi-Fi Space Gray',
-  remark: '정상 작동 양품'
-};
-
-const DEFAULT_SAMPLE_TEMP = {
-  asset_no: 'TEMP-20260815-01',
-  category_major: 'IT',
-  product_name: '갤럭시 탭 S9 Ultra',
-  model_name: 'SM-X910',
-  serial_no: 'R5KL60F0CZW',
-  temp_status: '가입고',
-  scanned_at: '2026-08-15 18:15',
-  shelf_no: 'T-LOC-01',
-  imei: '359876543210987',
-  mac_address: '4C:EB:B0:B5:7A:51',
-  mac_wlan: '4C:EB:B0:B5:7A:51',
-  mac_lan: '00:1A:2B:3C:4D:5E',
-  components: '본체, S펜, 어댑터',
-  spec: '512GB 5G Graphite',
-  repair_date: '2026-08-15',
-  remark: '신규 입고 검수 대기'
-};
+// ⭐️ 순수 스키마 필드 기반 동적 샘플 데이터 매핑 (임의 일시/상태 헤더 생성 금지)
 
 export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
   const [template, setTemplate] = useState(getStoredLabelTemplate);
@@ -259,22 +222,20 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
     }
   }, [currentTableSchema]);
 
-  // 대상 테이블에 맞춘 동적 샘플 데이터 생성
+  // 대상 테이블에 맞춘 동적 샘플 데이터 생성 (임의 일시/상태 헤더 생성 금지 - 오직 스키마에 정의된 실제 필드만 1:1 매핑)
   const SAMPLE_ITEM = useMemo(() => {
-    const base = currentTargetTable === 'temp_asset' ? DEFAULT_SAMPLE_TEMP : DEFAULT_SAMPLE_ASSET;
-    const item = { ...base };
+    const item = {};
     tableFields.forEach(f => {
-      if (item[f.id] === undefined) {
-        if (f.id === 'asset_no') item[f.id] = '224011319';
-        else if (f.id === 'imei') item[f.id] = '351379300225052';
-        else if (f.id === 'serial_no') item[f.id] = 'RSKL60F0CZW';
-        else if (f.id === 'mac_address') item[f.id] = '4C:EB:B0:B5:7A:51';
-        else if (f.id === 'scanned_at') item[f.id] = '2026-08-16 02:25';
-        else item[f.id] = f.name;
-      }
+      if (f.id === 'asset_no') item[f.id] = '224011319';
+      else if (f.id === 'imei') item[f.id] = '351379300225052';
+      else if (f.id === 'serial_no') item[f.id] = 'RSKL60F0CZW';
+      else if (f.id === 'mac_address' || f.id === 'mac_wlan') item[f.id] = '4C:EB:B0:B5:7A:51';
+      else if (f.id === 'product_name') item[f.id] = '갤럭시 탭 S9';
+      else if (f.id === 'model_name') item[f.id] = 'SM-X910';
+      else item[f.id] = f.name; // 사용자 정의 필드는 해당 필드명을 예시값으로 표출
     });
     return item;
-  }, [currentTargetTable, tableFields]);
+  }, [tableFields]);
 
   // 요소의 실시간 동적 표시명 조회
   const getElemDisplayName = (elem) => {

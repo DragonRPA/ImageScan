@@ -116,7 +116,7 @@ export default function App() {
                 라벨 출력 관리
               </h1>
               <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>
-                v1.7.0.Build.14 | 2026-08-16
+                v1.7.0.Build.15 | 2026-08-16
               </span>
             </div>
           </div>
