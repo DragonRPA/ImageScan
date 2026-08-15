@@ -29,7 +29,7 @@ export default function PCDashboard({
   const [loading, setLoading] = useState(false);
 
   // 조회 필터 상태
-  const [filterCategory, setFilterCategory] = useState('ALL');
+  const [filterCategory, setFilterCategory] = useState('IT');
   const [filterModel, setFilterModel] = useState('');
   const [filterSerial, setFilterSerial] = useState('');
   const [filterStatus, setFilterStatus] = useState('ALL');
@@ -38,11 +38,11 @@ export default function PCDashboard({
   // 선택된 항목 IDs (자산번호 또는 ID)
   const [selectedIds, setSelectedIds] = useState([]);
 
-  // 데이터 로드
+  // 데이터 로드 (기본 대분류: IT)
   const loadData = async () => {
     setLoading(true);
     try {
-      const data = await fetchScansFromSupabase();
+      const data = await fetchScansFromSupabase({ category_major: 'IT' });
       setItems(data || []);
     } catch (err) {
       console.warn('데이터 로드 경고:', err);
@@ -106,7 +106,7 @@ export default function PCDashboard({
 
   // 필터 초기화
   const handleResetFilters = async () => {
-    setFilterCategory('ALL');
+    setFilterCategory('IT');
     setFilterModel('');
     setFilterSerial('');
     setFilterStatus('ALL');
@@ -114,7 +114,7 @@ export default function PCDashboard({
     setSelectedIds([]);
     setLoading(true);
     try {
-      const data = await fetchScansFromSupabase();
+      const data = await fetchScansFromSupabase({ category_major: 'IT' });
       setItems(data || []);
     } catch (err) {
       console.warn('데이터 초기화 로드 경고:', err);
