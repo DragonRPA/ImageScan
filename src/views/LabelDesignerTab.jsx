@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Sliders,
   RotateCcw,
@@ -7,7 +7,10 @@ import {
   Eye,
   Code,
   CheckSquare,
-  Square
+  Square,
+  Plus,
+  Database,
+  X
 } from 'lucide-react';
 import {
   DEFAULT_LABEL_TEMPLATE,
@@ -17,32 +20,68 @@ import {
   saveBackendLabelTemplate,
   generateDynamicZpl,
   mmToDots,
-  getAllPresets
+  getAllPresets,
+  createEmptyTemplate
 } from '../utils/labelTemplate';
 import { generateCode39DataUrl } from '../utils/barcode39';
 import { insertPrintQueue } from '../utils/supabaseClient';
 
 import {
   DEFAULT_SCHEMA_DEF,
+  TEMP_ASSET_SCHEMA_DEF,
+  SUPPORTED_TABLES,
+  getTableSchema,
   fetchActiveSchema,
   getLocalSchemaDef
 } from '../utils/dynamicSchema';
 
-const DEFAULT_SAMPLE_ITEM = {
-  asset_no: 'TEST0001',
+const DEFAULT_SAMPLE_ASSET = {
+  asset_no: '224011319',
+  category_major: 'IT',
+  product_name: '아이패드 9세대',
+  model_name: 'A2602',
+  serial_no: 'QHJ66F6V0X',
+  asset_status: '임대중',
+  earning_ratio: '88.2',
+  shelf_no: 'A-01-02',
+  asset_option: '64GB Wi-Fi',
+  calibration_date: '2026-08-15',
+  mac_wlan: '4C:EB:B0:B5:7A:51',
+  mac_lan: '00:1A:2B:3C:4D:5E',
   imei: '351379300225052',
+  components: '본체, 케이스, 충전기',
+  remark: '정상 작동 양품'
+};
+
+const DEFAULT_SAMPLE_TEMP = {
+  asset_no: 'TEMP-20260815-01',
+  category_major: 'IT',
+  product_name: '갤럭시 탭 S9 Ultra',
+  model_name: 'SM-X910',
   serial_no: 'R5KL60F0CZW',
-  mac_address: '4CEBB0B57A51',
-  scanned_at: '2026-08-15'
+  temp_status: '가입고',
+  scanned_at: '2026-08-15 18:15',
+  shelf_no: 'T-LOC-01',
+  imei: '359876543210987',
+  mac_address: '4C:EB:B0:B5:7A:51',
+  components: '본체, S펜, 어댑터',
+  remark: '신규 입고 검수 대기'
 };
 
 export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
-  const [schemaDef, setSchemaDef] = useState(getLocalSchemaDef);
   const [template, setTemplate] = useState(getStoredLabelTemplate);
   const [selectedElemId, setSelectedElemId] = useState('elem_asset_no');
   const [activeRightTab, setActiveRightTab] = useState('preview');
   const [isSaved, setIsSaved] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
+  const [presets, setPresets] = useState(getAllPresets);
+
+  // ⭐️ [디자인 추가] 모달 상태
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [newDesignName, setNewDesignName] = useState('');
+  const [newDesignTable, setNewDesignTable] = useState('asset');
+  const [newDesignWidth, setNewDesignWidth] = useState(72);
+  const [newDesignHeight, setNewDesignHeight] = useState(40);
 
   const [draggingId, setDraggingId] = useState(null);
   const [dragStartPos, setDragStartPos] = useState({ x: 0, y: 0 });
@@ -52,28 +91,31 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
 
   // 캔버스 화면 픽셀 배율 (1mm당 8.5px로 시원하게 확대)
   const PX_PER_MM = 8.5;
-  const canvasWidthPx = (template.paper.widthMm || 72) * PX_PER_MM;
-  const canvasHeightPx = (template.paper.heightMm || 40) * PX_PER_MM;
+  const canvasWidthPx = (template.paper?.widthMm || 72) * PX_PER_MM;
+  const canvasHeightPx = (template.paper?.heightMm || 40) * PX_PER_MM;
+
+  // 현재 서식의 대상 테이블 및 스키마 (SSOT)
+  const currentTargetTable = template.targetTable || 'asset';
+  const currentTableSchema = useMemo(() => getTableSchema(currentTargetTable), [currentTargetTable]);
+  const tableFields = useMemo(() => currentTableSchema.fields || [], [currentTableSchema]);
 
   const selectedElem = (template.elements || []).find(e => e.id === selectedElemId) || null;
 
-  // 스키마 및 백엔드 라벨 서식 동시 로드
+  // 초기 로드: 백엔드 라벨 서식 로드
   useEffect(() => {
-    fetchActiveSchema().then(def => {
-      if (def) setSchemaDef(def);
-    });
-
     fetchBackendLabelTemplate().then(tpl => {
-      if (tpl) setTemplate(tpl);
+      if (tpl) {
+        setTemplate(tpl);
+      }
     });
   }, []);
 
-  // ★ 스키마 정의 변경 시 template.elements의 표시명(name)과 신규 필드를 자동 동기화 (SSOT)
+  // ★ 대상 테이블 스키마에 따라 template.elements의 표시명 및 신규 필드 자동 동기화
   useEffect(() => {
-    if (!schemaDef || !schemaDef.fields || !template || !template.elements) return;
+    if (!currentTableSchema || !currentTableSchema.fields || !template || !template.elements) return;
 
     const schemaFieldMap = new Map();
-    schemaDef.fields.forEach(f => schemaFieldMap.set(f.id, f));
+    currentTableSchema.fields.forEach(f => schemaFieldMap.set(f.id, f));
 
     let hasChanges = false;
     // 1. 기존 text 요소의 name을 최신 스키마 표시명으로 동기화
@@ -88,12 +130,12 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
       return elem;
     });
 
-    // 2. 스키마에 새로 추가된 필드가 템플릿 elements에 없으면 자동 추가
+    // 2. 스키마에 정의된 모든 필드가 템플릿 elements에 존재하는지 확인 (없으면 추가)
     const existingFieldIds = new Set(
       template.elements.filter(e => e.type === 'text').map(e => e.field)
     );
 
-    schemaDef.fields.forEach((f, idx) => {
+    currentTableSchema.fields.forEach((f, idx) => {
       if (!existingFieldIds.has(f.id)) {
         hasChanges = true;
         updatedElements.push({
@@ -117,32 +159,34 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
         elements: updatedElements
       }));
     }
-  }, [schemaDef]);
+  }, [currentTableSchema]);
 
-  // 동적 샘플 데이터 생성
-  const SAMPLE_ITEM = React.useMemo(() => {
-    const item = { ...DEFAULT_SAMPLE_ITEM };
-    (schemaDef.fields || []).forEach(f => {
-      if (!item[f.id]) {
+  // 대상 테이블에 맞춘 동적 샘플 데이터 생성
+  const SAMPLE_ITEM = useMemo(() => {
+    const base = currentTargetTable === 'temp_asset' ? DEFAULT_SAMPLE_TEMP : DEFAULT_SAMPLE_ASSET;
+    const item = { ...base };
+    tableFields.forEach(f => {
+      if (item[f.id] === undefined) {
         item[f.id] = f.id.toUpperCase();
       }
     });
     return item;
-  }, [schemaDef]);
+  }, [currentTargetTable, tableFields]);
 
   // 요소의 실시간 동적 표시명 조회
   const getElemDisplayName = (elem) => {
     if (!elem) return '';
-    if (elem.type === 'text' && elem.field && schemaDef.fields) {
-      const matched = schemaDef.fields.find(f => f.id === elem.field);
+    if (elem.type === 'text' && elem.field) {
+      const matched = tableFields.find(f => f.id === elem.field);
       if (matched) return matched.name;
     }
     return elem.name;
   };
 
-  // 바코드 대상 가능 필드 목록 (동적 스키마 연동)
-  const barcodeFields = (schemaDef.fields || []).filter(f => f.isBarcodeTarget !== false);
-  const allSchemaFields = schemaDef.fields || [];
+  // 바코드 대상 가능 필드 목록
+  const barcodeFields = useMemo(() => {
+    return tableFields.filter(f => f.isBarcodeTarget !== false);
+  }, [tableFields]);
 
   const handlePaperChange = (field, val) => {
     const num = Number(val) || 0;
@@ -278,8 +322,6 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
 
   const currentZpl = generateDynamicZpl(SAMPLE_ITEM, template);
 
-  const [presets, setPresets] = useState(getAllPresets);
-
   const handleSelectPreset = (presetId) => {
     const found = presets.find(p => p.templateId === presetId);
     if (found) {
@@ -289,19 +331,44 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
     }
   };
 
-  const handleAddNewPreset = () => {
-    const name = window.prompt('새 서식 프리셋 이름을 입력하세요:', '사용자 정의 라벨');
-    if (!name) return;
-    const newId = `tpl_custom_${Date.now()}`;
-    const newPreset = {
-      ...template,
-      templateId: newId,
-      name,
-      isDefault: false
-    };
+  // ⭐️ [디자인 추가] 모달 열기
+  const handleOpenCreateModal = () => {
+    setNewDesignName(`새 서식 ${presets.length + 1}`);
+    setNewDesignTable('asset');
+    setNewDesignWidth(72);
+    setNewDesignHeight(40);
+    setIsCreateModalOpen(true);
+  };
+
+  // ⭐️ [디자인 추가] 확인 및 템플릿 생성
+  const handleCreateNewDesign = () => {
+    if (!newDesignName.trim()) {
+      alert('서식 명칭을 입력하세요.');
+      return;
+    }
+    const newPreset = createEmptyTemplate(
+      newDesignName.trim(),
+      newDesignTable,
+      Number(newDesignWidth) || 72,
+      Number(newDesignHeight) || 40
+    );
     saveStoredLabelTemplate(newPreset);
-    setPresets(getAllPresets());
+    const updated = getAllPresets();
+    setPresets(updated);
     setTemplate(newPreset);
+    setSelectedElemId(newPreset.elements[0]?.id || 'elem_asset_no');
+    setIsCreateModalOpen(false);
+  };
+
+  // ⭐️ 대상 테이블 전환 (asset <-> temp_asset)
+  const handleSwitchTargetTable = (tableId) => {
+    if (template.targetTable === tableId) return;
+    const nextSchema = getTableSchema(tableId);
+    setTemplate(prev => ({
+      ...prev,
+      targetTable: tableId,
+      schemaId: nextSchema.id
+    }));
   };
 
   return (
@@ -329,7 +396,7 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
           <Sliders size={16} style={{ color: '#38bdf8' }} />
           <span style={{ fontSize: '0.85rem', fontWeight: 700 }}>라벨 서식 디자인</span>
 
-          {/* ★ 다중 서식 프리셋 선택 드롭다운 */}
+          {/* ★ 다중 서식 프리셋 선택 드롭다운 & [디자인 추가] 버튼 */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             <select
               value={template.templateId}
@@ -346,19 +413,42 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
             >
               {presets.map(p => (
                 <option key={p.templateId} value={p.templateId}>
-                  {p.name} ({p.paper.widthMm}×{p.paper.heightMm}mm)
+                  {p.name} ({p.targetTable === 'temp_asset' ? '임시자산' : '자산'} | {p.paper?.widthMm || 72}×{p.paper?.heightMm || 40}mm)
                 </option>
               ))}
             </select>
             <button
-              onClick={handleAddNewPreset}
-              className="btn btn-outline"
-              style={{ fontSize: '0.68rem', padding: '3px 8px' }}
-              title="새 서식 프리셋 추가"
+              onClick={handleOpenCreateModal}
+              className="btn btn-primary"
+              style={{
+                fontSize: '0.68rem',
+                padding: '3px 9px',
+                backgroundColor: '#0284c7',
+                borderColor: '#38bdf8',
+                color: '#ffffff',
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '3px'
+              }}
+              title="새로운 라벨 서식 디자인 추가"
             >
-              + 새 서식
+              <Plus size={12} /> 디자인 추가
             </button>
           </div>
+
+          {/* 대상 테이블 뱃지 */}
+          <span style={{
+            fontSize: '0.68rem',
+            padding: '2px 6px',
+            borderRadius: '4px',
+            backgroundColor: currentTargetTable === 'temp_asset' ? '#3b0764' : '#1e3a8a',
+            color: currentTargetTable === 'temp_asset' ? '#d8b4fe' : '#93c5fd',
+            border: `1px solid ${currentTargetTable === 'temp_asset' ? '#a855f7' : '#3b82f6'}`,
+            fontWeight: 600
+          }}>
+            {currentTargetTable === 'temp_asset' ? 'temp_asset (임시자산)' : 'asset (자산관리)'}
+          </span>
 
           {/* 활성 라벨 프린터 정보 표시 & 프린터 지정 버튼 */}
           <div style={{
@@ -496,12 +586,34 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
             padding: '10px',
             display: 'flex',
             flexDirection: 'column',
-            gap: '6px'
+            gap: '8px'
           }}>
-            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#94a3b8' }}>
-              출력 항목 선택
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#94a3b8' }}>
+                출력 항목 선택
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <span style={{ fontSize: '0.65rem', color: '#64748b' }}>대상 테이블:</span>
+                <select
+                  value={currentTargetTable}
+                  onChange={(e) => handleSwitchTargetTable(e.target.value)}
+                  style={{
+                    backgroundColor: '#0f172a',
+                    border: '1px solid #475569',
+                    borderRadius: '4px',
+                    padding: '2px 6px',
+                    color: '#38bdf8',
+                    fontSize: '0.68rem',
+                    fontWeight: 600
+                  }}
+                >
+                  <option value="asset">asset (자산 관리)</option>
+                  <option value="temp_asset">temp_asset (임시 자산)</option>
+                </select>
+              </div>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', maxHeight: '280px', overflowY: 'auto' }} className="grid-scrollbar">
               {template.elements.map(elem => {
                 const isSelected = elem.id === selectedElemId;
                 return (
@@ -623,7 +735,7 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                         fontSize: '0.72rem'
                       }}
                     >
-                      {allSchemaFields.map(f => (
+                      {tableFields.map(f => (
                         <option key={f.id} value={f.id}>
                           {f.name} ({f.id})
                         </option>
@@ -1090,6 +1202,164 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
           )}
         </div>
       </div>
+
+      {/* ⭐️ [디자인 추가] 모달 다이얼로그 (전사 표준 레이블-입력 상하 스택 구조 준수) */}
+      {isCreateModalOpen && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.75)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 99999
+        }}>
+          <div style={{
+            backgroundColor: '#1e293b',
+            border: '1px solid #38bdf8',
+            borderRadius: '8px',
+            width: '420px',
+            maxWidth: '90vw',
+            padding: '16px',
+            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '12px'
+          }}>
+            {/* Modal Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #334155', paddingBottom: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Plus size={16} style={{ color: '#38bdf8' }} />
+                <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#f8fafc' }}>
+                  라벨 서식 디자인 추가
+                </span>
+              </div>
+              <button
+                onClick={() => setIsCreateModalOpen(false)}
+                style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: 0 }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Modal Form */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {/* 1. 서식 명칭 */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <label style={{ fontSize: '0.72rem', color: '#cbd5e1', fontWeight: 600 }}>
+                  서식 명칭
+                </label>
+                <input
+                  type="text"
+                  value={newDesignName}
+                  onChange={(e) => setNewDesignName(e.target.value)}
+                  placeholder="예: 입고 검수용 라벨"
+                  style={{
+                    backgroundColor: '#0f172a',
+                    border: '1px solid #475569',
+                    borderRadius: '4px',
+                    padding: '6px 8px',
+                    color: '#f8fafc',
+                    fontSize: '0.78rem'
+                  }}
+                  autoFocus
+                />
+              </div>
+
+              {/* 2. 대상 테이블 선택 */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <label style={{ fontSize: '0.72rem', color: '#cbd5e1', fontWeight: 600 }}>
+                  대상 테이블 선택
+                </label>
+                <select
+                  value={newDesignTable}
+                  onChange={(e) => setNewDesignTable(e.target.value)}
+                  style={{
+                    backgroundColor: '#0f172a',
+                    border: '1px solid #38bdf8',
+                    borderRadius: '4px',
+                    padding: '6px 8px',
+                    color: '#38bdf8',
+                    fontSize: '0.78rem',
+                    fontWeight: 600
+                  }}
+                >
+                  <option value="asset">asset (자산 관리 - 15대 정규 헤더)</option>
+                  <option value="temp_asset">temp_asset (임시 자산 - 입고 검수 헤더)</option>
+                </select>
+              </div>
+
+              {/* 3. 용지 규격 (폭 x 높이) */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '0.72rem', color: '#cbd5e1', fontWeight: 600 }}>
+                    용지 폭 (mm)
+                  </label>
+                  <input
+                    type="number"
+                    value={newDesignWidth}
+                    onChange={(e) => setNewDesignWidth(e.target.value)}
+                    style={{
+                      backgroundColor: '#0f172a',
+                      border: '1px solid #475569',
+                      borderRadius: '4px',
+                      padding: '6px 8px',
+                      color: '#f8fafc',
+                      fontSize: '0.78rem'
+                    }}
+                  />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '0.72rem', color: '#cbd5e1', fontWeight: 600 }}>
+                    용지 높이 (mm)
+                  </label>
+                  <input
+                    type="number"
+                    value={newDesignHeight}
+                    onChange={(e) => setNewDesignHeight(e.target.value)}
+                    style={{
+                      backgroundColor: '#0f172a',
+                      border: '1px solid #475569',
+                      borderRadius: '4px',
+                      padding: '6px 8px',
+                      color: '#f8fafc',
+                      fontSize: '0.78rem'
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px', marginTop: '6px', borderTop: '1px solid #334155', paddingTop: '10px' }}>
+              <button
+                onClick={() => setIsCreateModalOpen(false)}
+                className="btn btn-outline"
+                style={{ fontSize: '0.72rem', padding: '5px 12px' }}
+              >
+                취소
+              </button>
+              <button
+                onClick={handleCreateNewDesign}
+                className="btn btn-primary"
+                style={{
+                  fontSize: '0.72rem',
+                  padding: '5px 14px',
+                  backgroundColor: '#0284c7',
+                  borderColor: '#38bdf8',
+                  color: '#ffffff',
+                  fontWeight: 700
+                }}
+              >
+                디자인 생성
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

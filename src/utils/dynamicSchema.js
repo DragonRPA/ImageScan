@@ -166,6 +166,151 @@ export const DEFAULT_SCHEMA_DEF = {
   ]
 };
 
+// ── 임시자산(temp_asset) 정규 스키마 정의 (SSOT) ─────────────────────────
+export const TEMP_ASSET_SCHEMA_DEF = {
+  id: 'temp_asset_schema',
+  table_name: 'temp_asset',
+  schema_name: '임시 자산 (temp_asset)',
+  key_field: 'asset_no',
+  key_field_name: '임시자산번호',
+  table_version: 1,
+  fields: [
+    {
+      id: 'asset_no',
+      name: '임시자산번호',
+      type: 'VARCHAR',
+      length: 50,
+      isKey: true,
+      isRequired: true,
+      isBarcodeTarget: true,
+      order: 1
+    },
+    {
+      id: 'category_major',
+      name: '대분류',
+      type: 'VARCHAR',
+      length: 20,
+      isKey: false,
+      isRequired: false,
+      isBarcodeTarget: false,
+      order: 2
+    },
+    {
+      id: 'product_name',
+      name: '제품명',
+      type: 'VARCHAR',
+      length: 100,
+      isKey: false,
+      isRequired: false,
+      isBarcodeTarget: false,
+      order: 3
+    },
+    {
+      id: 'model_name',
+      name: '모델명',
+      type: 'VARCHAR',
+      length: 100,
+      isKey: false,
+      isRequired: false,
+      isBarcodeTarget: false,
+      order: 4
+    },
+    {
+      id: 'serial_no',
+      name: '제조번호(시리얼)',
+      type: 'VARCHAR',
+      length: 50,
+      isKey: false,
+      isRequired: false,
+      isBarcodeTarget: true,
+      order: 5
+    },
+    {
+      id: 'temp_status',
+      name: '임시상태',
+      type: 'VARCHAR',
+      length: 50,
+      isKey: false,
+      isRequired: false,
+      isBarcodeTarget: false,
+      order: 6
+    },
+    {
+      id: 'scanned_at',
+      name: '스캔일시',
+      type: 'VARCHAR',
+      length: 50,
+      isKey: false,
+      isRequired: false,
+      isBarcodeTarget: false,
+      order: 7
+    },
+    {
+      id: 'shelf_no',
+      name: '선반번호',
+      type: 'VARCHAR',
+      length: 50,
+      isKey: false,
+      isRequired: false,
+      isBarcodeTarget: false,
+      order: 8
+    },
+    {
+      id: 'imei',
+      name: 'IMEI',
+      type: 'VARCHAR',
+      length: 50,
+      isKey: false,
+      isRequired: false,
+      isBarcodeTarget: true,
+      order: 9
+    },
+    {
+      id: 'mac_address',
+      name: 'MAC 주소',
+      type: 'VARCHAR',
+      length: 30,
+      isKey: false,
+      isRequired: false,
+      isBarcodeTarget: false,
+      order: 10
+    },
+    {
+      id: 'components',
+      name: '구성요소(사양)',
+      type: 'VARCHAR',
+      length: 255,
+      isKey: false,
+      isRequired: false,
+      isBarcodeTarget: false,
+      order: 11
+    },
+    {
+      id: 'remark',
+      name: '비고',
+      type: 'VARCHAR',
+      length: 255,
+      isKey: false,
+      isRequired: false,
+      isBarcodeTarget: false,
+      order: 12
+    }
+  ]
+};
+
+// ── 지원 테이블 카탈로그 (SSOT: asset, temp_asset) ────────────────────────
+export const SUPPORTED_TABLES = [
+  { id: 'asset', name: '자산 관리 (asset)', schema: DEFAULT_SCHEMA_DEF },
+  { id: 'temp_asset', name: '임시 자산 (temp_asset)', schema: TEMP_ASSET_SCHEMA_DEF }
+];
+
+export function getTableSchema(tableId = 'asset') {
+  if (tableId === 'temp_asset') {
+    return TEMP_ASSET_SCHEMA_DEF;
+  }
+  return DEFAULT_SCHEMA_DEF;
+}
+
 /**
  * 로컬 캐시 스키마 조회
  */

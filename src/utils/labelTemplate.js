@@ -11,6 +11,7 @@ export const LOCAL_KEY_TEMPLATE_PRESETS = 'IMAGE_SCAN_TEMPLATE_PRESETS_V3';
 export const BUILTIN_PRESETS = [
   {
     templateId: 'tpl_asset_large_72x40',
+    targetTable: 'asset',
     schemaId: 'main_schema',
     name: '자산 대형 72×40mm (기본)',
     isDefault: true,
@@ -97,6 +98,7 @@ export const BUILTIN_PRESETS = [
   },
   {
     templateId: 'tpl_asset_qr_50x25',
+    targetTable: 'asset',
     schemaId: 'main_schema',
     name: '자산 소형 QR 50×25mm',
     isDefault: false,
@@ -149,6 +151,7 @@ export const BUILTIN_PRESETS = [
   },
   {
     templateId: 'tpl_serial_qr_60x30',
+    targetTable: 'asset',
     schemaId: 'main_schema',
     name: '제조번호 QR 60×30mm',
     isDefault: false,
@@ -198,10 +201,158 @@ export const BUILTIN_PRESETS = [
         visible: true
       }
     ]
+  },
+  {
+    templateId: 'tpl_temp_asset_72x40',
+    targetTable: 'temp_asset',
+    schemaId: 'temp_asset_schema',
+    name: '임시자산 대형 72×40mm',
+    isDefault: false,
+    paper: {
+      widthMm: 72,
+      heightMm: 40,
+      dpi: 203,
+      dotsWidth: 576,
+      dotsHeight: 320
+    },
+    elements: [
+      {
+        id: 'elem_asset_no',
+        name: '임시자산번호',
+        type: 'text',
+        field: 'asset_no',
+        prefix: 'TEMP: ',
+        xMm: 2.0,
+        yMm: 1.5,
+        fontSizePt: 28,
+        fontFamily: 'A0N',
+        visible: true
+      },
+      {
+        id: 'elem_divider',
+        name: '구분선',
+        type: 'line',
+        xMm: 1.2,
+        yMm: 6.0,
+        widthMm: 69.5,
+        thicknessMm: 0.25,
+        visible: true
+      },
+      {
+        id: 'elem_product_name',
+        name: '제품명',
+        type: 'text',
+        field: 'product_name',
+        prefix: '제품명: ',
+        xMm: 2.0,
+        yMm: 7.0,
+        fontSizePt: 20,
+        fontFamily: 'A0N',
+        visible: true
+      },
+      {
+        id: 'elem_model_name',
+        name: '모델명',
+        type: 'text',
+        field: 'model_name',
+        prefix: 'M/N: ',
+        xMm: 2.0,
+        yMm: 10.5,
+        fontSizePt: 20,
+        fontFamily: 'A0N',
+        visible: true
+      },
+      {
+        id: 'elem_serial_no',
+        name: '제조번호(시리얼)',
+        type: 'text',
+        field: 'serial_no',
+        prefix: 'S/N: ',
+        xMm: 2.0,
+        yMm: 14.0,
+        fontSizePt: 18,
+        fontFamily: 'A0N',
+        visible: true
+      },
+      {
+        id: 'elem_barcode',
+        name: '바코드 / QR',
+        type: 'barcode',
+        barcodeType: 'CODE128',
+        targetField: 'asset_no',
+        xMm: 2.0,
+        yMm: 18.0,
+        heightMm: 10.0,
+        qrScale: 4,
+        showText: true,
+        visible: true
+      }
+    ]
   }
 ];
 
 export const DEFAULT_LABEL_TEMPLATE = BUILTIN_PRESETS[0];
+
+/**
+ * ⭐️ 새 템플릿 생성 팩토리 (지정된 테이블 스키마 기반)
+ */
+export function createEmptyTemplate(name = '새 라벨 서식', targetTable = 'asset', widthMm = 72, heightMm = 40) {
+  const dotsWidth = Math.round(widthMm * 8);
+  const dotsHeight = Math.round(heightMm * 8);
+  const id = `tpl_custom_${Date.now()}`;
+
+  return {
+    templateId: id,
+    targetTable: targetTable || 'asset',
+    schemaId: targetTable === 'temp_asset' ? 'temp_asset_schema' : 'asset_schema',
+    name: name,
+    isDefault: false,
+    paper: {
+      widthMm: Number(widthMm) || 72,
+      heightMm: Number(heightMm) || 40,
+      dpi: 203,
+      dotsWidth,
+      dotsHeight
+    },
+    elements: [
+      {
+        id: 'elem_asset_no',
+        name: targetTable === 'temp_asset' ? '임시자산번호' : '자산번호',
+        type: 'text',
+        field: 'asset_no',
+        prefix: '',
+        xMm: 2.0,
+        yMm: 1.5,
+        fontSizePt: 26,
+        fontFamily: 'A0N',
+        visible: true
+      },
+      {
+        id: 'elem_divider',
+        name: '구분선',
+        type: 'line',
+        xMm: 1.2,
+        yMm: 6.0,
+        widthMm: Math.max(10, widthMm - 2.5),
+        thicknessMm: 0.25,
+        visible: true
+      },
+      {
+        id: 'elem_barcode',
+        name: '바코드 / QR',
+        type: 'barcode',
+        barcodeType: 'CODE128',
+        targetField: 'asset_no',
+        xMm: 2.0,
+        yMm: 16.0,
+        heightMm: 10.0,
+        qrScale: 4,
+        showText: true,
+        visible: true
+      }
+    ]
+  };
+}
 
 /**
  * 전체 프리셋 목록 로드 (로컬 + 기본)
