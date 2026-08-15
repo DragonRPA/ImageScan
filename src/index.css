@@ -213,3 +213,31 @@ body {
     object-fit: contain;
   }
 }
+
+/* 전문 데이터 그리드 고가시성 스크롤바 */
+.grid-scrollbar {
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+  scrollbar-width: thin;
+  scrollbar-color: #38bdf8 #0f172a;
+}
+
+.grid-scrollbar::-webkit-scrollbar {
+  height: 12px;
+  width: 10px;
+}
+
+.grid-scrollbar::-webkit-scrollbar-track {
+  background: #0f172a;
+  border-top: 1px solid #334155;
+}
+
+.grid-scrollbar::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 6px;
+  border: 2px solid #0f172a;
+}
+
+.grid-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #38bdf8;
+}

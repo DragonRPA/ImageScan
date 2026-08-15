@@ -352,8 +352,8 @@ export default function PCDashboard({
         overflow: 'hidden',
         boxShadow: '0 4px 6px -1px rgba(0,0,0,0.2)'
       }}>
-        <div style={{ overflowX: 'auto', maxHeight: 'calc(100vh - 280px)', minHeight: '380px' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.72rem' }}>
+        <div className="grid-scrollbar" style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: 'calc(100vh - 280px)', minHeight: '380px', width: '100%' }}>
+          <table style={{ width: '100%', minWidth: '1600px', borderCollapse: 'collapse', fontSize: '0.72rem' }}>
             <thead>
               <tr style={{
                 backgroundColor: '#0f172a',
@@ -383,7 +383,7 @@ export default function PCDashboard({
                 <th style={{ padding: '6px 8px', textAlign: 'left', whiteSpace: 'nowrap' }}>MAC lan</th>
                 <th style={{ padding: '6px 8px', textAlign: 'left', whiteSpace: 'nowrap' }}>구성요소(사양)</th>
                 <th style={{ padding: '6px 8px', textAlign: 'left', whiteSpace: 'nowrap' }}>비고</th>
-                <th style={{ padding: '6px 8px', textAlign: 'left', whiteSpace: 'nowrap' }}>스캔일시</th>
+                <th style={{ padding: '6px 8px', textAlign: 'left', whiteSpace: 'nowrap' }}>등록일시</th>
               </tr>
             </thead>
             <tbody>
