@@ -19,14 +19,14 @@ import {
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { getSupabaseClient } from '../utils/supabaseClient';
-import { getTableSchema, TEMP_ASSET_SCHEMA_DEF } from '../utils/dynamicSchema';
+import { fetchTableSchema, getTableSchema, TEMP_ASSET_SCHEMA_DEF } from '../utils/dynamicSchema';
 import { getAllPresets, generateDynamicZpl } from '../utils/labelTemplate';
 import { getRegisteredPrinters, getActivePrinterId, sendZplToPrinter } from '../utils/printerManager';
 
 const LOCAL_KEY_TEMP_ASSETS = 'IMAGE_SCAN_TEMP_ASSET_ITEMS';
 
 export default function TempDataTab({ onError, onOpenPrintModal }) {
-  const [schema, setSchema] = useState(TEMP_ASSET_SCHEMA_DEF);
+  const [schema, setSchema] = useState(() => getTableSchema('temp_asset') || TEMP_ASSET_SCHEMA_DEF);
   const [items, setItems] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -40,10 +40,16 @@ export default function TempDataTab({ onError, onOpenPrintModal }) {
 
   const fileInputRef = useRef(null);
 
-  // 1. 스키마 로드
-  const loadSchema = () => {
-    const currentSchema = getTableSchema('temp_asset') || TEMP_ASSET_SCHEMA_DEF;
-    setSchema(currentSchema);
+  // 1. ⭐️ 비동기 실시간 스키마 로드 (Supabase schema_definitions 1:1 동기화)
+  const loadSchema = async () => {
+    try {
+      const currentSchema = await fetchTableSchema('temp_asset');
+      if (currentSchema && Array.isArray(currentSchema.fields)) {
+        setSchema(currentSchema);
+      }
+    } catch (e) {
+      console.warn('temp_asset 스키마 로드 예외:', e);
+    }
   };
 
   // 2. 데이터 로드 (Supabase 우선 ➔ 로컬 캐시 폴백)

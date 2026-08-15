@@ -186,16 +186,6 @@ export const TEMP_ASSET_SCHEMA_DEF = {
       order: 1
     },
     {
-      id: 'category_major',
-      name: '대분류',
-      type: 'VARCHAR',
-      length: 20,
-      isKey: false,
-      isRequired: false,
-      isBarcodeTarget: false,
-      order: 2
-    },
-    {
       id: 'product_name',
       name: '제품명',
       type: 'VARCHAR',
@@ -203,87 +193,17 @@ export const TEMP_ASSET_SCHEMA_DEF = {
       isKey: false,
       isRequired: false,
       isBarcodeTarget: false,
+      order: 2
+    },
+    {
+      id: 'category',
+      name: '분류',
+      type: 'VARCHAR',
+      length: 50,
+      isKey: false,
+      isRequired: false,
+      isBarcodeTarget: false,
       order: 3
-    },
-    {
-      id: 'model_name',
-      name: '모델명',
-      type: 'VARCHAR',
-      length: 100,
-      isKey: false,
-      isRequired: false,
-      isBarcodeTarget: false,
-      order: 4
-    },
-    {
-      id: 'serial_no',
-      name: '제조번호(시리얼)',
-      type: 'VARCHAR',
-      length: 50,
-      isKey: false,
-      isRequired: false,
-      isBarcodeTarget: true,
-      order: 5
-    },
-    {
-      id: 'temp_status',
-      name: '임시상태',
-      type: 'VARCHAR',
-      length: 50,
-      isKey: false,
-      isRequired: false,
-      isBarcodeTarget: false,
-      order: 6
-    },
-    {
-      id: 'scanned_at',
-      name: '스캔일시',
-      type: 'VARCHAR',
-      length: 50,
-      isKey: false,
-      isRequired: false,
-      isBarcodeTarget: false,
-      order: 7
-    },
-    {
-      id: 'shelf_no',
-      name: '선반번호',
-      type: 'VARCHAR',
-      length: 50,
-      isKey: false,
-      isRequired: false,
-      isBarcodeTarget: false,
-      order: 8
-    },
-    {
-      id: 'imei',
-      name: 'IMEI',
-      type: 'VARCHAR',
-      length: 50,
-      isKey: false,
-      isRequired: false,
-      isBarcodeTarget: true,
-      order: 9
-    },
-    {
-      id: 'mac_address',
-      name: 'MAC 주소',
-      type: 'VARCHAR',
-      length: 30,
-      isKey: false,
-      isRequired: false,
-      isBarcodeTarget: false,
-      order: 10
-    },
-    {
-      id: 'components',
-      name: '구성요소(사양)',
-      type: 'VARCHAR',
-      length: 255,
-      isKey: false,
-      isRequired: false,
-      isBarcodeTarget: false,
-      order: 11
     },
     {
       id: 'remark',
@@ -293,10 +213,12 @@ export const TEMP_ASSET_SCHEMA_DEF = {
       isKey: false,
       isRequired: false,
       isBarcodeTarget: false,
-      order: 12
+      order: 4
     }
   ]
 };
+
+export const LOCAL_KEY_TEMP_ASSET_SCHEMA = 'IMAGE_SCAN_TEMP_ASSET_SCHEMA_DEF_V1';
 
 // ── 지원 테이블 카탈로그 (SSOT: asset, temp_asset) ────────────────────────
 export const SUPPORTED_TABLES = [
@@ -306,69 +228,105 @@ export const SUPPORTED_TABLES = [
 
 export function getTableSchema(tableId = 'asset') {
   if (tableId === 'temp_asset') {
+    try {
+      const stored = localStorage.getItem(LOCAL_KEY_TEMP_ASSET_SCHEMA);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed && Array.isArray(parsed.fields) && parsed.key_field) return parsed;
+      }
+    } catch (e) {}
     return TEMP_ASSET_SCHEMA_DEF;
   }
   return DEFAULT_SCHEMA_DEF;
 }
 
 /**
- * 로컬 캐시 스키마 조회
+ * ⭐️ 비동기 원격 DB 및 로컬 스키마 통합 조회 (temp_asset / asset)
  */
-export function getLocalSchemaDef() {
-  try {
-    const stored = localStorage.getItem(LOCAL_KEY_SCHEMA_DEF);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      if (parsed && Array.isArray(parsed.fields) && parsed.key_field) {
-        return parsed;
-      }
-    }
-  } catch (e) {}
-  return DEFAULT_SCHEMA_DEF;
-}
+export async function fetchTableSchema(tableId = 'temp_asset') {
+  const schemaId = tableId === 'temp_asset' ? 'temp_asset_schema' : 'asset_schema';
+  const localKey = tableId === 'temp_asset' ? LOCAL_KEY_TEMP_ASSET_SCHEMA : LOCAL_KEY_SCHEMA_DEF;
+  const defaultDef = tableId === 'temp_asset' ? TEMP_ASSET_SCHEMA_DEF : DEFAULT_SCHEMA_DEF;
 
-/**
- * 로컬 캐시 스키마 저장
- */
-export function saveLocalSchemaDef(schemaDef) {
-  try {
-    localStorage.setItem(LOCAL_KEY_SCHEMA_DEF, JSON.stringify(schemaDef));
-  } catch (e) {}
-}
-
-/**
- * 백엔드 Supabase에서 활성 스키마 로드
- */
-export async function fetchActiveSchema() {
   const client = getSupabaseClient();
-  if (!client) return getLocalSchemaDef();
+  if (!client) return getTableSchema(tableId);
 
   try {
     const { data, error } = await client
       .from('schema_definitions')
       .select('*')
-      .eq('id', 'main_schema')
+      .eq('id', schemaId)
       .maybeSingle();
 
-    if (error || !data) {
-      return getLocalSchemaDef();
+    if (!error && data && Array.isArray(data.fields)) {
+      const schemaDef = {
+        id: data.id,
+        table_name: tableId,
+        schema_name: data.schema_name || (tableId === 'temp_asset' ? '임시 자산 (temp_asset)' : '자산 관리 (asset)'),
+        key_field: data.key_field || 'asset_no',
+        key_field_name: data.key_field_name || '임시자산번호',
+        table_version: data.table_version || 1,
+        fields: data.fields
+      };
+      localStorage.setItem(localKey, JSON.stringify(schemaDef));
+      return schemaDef;
     }
-
-    const schemaDef = {
-      id: data.id,
-      schema_name: data.schema_name,
-      key_field: data.key_field,
-      key_field_name: data.key_field_name,
-      table_version: data.table_version || 1,
-      fields: Array.isArray(data.fields) ? data.fields : DEFAULT_SCHEMA_DEF.fields
-    };
-
-    saveLocalSchemaDef(schemaDef);
-    return schemaDef;
   } catch (err) {
-    console.warn('스키마 조회 오류, 로컬 캐시 사용:', err);
-    return getLocalSchemaDef();
+    console.warn(`[${tableId}] 원격 스키마 조회 실패 (로컬 사용):`, err);
   }
+
+  return getTableSchema(tableId);
+}
+
+/**
+ * ⭐️ 스키마 정의 DB 및 로컬 영구 저장
+ */
+export async function saveTableSchema(tableId, schemaDef) {
+  const schemaId = tableId === 'temp_asset' ? 'temp_asset_schema' : (schemaDef.id || 'main_schema');
+  const localKey = tableId === 'temp_asset' ? LOCAL_KEY_TEMP_ASSET_SCHEMA : LOCAL_KEY_SCHEMA_DEF;
+
+  const normalized = {
+    ...schemaDef,
+    id: schemaId,
+    table_name: tableId,
+    updated_at: new Date().toISOString()
+  };
+
+  try {
+    localStorage.setItem(localKey, JSON.stringify(normalized));
+  } catch (e) {}
+
+  const client = getSupabaseClient();
+  if (!client) return { success: true, message: '로컬 스키마 저장 완료' };
+
+  try {
+    const { error } = await client.from('schema_definitions').upsert({
+      id: schemaId,
+      schema_name: normalized.schema_name || '임시 자산 스키마',
+      key_field: normalized.key_field || 'asset_no',
+      key_field_name: normalized.key_field_name || '임시자산번호',
+      fields: normalized.fields || [],
+      table_version: normalized.table_version || 1,
+      updated_at: new Date().toISOString()
+    });
+
+    if (error) throw error;
+    return { success: true, message: '온라인 DB 스키마 저장 완료' };
+  } catch (err) {
+    console.warn('DB 스키마 저장 실패 (로컬 보존):', err);
+    return { success: true, localOnly: true, message: `로컬 스키마 저장 완료 (DB: ${err.message})` };
+  }
+}
+
+/**
+ * 하위 호환성 헬퍼
+ */
+export async function fetchActiveSchema() {
+  return fetchTableSchema('temp_asset');
+}
+
+export function getLocalSchemaDef() {
+  return getTableSchema('temp_asset');
 }
 
 /**

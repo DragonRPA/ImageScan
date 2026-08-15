@@ -10,19 +10,21 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import {
+  TEMP_ASSET_SCHEMA_DEF,
   DEFAULT_SCHEMA_DEF,
-  fetchActiveSchema,
+  fetchTableSchema,
+  saveTableSchema,
   applySchemaPatch
 } from '../utils/dynamicSchema';
 
 export default function SchemaBuilderTab({ onError, onSchemaUpdated }) {
-  const [schemaDef, setSchemaDef] = useState(DEFAULT_SCHEMA_DEF);
+  const [schemaDef, setSchemaDef] = useState(TEMP_ASSET_SCHEMA_DEF);
   const [resetData, setResetData] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [statusMessage, setStatusMessage] = useState(null);
 
   useEffect(() => {
-    fetchActiveSchema().then(def => {
+    fetchTableSchema('temp_asset').then(def => {
       if (def) setSchemaDef(def);
     });
   }, []);
@@ -92,27 +94,27 @@ export default function SchemaBuilderTab({ onError, onSchemaUpdated }) {
   // 기본 스키마로 초기화
   const handleReset = () => {
     if (window.confirm('스키마 정의를 초기 기본값으로 되돌리시겠습니까?')) {
-      setSchemaDef(DEFAULT_SCHEMA_DEF);
+      setSchemaDef(TEMP_ASSET_SCHEMA_DEF);
     }
   };
 
-  // DDL 패치 실행
+  // ⭐️ 스키마 저장 및 동기화
   const handleApplyPatch = async () => {
     if (!schemaDef.key_field) {
-      alert('반드시 1개의 헤더를 키 인덱스로 지정해야 합니다.');
+      alert('반드시 1개의 헤더를 키 인덱스(PK)로 지정해야 합니다.');
       return;
     }
     setIsSaving(true);
     setStatusMessage(null);
 
     try {
-      const res = await applySchemaPatch(schemaDef, resetData);
+      const res = await saveTableSchema('temp_asset', schemaDef);
       setStatusMessage({
-        type: res.localOnly ? 'warning' : 'success',
-        text: res.message || '스키마 DDL 패치 완료'
+        type: 'success',
+        text: '임시 자산(temp_asset) 스키마 정의가 성공적으로 저장되었습니다.'
       });
       if (onSchemaUpdated) onSchemaUpdated(schemaDef);
-      setTimeout(() => setStatusMessage(null), 5000);
+      setTimeout(() => setStatusMessage(null), 4000);
     } catch (err) {
       setStatusMessage({ type: 'error', text: err.message });
       if (onError) onError(err.message);
