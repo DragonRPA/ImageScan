@@ -1,5 +1,15 @@
 # 릴리즈 노트 (RELEASE_NOTES.md)
 
+## [v1.6.0.Build.12] - 2026-08-15 20:17:00 (KST)
+
+### 🧹 [로컬 시드 완전 박멸] 로컬 하드코딩 시드 데이터 전면 제거 & 100% DB SSOT 확립
+
+1. **라벨 서식 관련 로컬 시드(`BUILTIN_PRESETS`) 및 주입 코드 전면 영구 삭제**
+   - 클라이언트 소스코드 내 하드코딩된 더미 서식 목록을 100% 제거
+   - `syncTemplatesWithBackend()`가 오직 Supabase `label_templates` 테이블에서 조회된 실제 온라인 DB 레코드만을 렌더링하고 동기화하도록 단일 진실의 원천(SSOT) 원칙 완결
+
+---
+
 ## [v1.6.0.Build.11] - 2026-08-15 20:15:00 (KST)
 
 ### ☁️ [라벨 서식 DB 저장] Supabase `label_templates` 스키마 정합성 및 저장 오류 수정

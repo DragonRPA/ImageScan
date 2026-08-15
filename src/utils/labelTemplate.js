@@ -7,291 +7,21 @@ import { getSupabaseClient } from './supabaseClient';
 export const LOCAL_KEY_ACTIVE_TEMPLATE_ID = 'IMAGE_SCAN_ACTIVE_TEMPLATE_ID_V3';
 export const LOCAL_KEY_TEMPLATE_PRESETS = 'IMAGE_SCAN_TEMPLATE_PRESETS_V3';
 
-// ── 4대 표준 빌트인 프리셋 ───────────────────────────────────────────────
-export const BUILTIN_PRESETS = [
-  {
-    templateId: 'tpl_asset_large_72x40',
-    targetTable: 'asset',
-    schemaId: 'main_schema',
-    name: '자산 대형 72×40mm (기본)',
-    isDefault: true,
-    paper: {
-      widthMm: 72,
-      heightMm: 40,
-      dpi: 203,
-      dotsWidth: 576,
-      dotsHeight: 320
-    },
-    elements: [
-      {
-        id: 'elem_asset_no',
-        name: '자산번호',
-        type: 'text',
-        field: 'asset_no',
-        prefix: '',
-        xMm: 2.0,
-        yMm: 1.5,
-        fontSizePt: 28,
-        fontFamily: 'A0N',
-        visible: true
-      },
-      {
-        id: 'elem_divider',
-        name: '구분선',
-        type: 'line',
-        xMm: 1.2,
-        yMm: 6.0,
-        widthMm: 69.5,
-        thicknessMm: 0.25,
-        visible: true
-      },
-      {
-        id: 'elem_product_name',
-        name: '제품명',
-        type: 'text',
-        field: 'product_name',
-        prefix: '제품명: ',
-        xMm: 2.0,
-        yMm: 7.0,
-        fontSizePt: 20,
-        fontFamily: 'A0N',
-        visible: true
-      },
-      {
-        id: 'elem_model_name',
-        name: '모델명',
-        type: 'text',
-        field: 'model_name',
-        prefix: 'M/N: ',
-        xMm: 2.0,
-        yMm: 10.5,
-        fontSizePt: 20,
-        fontFamily: 'A0N',
-        visible: true
-      },
-      {
-        id: 'elem_serial_no',
-        name: '제조번호(시리얼)',
-        type: 'text',
-        field: 'serial_no',
-        prefix: 'S/N: ',
-        xMm: 2.0,
-        yMm: 14.0,
-        fontSizePt: 18,
-        fontFamily: 'A0N',
-        visible: true
-      },
-      {
-        id: 'elem_barcode',
-        name: '바코드 / QR',
-        type: 'barcode',
-        barcodeType: 'CODE128',
-        targetField: 'asset_no',
-        xMm: 2.0,
-        yMm: 18.0,
-        heightMm: 10.0,
-        qrScale: 4,
-        showText: true,
-        visible: true
-      }
-    ]
+export const DEFAULT_LABEL_TEMPLATE = {
+  templateId: 'tpl_default',
+  targetTable: 'asset',
+  schemaId: 'main_schema',
+  name: '기본 라벨 서식 (72×40mm)',
+  isDefault: true,
+  paper: {
+    widthMm: 72,
+    heightMm: 40,
+    dpi: 203,
+    dotsWidth: 576,
+    dotsHeight: 320
   },
-  {
-    templateId: 'tpl_asset_qr_50x25',
-    targetTable: 'asset',
-    schemaId: 'main_schema',
-    name: '자산 소형 QR 50×25mm',
-    isDefault: false,
-    paper: {
-      widthMm: 50,
-      heightMm: 25,
-      dpi: 203,
-      dotsWidth: 400,
-      dotsHeight: 200
-    },
-    elements: [
-      {
-        id: 'elem_barcode_qr',
-        name: 'QR 코드',
-        type: 'barcode',
-        barcodeType: 'QR',
-        targetField: 'asset_no',
-        xMm: 2.0,
-        yMm: 2.0,
-        heightMm: 12.0,
-        qrScale: 4,
-        showText: false,
-        visible: true
-      },
-      {
-        id: 'elem_asset_no',
-        name: '자산번호',
-        type: 'text',
-        field: 'asset_no',
-        prefix: '',
-        xMm: 18.0,
-        yMm: 3.0,
-        fontSizePt: 26,
-        fontFamily: 'A0N',
-        visible: true
-      },
-      {
-        id: 'elem_model_name',
-        name: '모델명',
-        type: 'text',
-        field: 'model_name',
-        prefix: 'M/N: ',
-        xMm: 18.0,
-        yMm: 12.0,
-        fontSizePt: 16,
-        fontFamily: 'A0N',
-        visible: true
-      }
-    ]
-  },
-  {
-    templateId: 'tpl_serial_qr_60x30',
-    targetTable: 'asset',
-    schemaId: 'main_schema',
-    name: '제조번호 QR 60×30mm',
-    isDefault: false,
-    paper: {
-      widthMm: 60,
-      heightMm: 30,
-      dpi: 203,
-      dotsWidth: 480,
-      dotsHeight: 240
-    },
-    elements: [
-      {
-        id: 'elem_serial_no',
-        name: '제조번호(시리얼)',
-        type: 'text',
-        field: 'serial_no',
-        prefix: 'S/N: ',
-        xMm: 2.0,
-        yMm: 2.0,
-        fontSizePt: 22,
-        fontFamily: 'A0N',
-        visible: true
-      },
-      {
-        id: 'elem_model_name',
-        name: '모델명',
-        type: 'text',
-        field: 'model_name',
-        prefix: 'M/N: ',
-        xMm: 2.0,
-        yMm: 9.0,
-        fontSizePt: 18,
-        fontFamily: 'A0N',
-        visible: true
-      },
-      {
-        id: 'elem_barcode_qr',
-        name: 'QR 코드',
-        type: 'barcode',
-        barcodeType: 'QR',
-        targetField: 'serial_no',
-        xMm: 40.0,
-        yMm: 2.0,
-        heightMm: 14.0,
-        qrScale: 4,
-        showText: false,
-        visible: true
-      }
-    ]
-  },
-  {
-    templateId: 'tpl_temp_asset_72x40',
-    targetTable: 'temp_asset',
-    schemaId: 'temp_asset_schema',
-    name: '임시자산 대형 72×40mm',
-    isDefault: false,
-    paper: {
-      widthMm: 72,
-      heightMm: 40,
-      dpi: 203,
-      dotsWidth: 576,
-      dotsHeight: 320
-    },
-    elements: [
-      {
-        id: 'elem_asset_no',
-        name: '임시자산번호',
-        type: 'text',
-        field: 'asset_no',
-        prefix: 'TEMP: ',
-        xMm: 2.0,
-        yMm: 1.5,
-        fontSizePt: 28,
-        fontFamily: 'A0N',
-        visible: true
-      },
-      {
-        id: 'elem_divider',
-        name: '구분선',
-        type: 'line',
-        xMm: 1.2,
-        yMm: 6.0,
-        widthMm: 69.5,
-        thicknessMm: 0.25,
-        visible: true
-      },
-      {
-        id: 'elem_product_name',
-        name: '제품명',
-        type: 'text',
-        field: 'product_name',
-        prefix: '제품명: ',
-        xMm: 2.0,
-        yMm: 7.0,
-        fontSizePt: 20,
-        fontFamily: 'A0N',
-        visible: true
-      },
-      {
-        id: 'elem_model_name',
-        name: '모델명',
-        type: 'text',
-        field: 'model_name',
-        prefix: 'M/N: ',
-        xMm: 2.0,
-        yMm: 10.5,
-        fontSizePt: 20,
-        fontFamily: 'A0N',
-        visible: true
-      },
-      {
-        id: 'elem_serial_no',
-        name: '제조번호(시리얼)',
-        type: 'text',
-        field: 'serial_no',
-        prefix: 'S/N: ',
-        xMm: 2.0,
-        yMm: 14.0,
-        fontSizePt: 18,
-        fontFamily: 'A0N',
-        visible: true
-      },
-      {
-        id: 'elem_barcode',
-        name: '바코드 / QR',
-        type: 'barcode',
-        barcodeType: 'CODE128',
-        targetField: 'asset_no',
-        xMm: 2.0,
-        yMm: 18.0,
-        heightMm: 10.0,
-        qrScale: 4,
-        showText: true,
-        visible: true
-      }
-    ]
-  }
-];
-
-export const DEFAULT_LABEL_TEMPLATE = BUILTIN_PRESETS[0];
+  elements: []
+};
 
 /**
  * ⭐️ 새 템플릿 생성 팩토리 (모든 아이템이 깨끗한 빈 서식으로 시작)
@@ -575,7 +305,7 @@ export function createEmptyTemplate(name = '새 라벨 서식', targetTable = 'a
 }
 
 /**
- * 전체 프리셋 목록 로드 (로컬 + 기본)
+ * 전체 프리셋 목록 로드 (서버 DB 동기화 캐시)
  */
 export function getAllPresets() {
   try {
@@ -587,7 +317,7 @@ export function getAllPresets() {
       }
     }
   } catch (e) {}
-  return BUILTIN_PRESETS;
+  return [];
 }
 
 /**
@@ -601,10 +331,9 @@ export function getStoredLabelTemplate() {
       const found = presets.find(p => p.templateId === activeId);
       if (found) return found;
     }
-    return presets[0] || DEFAULT_LABEL_TEMPLATE;
-  } catch (e) {
-    return DEFAULT_LABEL_TEMPLATE;
-  }
+    if (presets.length > 0) return presets[0];
+  } catch (e) {}
+  return DEFAULT_LABEL_TEMPLATE;
 }
 
 /**
@@ -658,13 +387,11 @@ export async function deleteStoredLabelTemplate(templateId) {
 }
 
 /**
- * ⭐️ Supabase 백엔드에서 전체 라벨 서식 목록 조회 및 로컬 스토리지 실시간 동기화 (SSOT)
+ * ⭐️ Supabase 백엔드에서 전체 라벨 서식 목록 조회 (100% DB SSOT)
  */
 export async function syncTemplatesWithBackend() {
   const client = getSupabaseClient();
-  const localPresets = getAllPresets();
-
-  if (!client) return localPresets;
+  if (!client) return getAllPresets();
 
   try {
     const { data, error } = await client
@@ -672,7 +399,7 @@ export async function syncTemplatesWithBackend() {
       .select('*')
       .order('created_at', { ascending: true });
 
-    if (!error && data && data.length > 0) {
+    if (!error && data) {
       // 백엔드 데이터를 템플릿 포맷으로 매핑
       const backendPresets = data.map(row => ({
         templateId: row.id,
@@ -684,22 +411,15 @@ export async function syncTemplatesWithBackend() {
         elements: Array.isArray(row.elements) ? row.elements : []
       }));
 
-      // ⭐️ 서버 DB 서식을 절대적인 단일 진실의 원천(SSOT)으로 확립
-      const mergedMap = new Map();
-      // 1) 빌트인 기본 서식 등록
-      BUILTIN_PRESETS.forEach(p => mergedMap.set(p.templateId, p));
-      // 2) 서버 DB 서식 등록 (서버 데이터가 로컬보다 절대 우선)
-      backendPresets.forEach(p => mergedMap.set(p.templateId, p));
-
-      const mergedList = Array.from(mergedMap.values());
-      localStorage.setItem(LOCAL_KEY_TEMPLATE_PRESETS, JSON.stringify(mergedList));
-      return mergedList;
+      // ⭐️ 100% 서버 DB에서 조회된 레코드만 로컬 스토리지에 동기화
+      localStorage.setItem(LOCAL_KEY_TEMPLATE_PRESETS, JSON.stringify(backendPresets));
+      return backendPresets;
     }
   } catch (err) {
-    console.warn('서버 라벨 서식 조회 실패 (오프라인 캐시 폴백):', err);
+    console.warn('서버 라벨 서식 조회 실패 (로컬 캐시 유지):', err);
   }
 
-  return localPresets;
+  return getAllPresets();
 }
 
 /**
