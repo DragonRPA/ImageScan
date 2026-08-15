@@ -1,5 +1,14 @@
 # 릴리즈 노트 (RELEASE_NOTES.md)
 
+## [v1.3.0.Build.7] - 2026-08-15 16:08:00 (KST)
+
+### 🐛 PCDashboardView getStoredOffsetConfig 잔여 참조 완전 제거 핫픽스
+
+1. **`PCDashboardView.jsx` 구형 오프셋 상태 완전 정리**
+   - 구형 `getStoredOffsetConfig` 및 미사용 오프셋 핸들러 잔여 코드 완전 삭제 완료
+
+---
+
 ## [v1.3.0.Build.6] - 2026-08-15 16:04:00 (KST)
 
 ### 🎨 데이터 목록 탭 대폭 개편: 12대 필드 그리드 전면 표출 & 정밀 조회 필터 바 탑재

@@ -221,12 +221,9 @@ export default function PCDashboardView({
   onError,
   onOpenExportModal,
   onOpenPrintModal,
-  onOpenConfigModal,
-  onOpenImportModal,
-  onOpenPrinterGuide
+  onOpenImportModal
 }) {
   const [activeTab, setActiveTab] = useState('data'); // 'data' | 'rpa-run' | 'designer' | 'queue' | 'rpa-builder' | 'schema'
-  const [offsetConfig, setOffsetConfig] = useState(getStoredOffsetConfig);
   const [isAdmin, setIsAdmin] = useState(isAdminAuthenticated);
   const [docViewerOpen, setDocViewerOpen] = useState(false);
 
@@ -234,24 +231,6 @@ export default function PCDashboardView({
   const [gatekeeperOpen, setGatekeeperOpen] = useState(false);
   const [pendingAdminTab, setPendingAdminTab] = useState(null);
   const [pendingFeatureName, setPendingFeatureName] = useState('');
-
-  const handleResetConfig = () => {
-    const def = { offsetXmm: 0.0, offsetYmm: 0.0, darkness: 20, speed: 4 };
-    setOffsetConfig(def);
-    saveStoredOffsetConfig(def);
-  };
-
-  const handleTestPrint = () => {
-    const testSampleItem = [{
-      id: 'test_sample_1',
-      asset_no: 'TEST0001',
-      product_name: '갤럭시 S24',
-      model_name: 'SM-S921N',
-      serial_no: 'R5KL60F0CZW',
-      status: 'TEST'
-    }];
-    onOpenPrintModal(testSampleItem, offsetConfig);
-  };
 
   // 탭 클릭 핸들러 (관리자 탭 보호)
   const handleTabClick = (tabKey, featureName, isProtected = false) => {
@@ -407,7 +386,7 @@ export default function PCDashboardView({
       {activeTab === 'designer' && (
         <LabelDesignerTab
           onError={onError}
-          onOpenPrintModal={(items) => onOpenPrintModal(items, offsetConfig)}
+          onOpenPrintModal={(items) => onOpenPrintModal && onOpenPrintModal(items)}
         />
       )}
 
