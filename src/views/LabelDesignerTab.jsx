@@ -265,14 +265,15 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
   }, [tableFields]);
 
   const handlePaperChange = (field, val) => {
-    const num = Number(val) || 0;
+    const isBool = typeof val === 'boolean';
+    const parsedVal = isBool ? val : (Number(val) || 0);
     setTemplate(prev => ({
       ...prev,
       paper: {
         ...prev.paper,
-        [field]: num,
-        dotsWidth: field === 'widthMm' ? mmToDots(num, prev.paper.dpi) : prev.paper.dotsWidth,
-        dotsHeight: field === 'heightMm' ? mmToDots(num, prev.paper.dpi) : prev.paper.dotsHeight
+        [field]: parsedVal,
+        dotsWidth: field === 'widthMm' ? mmToDots(parsedVal, prev.paper.dpi) : prev.paper.dotsWidth,
+        dotsHeight: field === 'heightMm' ? mmToDots(parsedVal, prev.paper.dpi) : prev.paper.dotsHeight
       }
     }));
     setIsSaved(false);
@@ -848,6 +849,29 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                   }}
                 />
               </div>
+            </div>
+
+            {/* ⭐️ ^LH / ^PW 기능 ON/OFF 토글 (좌측 용지 패널) */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginTop: '6px', paddingTop: '6px', borderTop: '1px dashed #334155' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.68rem', color: template.paper?.useLabelHome ? '#38bdf8' : '#94a3b8', cursor: 'pointer', userSelect: 'none' }}>
+                <input
+                  type="checkbox"
+                  checked={!!template.paper?.useLabelHome}
+                  onChange={e => handlePaperChange('useLabelHome', e.target.checked)}
+                  style={{ cursor: 'pointer' }}
+                />
+                <span style={{ fontWeight: 600 }}>^LH (원점)</span>
+              </label>
+
+              <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.68rem', color: template.paper?.usePrintWidth ? '#38bdf8' : '#94a3b8', cursor: 'pointer', userSelect: 'none' }}>
+                <input
+                  type="checkbox"
+                  checked={!!template.paper?.usePrintWidth}
+                  onChange={e => handlePaperChange('usePrintWidth', e.target.checked)}
+                  style={{ cursor: 'pointer' }}
+                />
+                <span style={{ fontWeight: 600 }}>^PW (인쇄폭)</span>
+              </label>
             </div>
           </div>
 
@@ -2257,10 +2281,40 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                 flexWrap: 'wrap',
                 gap: '6px'
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span style={{ fontSize: '0.75rem', fontWeight: 700, color: isZplCustomized ? '#facc15' : '#38bdf8' }}>
                     ZPL 코드 직접 편집기
                   </span>
+
+                  {/* ⭐️ 상단 바 ^LH / ^PW 토글 */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#1e293b', padding: '2px 6px', borderRadius: '4px', border: '1px solid #334155' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '0.68rem', color: template.paper?.useLabelHome ? '#38bdf8' : '#94a3b8', cursor: 'pointer', userSelect: 'none' }}>
+                      <input
+                        type="checkbox"
+                        checked={!!template.paper?.useLabelHome}
+                        onChange={e => {
+                          handlePaperChange('useLabelHome', e.target.checked);
+                          setIsZplCustomized(false);
+                        }}
+                        style={{ cursor: 'pointer' }}
+                      />
+                      <span>^LH</span>
+                    </label>
+
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '0.68rem', color: template.paper?.usePrintWidth ? '#38bdf8' : '#94a3b8', cursor: 'pointer', userSelect: 'none' }}>
+                      <input
+                        type="checkbox"
+                        checked={!!template.paper?.usePrintWidth}
+                        onChange={e => {
+                          handlePaperChange('usePrintWidth', e.target.checked);
+                          setIsZplCustomized(false);
+                        }}
+                        style={{ cursor: 'pointer' }}
+                      />
+                      <span>^PW</span>
+                    </label>
+                  </div>
+
                   {isZplCustomized && (
                     <span style={{ fontSize: '0.62rem', backgroundColor: '#eab308', color: '#000', padding: '1px 5px', borderRadius: '3px', fontWeight: 700 }}>
                       수정됨 (직접 입력 모드)

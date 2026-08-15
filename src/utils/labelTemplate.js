@@ -581,6 +581,27 @@ export function generateDynamicZpl(item = {}, template = DEFAULT_LABEL_TEMPLATE)
       : '^XA^MD21'
   ];
 
+  const widthMm = Number(t.paper?.widthMm) || 72;
+  const dotsPerMm = dpi / 25.4;
+
+  // ⭐️ [토글 옵션 1] ^LH (라벨 원점 자동 중앙정렬) ON 시 삽입
+  if (t.paper?.useLabelHome) {
+    let homeXDots = 0;
+    if (typeof t.paper?.customHomeX === 'number' && !isNaN(t.paper.customHomeX)) {
+      homeXDots = Math.round(t.paper.customHomeX * dotsPerMm);
+    } else if (widthMm < 104) {
+      homeXDots = Math.max(0, Math.round(((104.0 - widthMm) / 2.0) * dotsPerMm));
+    }
+    const homeYDots = Math.max(0, Math.round((Number(t.paper?.customHomeY) || 0) * dotsPerMm));
+    zplCommands.push(`^LH${homeXDots},${homeYDots}`);
+  }
+
+  // ⭐️ [토글 옵션 2] ^PW (인쇄폭 선언) ON 시 삽입
+  if (t.paper?.usePrintWidth) {
+    const printWidthDots = Math.round(widthMm * dotsPerMm);
+    zplCommands.push(`^PW${printWidthDots}`);
+  }
+
   (t.elements || []).forEach(elem => {
     if (!elem.visible) return;
 
