@@ -1,35 +1,12 @@
 /**
  * ZPL II Raw Code Generator and WebSerial/WebUSB Thermal Printer Direct Output Engine
  */
+import { getStoredLabelTemplate, generateDynamicZpl } from './labelTemplate';
 
 export function generateZplCode(item, offsetConfig) {
-  const config = offsetConfig || {
-    offsetX: 0,
-    offsetY: 0,
-    fontSize: 11,
-    barcodeHeight: 11
-  };
-
-  const assetNo = item.asset_no || item.assetNo || 'TEST0001';
-  const serialNo = item.serial_no || item.serialNo || '-';
-  const macAddress = item.mac_address || item.macAddress || '-';
-  const imei = item.imei || '-';
-
-  // Calculate ZPL dot coordinates (8 dots = 1mm at 203 DPI)
-  const dotsX = Math.round(config.offsetX * 8);
-  const dotsY = Math.round(config.offsetY * 8);
-  const fontPt = Math.round(config.fontSize * 2.2);
-  const barH = Math.round(config.barcodeHeight * 8);
-
-  return `^XA
-^LH${Math.max(0, dotsX)},${Math.max(0, dotsY)}
-^SEE:GB2312.DAT^FS
-^FO20,20^A0N,${fontPt},${fontPt}^FD관리번호: ${assetNo}^FS
-^FO20,55^A0N,${fontPt},${fontPt}^FD시리얼: ${serialNo}^FS
-^FO20,90^A0N,${fontPt},${fontPt}^FDMAC: ${macAddress}^FS
-^FO20,125^A0N,${fontPt},${fontPt}^FDIMEI: ${imei}^FS
-^FO30,170^B3N,N,${barH},Y,N^FD${assetNo}^FS
-^XZ`;
+  // 사용자가 디자이너에서 구성한 템플릿(SSOT)을 조회하여 동적 생성
+  const template = getStoredLabelTemplate();
+  return generateDynamicZpl(item, template);
 }
 
 /**

@@ -5,12 +5,14 @@
   "main": "zebra-agent.cjs",
   "bin": "zebra-agent.cjs",
   "scripts": {
-    "start":     "node zebra-agent.cjs",
+    "start": "node zebra-agent.cjs",
     "start:dev": "node --watch zebra-agent.cjs",
-    "build":     "npx pkg zebra-agent.cjs --target node18-win-x64 --output dist/zebra-agent.exe"
+    "build": "npx pkg zebra-agent.cjs --target node18-win-x64 --output dist/zebra-agent.exe"
   },
   "pkg": {
-    "targets": ["node18-win-x64"],
+    "targets": [
+      "node18-win-x64"
+    ],
     "outputPath": "dist",
     "assets": [],
     "scripts": []
@@ -20,5 +22,8 @@
   },
   "engines": {
     "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
   }
 }

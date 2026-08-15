@@ -68,7 +68,8 @@ const SUPABASE_URL  = process.env.SUPABASE_URL  || EXT.SUPABASE_URL  || 'https:/
 const SUPABASE_KEY  = process.env.SUPABASE_KEY  || EXT.SUPABASE_KEY  || 'sb_publishable_wruJQfp3Op-ISvVwb4ZdmA_2OqMUJeQ';
 const ENV_PRINTER_HOST = process.env.PRINTER_HOST || EXT.PRINTER_HOST || '';
 const ENV_PRINTER_PORT = parseInt(process.env.PRINTER_PORT || EXT.PRINTER_PORT || '9100', 10);
-const RECONNECT_MS  = parseInt(process.env.RECONNECT_MS  || EXT.RECONNECT_MS  || '5000', 10);
+const RECONNECT_MS     = parseInt(process.env.RECONNECT_MS  || EXT.RECONNECT_MS  || '5000', 10);
+const POLL_INTERVAL_MS = 10000;
 const DEFAULT_PORT  = 9100;
 const AGENT_ID      = os.hostname() + '_agent';
 
@@ -157,18 +158,21 @@ async function interactiveSetup() {
   log('SETUP', 'Windows 프린터 목록 조회 중...');
   const printers = await discoverWindowsPrinters();
 
-  let printerName = '', printerHost = '127.0.0.1', printerPort = DEFAULT_PORT, connectionType = 'USB';
+  let printerName = '', printerHost = '127.0.0.1', printerPort = DEFAULT_PORT;
+  let connectionType = 'TCP';   // 'TCP' | 'USB_RAW'
+  let usbPort = 'USB001';       // USB_RAW 모드에서 사용하는 Windows 포트명
 
   if (printers.length > 0) {
     console.log('');
     console.log('  === 연결된 프린터 목록 ===');
     printers.forEach((p, i) => {
       const h = extractHostFromPortName(p.PortName);
-      const c = h === '127.0.0.1' ? 'USB/로컬' : 'LAN ' + h;
+      const isUsb = h === '127.0.0.1';
+      const portLabel = isUsb ? 'USB (' + p.PortName + ')' : 'LAN ' + h;
       console.log('  [' + (i+1) + '] ' + p.Name);
-      console.log('       포트: ' + p.PortName + '  →  ' + c);
+      console.log('       포트: ' + p.PortName + '  →  ' + portLabel);
     });
-    console.log('  [' + (printers.length+1) + '] IP 주소 직접 입력 (LAN 프린터)');
+    console.log('  [' + (printers.length+1) + '] IP 주소 직접 입력 (LAN/네트워크 프린터)');
     console.log('  =========================');
     console.log('');
 
@@ -177,30 +181,71 @@ async function interactiveSetup() {
 
     if (num >= 1 && num <= printers.length) {
       const sel = printers[num-1];
-      printerName    = sel.Name;
-      printerHost    = extractHostFromPortName(sel.PortName);
-      connectionType = printerHost === '127.0.0.1' ? 'USB' : 'NETWORK';
-      log('SETUP', '선택: ' + printerName + ' (' + connectionType + ': ' + printerHost + ')');
+      printerName = sel.Name;
+      const detectedHost = extractHostFromPortName(sel.PortName);
+      const isUsbPort = detectedHost === '127.0.0.1';
+
+      if (isUsbPort) {
+        // USB 연결: 출력 방식 선택
+        console.log('');
+        console.log('  [USB 연결 감지] 출력 방식을 선택하세요:');
+        console.log('  [1] USB 직접 출력  (copy /b → ' + sel.PortName + ') ← Zebra USB 권장');
+        console.log('  [2] TCP 출력       (127.0.0.1:9100, Zebra Setup Utilities 필요)');
+        console.log('');
+        const modeChoice = await ask(rl, '  방식 선택 [1]: ') || '1';
+        if (modeChoice !== '2') {
+          connectionType = 'USB_RAW';
+          usbPort = sel.PortName;  // e.g., 'USB001'
+          log('SETUP', '선택: ' + printerName + ' (USB_RAW → ' + usbPort + ')');
+        } else {
+          connectionType = 'TCP';
+          printerHost    = '127.0.0.1';
+          printerPort    = DEFAULT_PORT;
+          log('SETUP', '선택: ' + printerName + ' (TCP → 127.0.0.1:' + printerPort + ')');
+        }
+      } else {
+        connectionType = 'TCP';
+        printerHost    = detectedHost;
+        log('SETUP', '선택: ' + printerName + ' (TCP → ' + printerHost + ':' + printerPort + ')');
+      }
     } else {
       printerName = (await ask(rl, '  프린터 이름 (설명용): ')) || 'Zebra GK-420D';
       printerHost = (await ask(rl, '  IP 주소 [예: 192.168.1.50]: ')) || '127.0.0.1';
-      connectionType = printerHost === '127.0.0.1' ? 'USB' : 'NETWORK';
+      connectionType = 'TCP';
     }
   } else {
     console.log('  ** 설치된 프린터 없음. 직접 입력하세요. **');
-    printerName = (await ask(rl, '  프린터 이름: ')) || 'Zebra GK-420D';
-    printerHost = (await ask(rl, '  IP 주소 [127.0.0.1]: ')) || '127.0.0.1';
-    connectionType = printerHost === '127.0.0.1' ? 'USB' : 'NETWORK';
+    console.log('  [1] USB 직접 출력  (copy /b → USB001)');
+    console.log('  [2] TCP 출력       (IP:9100)');
+    const modeChoice = await ask(rl, '  방식 선택 [1]: ') || '1';
+    if (modeChoice !== '2') {
+      printerName = (await ask(rl, '  프린터 이름: ')) || 'Zebra GK-420D';
+      usbPort     = (await ask(rl, '  USB 포트 [USB001]: ')) || 'USB001';
+      connectionType = 'USB_RAW';
+    } else {
+      printerName = (await ask(rl, '  프린터 이름: ')) || 'Zebra GK-420D';
+      printerHost = (await ask(rl, '  IP 주소 [127.0.0.1]: ')) || '127.0.0.1';
+      const portInput = await ask(rl, '  TCP 포트 [9100]: ');
+      printerPort = parseInt(portInput, 10) || DEFAULT_PORT;
+      connectionType = 'TCP';
+    }
   }
 
-  const portInput = await ask(rl, '  TCP 포트 [기본 ' + DEFAULT_PORT + ']: ');
-  printerPort = parseInt(portInput, 10) || DEFAULT_PORT;
+  // TCP 모드일 때만 포트 추가 질문
+  if (connectionType === 'TCP') {
+    const portInput = await ask(rl, '  TCP 포트 [기본 ' + DEFAULT_PORT + ']: ');
+    printerPort = parseInt(portInput, 10) || DEFAULT_PORT;
+  }
 
   console.log('');
   console.log('  === 최종 설정 확인 ===');
   console.log('  프린터  : ' + printerName);
   console.log('  연결    : ' + connectionType);
-  console.log('  주소    : ' + printerHost + ':' + printerPort);
+  if (connectionType === 'USB_RAW') {
+    console.log('  USB 포트: ' + usbPort + '  (copy /b 직접 출력)');
+  } else {
+    console.log('  주소    : ' + printerHost + ':' + printerPort);
+  }
   console.log('  라벨    : 72mm x 40mm / Code39 / 203DPI');
   console.log('  ======================');
   console.log('');
@@ -209,7 +254,7 @@ async function interactiveSetup() {
   rl.close();
   if (ok.toLowerCase() === 'n') { log('SETUP', '설정 취소. 다시 실행하세요.'); process.exit(0); }
 
-  const cfg = { printerName, printerHost, printerPort, connectionType, labelWidthMm: 72, labelHeightMm: 40 };
+  const cfg = { printerName, connectionType, printerHost, printerPort, usbPort, labelWidthMm: 72, labelHeightMm: 40 };
   saveConfig(cfg);
   return cfg;
 }
@@ -270,7 +315,7 @@ function buildZpl(item) {
   ].join('\\n');
 }
 
-// ── TCP 전송 ──────────────────────────────────────────────────────────────
+// ── [모드 1] TCP 전송 (LAN / Zebra Setup Utilities TCP 리스너) ──────────────
 function sendZplViaTcp(zpl, host, port) {
   return new Promise((resolve, reject) => {
     const s = net.createConnection({ host, port }, () => s.write(zpl, 'utf8', () => s.end()));
@@ -280,21 +325,48 @@ function sendZplViaTcp(zpl, host, port) {
   });
 }
 
-function checkPrinterConnection(host, port) {
+// ── [모드 2] USB 직접 출력 (copy /b zplfile USB001) ──────────────────────────
+// Windows USB 연결 Zebra 프린터에서 TCP 없이 바로 출력
+function sendZplViaWindowsPort(zpl, portName) {
+  return new Promise((resolve, reject) => {
+    const tmpFile = path.join(os.tmpdir(), 'zebra_' + Date.now() + '.zpl');
+    try {
+      fs.writeFileSync(tmpFile, Buffer.from(zpl, 'ascii'));
+      // copy /b 명령으로 Windows 프린터 포트에 직접 전송
+      const cmd = 'copy /b "' + tmpFile + '" ' + portName;
+      log('PRINT', 'USB 직접 출력: ' + cmd);
+      exec(cmd, { timeout: 10000 }, (err, stdout, stderr) => {
+        try { fs.unlinkSync(tmpFile); } catch {}
+        if (err) { reject(new Error('USB 포트 전송 실패 (' + portName + '): ' + (stderr || err.message))); }
+        else { resolve(); }
+      });
+    } catch (e) { reject(e); }
+  });
+}
+
+// ── 프린터 연결 점검 (connectionType 자동 감지) ───────────────────────────────
+function checkPrinterConnection(config) {
+  if (config.connectionType === 'USB_RAW') {
+    // USB 직접 모드: 포트 존재 여부만 확인 (항상 OK로 처리, 실제 오류는 출력 시 감지)
+    log('INFO', '[OK] USB 직접 출력 모드 (' + config.usbPort + ') - 연결 점검 생략');
+    return Promise.resolve(true);
+  }
+  // TCP 모드 점검
   return new Promise(resolve => {
+    const { printerHost: host, printerPort: port } = config;
     const s = net.createConnection({ host, port }, () => {
       s.end();
-      log('INFO', '[OK] 프린터 연결 확인 (' + host + ':' + port + ')');
+      log('INFO', '[OK] 프린터 TCP 연결 확인 (' + host + ':' + port + ')');
       resolve(true);
     });
     s.on('error', err => {
-      log('WARN', '프린터 연결 불가 (' + host + ':' + port + ') - ' + err.message);
+      log('WARN', '프린터 TCP 연결 불가 (' + host + ':' + port + ') - ' + err.message);
       log('WARN', '프린터 전원 및 연결을 확인하세요. 에이전트는 계속 실행됩니다.');
       resolve(false);
     });
     s.setTimeout(3000, () => {
       s.destroy();
-      log('WARN', '프린터 연결 타임아웃 (3초)');
+      log('WARN', '프린터 TCP 연결 타임아웃 (3초)');
       resolve(false);
     });
   });
@@ -311,7 +383,12 @@ async function processQueueItem(row, supabase, config) {
   if (le) { log('WARN', '선점 실패 (이미 처리 중?)', le.message); return; }
 
   try {
-    await sendZplViaTcp(buildZpl(row), config.printerHost, config.printerPort);
+    const zpl = buildZpl(row);
+    if (config.connectionType === 'USB_RAW') {
+      await sendZplViaWindowsPort(zpl, config.usbPort || 'USB001');
+    } else {
+      await sendZplViaTcp(zpl, config.printerHost, config.printerPort);
+    }
     log('PRINT', '[OK] 출력 완료  ' + asset_no);
     await supabase.from('print_queue')
       .update({ print_status: 'PRINTED', printed_at: new Date().toISOString() })
@@ -334,16 +411,22 @@ async function processPendingOnStartup(supabase, config) {
   for (const row of data) await processQueueItem(row, supabase, config);
 }
 
+// ── Realtime 구독 (필터 없음 - 모든 INSERT 수신 후 코드에서 상태 체크) ────────
+// ※ 주의: Supabase Free 플랜에서 filter 옵션이 작동하지 않을 수 있어 제거함
 function setupRealtimeSubscription(supabase, config) {
-  log('INFO', 'Supabase Realtime 구독 시작...');
+  log('INFO', 'Supabase Realtime 구독 시작... (필터 없음 - 전체 INSERT 감지)');
   const ch = supabase.channel('zebra-print-agent')
     .on('postgres_changes',
-      { event: 'INSERT', schema: 'public', table: 'print_queue', filter: 'print_status=eq.PENDING' },
+      { event: 'INSERT', schema: 'public', table: 'print_queue' },  // 필터 제거
       async payload => {
-        if (payload.new) {
-          log('INFO', '신규 PENDING  IMEI:' + payload.new.imei);
-          await processQueueItem(payload.new, supabase, config);
+        if (!payload.new) return;
+        // 코드에서 직접 PENDING 체크 (필터 대신)
+        if (payload.new.print_status !== 'PENDING') {
+          log('INFO', 'INSERT 감지 (PENDING 아님, 건너뜀): ' + payload.new.print_status);
+          return;
         }
+        log('INFO', '[RT] 신규 PENDING 감지  자산:' + payload.new.asset_no + '  IMEI:' + payload.new.imei);
+        await processQueueItem(payload.new, supabase, config);
       })
     .subscribe((status, err) => {
       if (status === 'SUBSCRIBED') {
@@ -354,6 +437,23 @@ function setupRealtimeSubscription(supabase, config) {
       }
     });
   return ch;
+}
+
+// ── 폴링 백업 루프 (10초마다 PENDING 재확인 - Realtime 누락 방어) ────────────
+function startPollingLoop(supabase, config) {
+  log('INFO', 'PENDING 폴링 루프 시작 (간격: ' + (POLL_INTERVAL_MS/1000) + '초)');
+  setInterval(async () => {
+    const { data, error } = await supabase
+      .from('print_queue')
+      .select('*')
+      .eq('print_status', 'PENDING')
+      .order('created_at', { ascending: true })
+      .limit(10);
+    if (error) { log('WARN', '폴링 조회 실패', error.message); return; }
+    if (!data?.length) return;  // 조용히 패스
+    log('INFO', '[POLL] PENDING ' + data.length + '건 발견 → 처리');
+    for (const row of data) await processQueueItem(row, supabase, config);
+  }, POLL_INTERVAL_MS);
 }
 
 // ── 메인 ──────────────────────────────────────────────────────────────────
@@ -390,9 +490,10 @@ async function main() {
   console.log('');
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false } });
-  await checkPrinterConnection(config.printerHost, config.printerPort);
+  await checkPrinterConnection(config);
   await processPendingOnStartup(supabase, config);
   setupRealtimeSubscription(supabase, config);
+  startPollingLoop(supabase, config);  // Realtime 누락 방어용 폴링 백업
 
   log('INFO', '[PR] 상시 대기 -- 모바일 IMEI 확정 시 자동 라벨 출력');
   console.log('');
