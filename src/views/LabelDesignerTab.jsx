@@ -1028,7 +1028,7 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <label style={{ fontSize: '0.68rem', color: '#cbd5e1' }}>폰트 크기 (1 pt 단위)</label>
+                      <label style={{ fontSize: '0.68rem', color: '#cbd5e1' }}>폰트 크기</label>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <button
                           onClick={() => handleAdjustFontSize(-1)}
@@ -1038,14 +1038,14 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                         </button>
                         <input
                           type="number"
-                          min="6"
-                          max="60"
+                          min="10"
+                          max="80"
                           step="1"
-                          value={selectedElem.fontSizePt || 14}
+                          value={selectedElem.fontSizePt || 25}
                           onChange={e => handleElemPropChange('fontSizePt', e.target.value)}
                           style={{ width: '40px', backgroundColor: '#0f172a', border: '1px solid #38bdf8', borderRadius: '3px', color: '#facc15', fontSize: '0.72rem', fontWeight: 700, textAlign: 'center', padding: '1px 2px' }}
                         />
-                        <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>Pt</span>
+                        <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>pt</span>
                         <button
                           onClick={() => handleAdjustFontSize(1)}
                           style={{ background: '#0f172a', border: '1px solid #475569', color: '#cbd5e1', borderRadius: '3px', padding: '1px 4px', cursor: 'pointer', display: 'flex' }}
@@ -1056,10 +1056,10 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                     </div>
                     <input
                       type="range"
-                      min="6"
-                      max="60"
+                      min="10"
+                      max="80"
                       step="1"
-                      value={selectedElem.fontSizePt || 14}
+                      value={selectedElem.fontSizePt || 25}
                       onChange={e => handleElemPropChange('fontSizePt', e.target.value)}
                       style={{ accentColor: '#38bdf8', width: '100%' }}
                     />
@@ -1411,8 +1411,8 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                   displayVal += (SAMPLE_ITEM[elem.field] || elem.field?.toUpperCase() || '');
                 }
 
-                // ⭐️ 물리적 폰트 크기 정밀 변환 (1 pt = 25.4/72 mm ≈ 0.3528mm)
-                const fontSizePx = (elem.fontSizePt || 12) * (25.4 / 72) * PX_PER_MM;
+                // ⭐️ ZPL Dot 기준 캔버스 정밀 1:1 비례 변환 (1mm = 8 dots)
+                const fontSizePx = (elem.fontSizePt || 25) * (PX_PER_MM / 8.0);
 
                 return (
                   <div

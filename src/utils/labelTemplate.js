@@ -515,14 +515,10 @@ export function generateDynamicZpl(item = {}, template = DEFAULT_LABEL_TEMPLATE)
 
   const zplCommands = [
     '^XA',
-    '^MD21',
-    `^PW${dotsW}`,
-    `^LL${dotsH}`,
-    '^LH0,0',
+    '^MD21^LH0,0',
     '^SEE:UHANGUL.DAT^FS',
     '^CW1,E:KFONT3.FNT^FS',
-    '^CI26^FS',
-    '^MMT'
+    '^CI26^FS'
   ];
 
   const getValue = (elem) => {
@@ -549,10 +545,8 @@ export function generateDynamicZpl(item = {}, template = DEFAULT_LABEL_TEMPLATE)
       const val = getValue(elem);
       const prefix = elem.prefix || '';
       const text = `${prefix}${val}`;
-      const fontPt = elem.fontSizePt || 12;
-
-      // ⭐️ 203 DPI 기준 Pt -> ZPL Dot 정밀 매핑 (12pt = 30 dots ≈ 3.75mm 실무 표준)
-      const fontH = Math.max(18, Math.min(100, Math.round(fontPt * 2.5)));
+      // ⭐️ UI 설정값 그대로 1:1 ZPL 폰트 크기 매핑 (예: 25 -> ^A1N,25,25)
+      const fontH = Math.max(10, Math.min(120, Math.round(elem.fontSizePt || 25)));
       const fontW = fontH;
 
       // 한글 포함 시 UBUS 표준 ^A1N (KFONT3), 영문 전용은 ^A0N

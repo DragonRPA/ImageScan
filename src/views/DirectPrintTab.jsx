@@ -874,7 +874,7 @@ export default function DirectPrintTab({ onError, onOpenPrintModal }) {
                 } else {
                   displayVal += (currentData[elem.field] || elem.field?.toUpperCase() || '');
                 }
-                const fontSizePx = (elem.fontSizePt || 12) * (25.4 / 72) * PX_PER_MM;
+                const fontSizePx = (elem.fontSizePt || 25) * (PX_PER_MM / 8.0);
 
                 return (
                   <div
