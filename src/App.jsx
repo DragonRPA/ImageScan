@@ -58,7 +58,7 @@ export default function App() {
         setRefreshKey(prev => prev + 1);
       },
       onError: (err) => {
-        setErrorMessage(err);
+        setErrorMessage(typeof err === 'string' ? err : (err?.message || '스캐너 오류가 발생했습니다.'));
       }
     });
   }, []);
@@ -116,7 +116,7 @@ export default function App() {
                 라벨 출력 관리
               </h1>
               <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>
-                v1.6.0.Build.19 | 2026-08-15
+                v1.6.0.Build.20 | 2026-08-15
               </span>
             </div>
           </div>
@@ -217,13 +217,13 @@ export default function App() {
       <main>
         {deviceMode === 'mobile' ? (
           <MobileScannerView
-            onError={(msg) => setErrorMessage(msg)}
+            onError={(msg) => setErrorMessage(typeof msg === 'string' ? msg : (msg?.message || '모바일 오류'))}
             onOpenConfigModal={() => setIsConfigOpen(true)}
           />
         ) : (
           <PCDashboardView
             key={refreshKey}
-            onError={(msg) => setErrorMessage(msg)}
+            onError={(msg) => setErrorMessage(typeof msg === 'string' ? msg : (msg?.message || '시스템 오류'))}
             onOpenExportModal={(items) => setExportModalState({ isOpen: true, items })}
             onOpenPrintModal={(items, config) => setPrintModalState({ isOpen: true, items, config })}
             onOpenConfigModal={() => setIsConfigOpen(true)}

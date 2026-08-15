@@ -358,7 +358,13 @@ export default function DirectPrintTab({ onError, onOpenPrintModal }) {
         setLastScannedItem(matchedItem);
 
         // 1. ⭐️ 캔버스 100% WYSIWYG 비트맵 ZPL 코드 생성 (한글/위치/바코드 1:1 완벽 일치)
-        const zpl = await generateWysiwygZpl(matchedItem, selectedTemplate);
+        let zpl = '';
+        try {
+          zpl = await generateWysiwygZpl(matchedItem, selectedTemplate);
+        } catch (zplErr) {
+          console.warn('Wysiwyg ZPL 생성 폴백:', zplErr);
+          zpl = generateDynamicZpl(matchedItem, selectedTemplate);
+        }
         setLastZpl(zpl);
 
         // 2. 선택된 프린터로 즉시 ZPL 전송

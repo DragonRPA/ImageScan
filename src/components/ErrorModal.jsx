@@ -4,6 +4,10 @@ import { AlertTriangle, X } from 'lucide-react';
 export default function ErrorModal({ errorMessage, onClose }) {
   if (!errorMessage) return null;
 
+  const displayMessage = typeof errorMessage === 'string'
+    ? errorMessage
+    : (errorMessage?.message || JSON.stringify(errorMessage, null, 2));
+
   return (
     <div className="modal-overlay">
       <div className="modal-content" style={{ borderColor: '#ef4444' }}>
@@ -18,8 +22,8 @@ export default function ErrorModal({ errorMessage, onClose }) {
         </div>
 
         <div style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', padding: '16px', borderRadius: '8px', marginBottom: '20px' }}>
-          <p style={{ color: '#fca5a5', fontSize: '0.95rem', lineHeight: 1.5, wordBreak: 'break-word' }}>
-            {errorMessage}
+          <p style={{ color: '#fca5a5', fontSize: '0.95rem', lineHeight: 1.5, wordBreak: 'break-word', whiteSpace: 'pre-wrap', margin: 0 }}>
+            {displayMessage}
           </p>
         </div>
 

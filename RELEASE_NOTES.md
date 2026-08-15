@@ -1,5 +1,15 @@
 # 릴리즈 노트 (RELEASE_NOTES.md)
 
+## [v1.6.0.Build.20] - 2026-08-15 21:34:00 (KST)
+
+### 🛡️ [시스템 안정성] React Error #31 (Error 객체 직접 렌더링) 완전 해결
+
+1. **`ErrorModal` 및 `App.jsx` 에러 메시지 문자열(String) 안전 변환 방어벽 구축**
+   - 하드웨어 통신 또는 렌더링 예외 발생 시 `Error` 객체가 JSX 노드로 직접 전달되어 화면 전체가 크래시(`Minified React error #31`)되던 문제 완전 해결
+2. **`DirectPrintTab` WYSIWYG 비트맵 ZPL 생성 2중 fallback 안전망 적용**
+
+---
+
 ## [v1.6.0.Build.19] - 2026-08-15 21:20:00 (KST)
 
 ### 🖨️ [인쇄 파이프라인 단일화] 1회 출력 명령 = 1회 ZPL 전송 완벽 보장 & 큐 PENDING 중복 제거
