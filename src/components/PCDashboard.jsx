@@ -76,6 +76,7 @@ export default function PCDashboard({
   // 데이터 로드 (기본 대분류: IT)
   const loadData = async () => {
     setLoading(true);
+    setCellSelection(null);
     try {
       const data = await fetchScansFromSupabase({ category_major: 'IT' });
       setItems(data || []);
@@ -90,6 +91,7 @@ export default function PCDashboard({
   // ⭐️ [명시적 조회] DB 직통 쿼리 실행 (17,000건 전량 범위 지원)
   const handleSearch = async () => {
     setLoading(true);
+    setCellSelection(null); // 조회 시 셀 선택 영역 초기화
     try {
       const filters = {
         category_major: filterCategory,
@@ -147,6 +149,7 @@ export default function PCDashboard({
     setFilterStatus('ALL');
     setSearchGeneral('');
     setSelectedIds([]);
+    setCellSelection(null); // 초기화 시 셀 선택 영역 초기화
     setLoading(true);
     try {
       const data = await fetchScansFromSupabase({ category_major: 'IT' });
