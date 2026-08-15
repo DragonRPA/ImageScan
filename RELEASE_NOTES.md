@@ -1,5 +1,16 @@
 # 릴리즈 노트 (RELEASE_NOTES.md)
 
+## [v1.6.0.Build.19] - 2026-08-15 21:20:00 (KST)
+
+### 🖨️ [인쇄 파이프라인 단일화] 1회 출력 명령 = 1회 ZPL 전송 완벽 보장 & 큐 PENDING 중복 제거
+
+1. **`insertPrintQueue`의 강제 `PENDING` 하드코딩 버그 완전 박멸**
+   - 직접 출력 시 `status: 'COMPLETED'`로 넘겨도 DB에 무조건 `PENDING`으로 저장되어, 에이전트의 실시간 큐 리스너가 2번째 더미 라벨을 또 출력하던 근본 원인 해결
+   - 이제 직접 출력 시 `print_status: 'PRINTED'`로 INSERT되어 에이전트가 중복 인쇄하지 않고 1회 출력만 무결하게 수행됨
+2. **모든 뷰(`DirectPrintTab`, `LabelDesignerTab`) 캔버스 폰트 크기 계산식 100% 통일**
+
+---
+
 ## [v1.6.0.Build.18] - 2026-08-15 21:15:00 (KST)
 
 ### 📐 [캔버스 폰트 비율 혁신] 물리적 Pt ➔ mm(0.3528mm) 정밀 렌더링 공식 복구

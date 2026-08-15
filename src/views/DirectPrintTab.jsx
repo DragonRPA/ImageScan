@@ -429,7 +429,7 @@ export default function DirectPrintTab({ onError, onOpenPrintModal }) {
     }
     setIsProcessing(true);
     try {
-      const zpl = generateDynamicZpl(lastScannedItem, selectedTemplate);
+      const zpl = await generateWysiwygZpl(lastScannedItem, selectedTemplate);
       await sendZplToPrinter(zpl, activePrinter);
       setStatusMessage({
         type: 'success',
@@ -862,7 +862,7 @@ export default function DirectPrintTab({ onError, onOpenPrintModal }) {
                 } else {
                   displayVal += (currentData[elem.field] || elem.field?.toUpperCase() || '');
                 }
-                const fontSizePx = (elem.fontSizePt || 20) * 0.46 * (PX_PER_MM / 8.5);
+                const fontSizePx = (elem.fontSizePt || 12) * (25.4 / 72) * PX_PER_MM;
 
                 return (
                   <div

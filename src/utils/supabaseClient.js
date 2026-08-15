@@ -431,29 +431,40 @@ export function subscribeRealtimeScans(onInsertCallback) {
  * Insert a single confirmed asset record into the print_queue table.
  * Supports dynamic ZPL payload, key_value and record_data.
  */
-export async function insertPrintQueue(item, templateOverride = null) {
+export async function insertPrintQueue(item, templateOverride = null, customStatus = null) {
   const client = getSupabaseClient();
   if (!client) {
     console.warn('[print_queue] Supabase 미연결 - 큐 등록 건너뜀');
     return null;
   }
 
-  const { getStoredLabelTemplate, generateDynamicZpl } = await import('./labelTemplate');
+  const { getStoredLabelTemplate, generateWysiwygZpl, generateDynamicZpl } = await import('./labelTemplate');
   const template = templateOverride || getStoredLabelTemplate();
-  const zpl = generateDynamicZpl(item, template);
+  
+  let zpl = item.zplCode || item.zpl_payload;
+  if (!zpl) {
+    try {
+      zpl = await generateWysiwygZpl(item, template);
+    } catch (e) {
+      zpl = generateDynamicZpl(item, template);
+    }
+  }
 
   const keyValue = item.key_value || item.asset_no || item.assetNo || item.imei || 'RECORD';
+  const statusToSet = customStatus || item.print_status || item.status || 'PENDING';
+  const isAlreadyPrinted = statusToSet === 'PRINTED' || statusToSet === 'COMPLETED';
 
   const payload = {
     key_value:    String(keyValue),
-    record_data:  item,
+    record_data:  item.itemData || item,
     zpl_payload:  zpl,
     asset_no:     item.asset_no     || item.assetNo  || keyValue,
     imei:         item.imei                           || '',
     mac_address:  item.mac_address  || item.macAddress || '',
     serial_no:    item.serial_no    || item.serialNo  || '',
-    print_status: 'PENDING',
-    requested_by: 'MOBILE'
+    print_status: isAlreadyPrinted ? 'PRINTED' : statusToSet,
+    printed_at:   isAlreadyPrinted ? new Date().toISOString() : null,
+    requested_by: item.requested_by || 'DIRECT'
   };
 
   const { data, error } = await client
