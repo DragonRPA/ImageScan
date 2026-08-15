@@ -26,12 +26,99 @@ export const DEFAULT_LABEL_TEMPLATE = {
 };
 
 /**
- * ⭐️ 새 템플릿 생성 팩토리 (모든 아이템이 깨끗한 빈 서식으로 시작)
+ * ⭐️ 100% 동적 빈 라벨 서식 생성기 (대상 테이블의 실제 스키마 필드 1:1 바인딩)
  */
-export function createEmptyTemplate(name = '새 라벨 서식', targetTable = 'asset', widthMm = 72, heightMm = 40, targetPrinterId = '', targetPrinterName = '') {
+export function createEmptyTemplate(name = '새 라벨 서식', targetTable = 'asset', widthMm = 72, heightMm = 40, targetPrinterId = '', targetPrinterName = '', customFields = null) {
   const dotsWidth = Math.round(widthMm * 8);
   const dotsHeight = Math.round(heightMm * 8);
   const id = `tpl_custom_${Date.now()}`;
+
+  // 스키마 필드 결정 (인자로 넘겨받거나 로컬 스키마 조회)
+  let fields = customFields;
+  if (!fields || !Array.isArray(fields) || fields.length === 0) {
+    try {
+      const { getTableSchema } = require('./dynamicSchema');
+      const s = getTableSchema(targetTable);
+      fields = s?.fields || [];
+    } catch (e) {
+      fields = [];
+    }
+  }
+
+  // 1. 스키마 기반 텍스트 요소 생성
+  const dynamicElements = fields.map((f, idx) => ({
+    id: `elem_${f.id}`,
+    name: f.name,
+    type: 'text',
+    field: f.id,
+    prefix: f.isKey ? '' : `${f.name}: `,
+    xMm: 2.0,
+    yMm: Math.min(heightMm - 6, 2.0 + (idx * 4.5)),
+    fontSizePt: f.isKey ? 20 : 15,
+    fontFamily: 'A0N',
+    visible: idx === 0 || f.isKey // 기본 키나 첫 항목은 표시
+  }));
+
+  // 바코드 대상 필드 (PK 또는 첫 번째 바코드 대상 필드)
+  const barcodeTargetField = fields.find(f => f.isBarcodeTarget || f.isKey)?.id || (fields[0]?.id || 'asset_no');
+
+  // 2. 바코드 요소
+  dynamicElements.push({
+    id: 'elem_barcode',
+    name: '바코드 / QR',
+    type: 'barcode',
+    barcodeType: 'CODE128',
+    targetField: barcodeTargetField,
+    prefix: '',
+    xMm: 2.0,
+    yMm: Math.min(heightMm - 12, 18.0),
+    heightMm: 10.0,
+    qrScale: 4,
+    showText: true,
+    visible: true
+  });
+
+  // 3. 구분선
+  dynamicElements.push({
+    id: 'elem_divider',
+    name: '구분선',
+    type: 'line',
+    xMm: 1.5,
+    yMm: 7.0,
+    widthMm: Math.max(10, widthMm - 3),
+    thicknessMm: 0.25,
+    visible: false
+  });
+
+  // 4. 추가 텍스트 1 ~ 4
+  for (let i = 1; i <= 4; i++) {
+    dynamicElements.push({
+      id: `elem_custom_text_${i}`,
+      name: `추가 텍스트 ${i}`,
+      type: 'text',
+      field: `custom_text_${i}`,
+      customValue: '',
+      prefix: '',
+      xMm: 2.0,
+      yMm: Math.min(heightMm - 4, 24.0 + (i * 3.5)),
+      fontSizePt: 14,
+      fontFamily: 'A0N',
+      visible: false
+    });
+  }
+
+  // 5. 이미지 / 로고
+  dynamicElements.push({
+    id: 'elem_image',
+    name: '이미지 / 로고',
+    type: 'image',
+    imageDataUrl: '',
+    widthMm: 18.0,
+    heightMm: 12.0,
+    xMm: Math.max(10, widthMm - 22.0),
+    yMm: 2.0,
+    visible: false
+  });
 
   return {
     templateId: id,
@@ -48,263 +135,7 @@ export function createEmptyTemplate(name = '새 라벨 서식', targetTable = 'a
       dotsWidth,
       dotsHeight
     },
-    elements: [
-      {
-        id: 'elem_asset_no',
-        name: targetTable === 'temp_asset' ? '임시자산번호' : '자산번호',
-        type: 'text',
-        field: 'asset_no',
-        prefix: '',
-        xMm: 2.0,
-        yMm: 2.0,
-        fontSizePt: 22,
-        fontFamily: 'A0N',
-        visible: false
-      },
-      {
-        id: 'elem_category_major',
-        name: '대분류',
-        type: 'text',
-        field: 'category_major',
-        prefix: '',
-        xMm: 2.0,
-        yMm: 6.0,
-        fontSizePt: 16,
-        fontFamily: 'A0N',
-        visible: false
-      },
-      {
-        id: 'elem_product_name',
-        name: '제품명',
-        type: 'text',
-        field: 'product_name',
-        prefix: '제품명: ',
-        xMm: 2.0,
-        yMm: 8.0,
-        fontSizePt: 16,
-        fontFamily: 'A0N',
-        visible: false
-      },
-      {
-        id: 'elem_model_name',
-        name: '모델명',
-        type: 'text',
-        field: 'model_name',
-        prefix: 'M/N: ',
-        xMm: 2.0,
-        yMm: 13.0,
-        fontSizePt: 16,
-        fontFamily: 'A0N',
-        visible: false
-      },
-      {
-        id: 'elem_serial_no',
-        name: '제조번호(시리얼)',
-        type: 'text',
-        field: 'serial_no',
-        prefix: 'S/N: ',
-        xMm: 2.0,
-        yMm: 18.0,
-        fontSizePt: 16,
-        fontFamily: 'A0N',
-        visible: false
-      },
-      {
-        id: 'elem_asset_option',
-        name: '옵션',
-        type: 'text',
-        field: 'asset_option',
-        prefix: '옵션: ',
-        xMm: 2.0,
-        yMm: 23.0,
-        fontSizePt: 14,
-        fontFamily: 'A0N',
-        visible: false
-      },
-      {
-        id: 'elem_shelf_no',
-        name: '선반번호',
-        type: 'text',
-        field: 'shelf_no',
-        prefix: '선반: ',
-        xMm: 45.0,
-        yMm: 2.0,
-        fontSizePt: 16,
-        fontFamily: 'A0N',
-        visible: false
-      },
-      {
-        id: 'elem_imei',
-        name: 'IMEI',
-        type: 'text',
-        field: 'imei',
-        prefix: 'IMEI: ',
-        xMm: 2.0,
-        yMm: 27.0,
-        fontSizePt: 14,
-        fontFamily: 'A0N',
-        visible: false
-      },
-      {
-        id: 'elem_mac_wlan',
-        name: 'MAC (wlan)',
-        type: 'text',
-        field: 'mac_wlan',
-        prefix: 'MAC(W): ',
-        xMm: 2.0,
-        yMm: 31.0,
-        fontSizePt: 13,
-        fontFamily: 'A0N',
-        visible: false
-      },
-      {
-        id: 'elem_mac_lan',
-        name: 'MAC (lan)',
-        type: 'text',
-        field: 'mac_lan',
-        prefix: 'MAC(L): ',
-        xMm: 2.0,
-        yMm: 35.0,
-        fontSizePt: 13,
-        fontFamily: 'A0N',
-        visible: false
-      },
-      {
-        id: 'elem_asset_status',
-        name: '자산상태',
-        type: 'text',
-        field: 'asset_status',
-        prefix: '상태: ',
-        xMm: 45.0,
-        yMm: 6.0,
-        fontSizePt: 14,
-        fontFamily: 'A0N',
-        visible: false
-      },
-      {
-        id: 'elem_spec',
-        name: '구성요소(사양)',
-        type: 'text',
-        field: 'spec',
-        prefix: '사양: ',
-        xMm: 2.0,
-        yMm: 39.0,
-        fontSizePt: 12,
-        fontFamily: 'A0N',
-        visible: false
-      },
-      {
-        id: 'elem_repair_date',
-        name: '교진일자',
-        type: 'text',
-        field: 'repair_date',
-        prefix: '교진일: ',
-        xMm: 45.0,
-        yMm: 10.0,
-        fontSizePt: 13,
-        fontFamily: 'A0N',
-        visible: false
-      },
-      {
-        id: 'elem_remark',
-        name: '비고',
-        type: 'text',
-        field: 'remark',
-        prefix: '',
-        xMm: 2.0,
-        yMm: 43.0,
-        fontSizePt: 12,
-        fontFamily: 'A0N',
-        visible: false
-      },
-      {
-        id: 'elem_divider',
-        name: '구분선',
-        type: 'line',
-        xMm: 1.5,
-        yMm: 7.0,
-        widthMm: Math.max(10, widthMm - 3),
-        thicknessMm: 0.25,
-        visible: false
-      },
-      {
-        id: 'elem_barcode',
-        name: '바코드 / QR',
-        type: 'barcode',
-        barcodeType: 'CODE128',
-        targetField: 'asset_no',
-        prefix: '',
-        xMm: 2.0,
-        yMm: 22.0,
-        heightMm: 10.0,
-        qrScale: 4,
-        showText: true,
-        visible: false
-      },
-      {
-        id: 'elem_custom_text_1',
-        name: '추가 텍스트 1',
-        type: 'text',
-        field: 'custom_text_1',
-        customValue: '',
-        prefix: '',
-        xMm: 2.0,
-        yMm: 2.0,
-        fontSizePt: 14,
-        fontFamily: 'A0N',
-        visible: false
-      },
-      {
-        id: 'elem_custom_text_2',
-        name: '추가 텍스트 2',
-        type: 'text',
-        field: 'custom_text_2',
-        customValue: '',
-        prefix: '',
-        xMm: 2.0,
-        yMm: 6.0,
-        fontSizePt: 14,
-        fontFamily: 'A0N',
-        visible: false
-      },
-      {
-        id: 'elem_custom_text_3',
-        name: '추가 텍스트 3',
-        type: 'text',
-        field: 'custom_text_3',
-        customValue: '',
-        prefix: '',
-        xMm: 2.0,
-        yMm: 10.0,
-        fontSizePt: 14,
-        fontFamily: 'A0N',
-        visible: false
-      },
-      {
-        id: 'elem_custom_text_4',
-        name: '추가 텍스트 4',
-        type: 'text',
-        field: 'custom_text_4',
-        customValue: '',
-        prefix: '',
-        xMm: 2.0,
-        yMm: 14.0,
-        fontSizePt: 14,
-        fontFamily: 'A0N',
-        visible: false
-      },
-      {
-        id: 'elem_image',
-        name: '이미지 / 로고',
-        type: 'image',
-        imageDataUrl: '',
-        widthMm: 18.0,
-        heightMm: 12.0,
-        xMm: 45.0,
-        yMm: 2.0,
-        visible: false
-      }
-    ]
+    elements: dynamicElements
   };
 }
 

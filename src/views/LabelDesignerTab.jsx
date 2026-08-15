@@ -118,11 +118,24 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
   const canvasWidthPx = (template.paper?.widthMm || 72) * PX_PER_MM;
   const canvasHeightPx = (template.paper?.heightMm || 40) * PX_PER_MM;
 
-  // 현재 서식의 대상 테이블 및 스키마 (SSOT)
-  const currentTargetTable = template.targetTable || 'asset';
-  const currentTableSchema = useMemo(() => getTableSchema(currentTargetTable), [currentTargetTable]);
-  const tableFields = useMemo(() => currentTableSchema.fields || [], [currentTableSchema]);
+  // 현재 서식의 대상 테이블 및 스키마 (Supabase 실제 스키마 1:1 실시간 동기화)
+  const currentTargetTable = template.targetTable || template.paper?.targetTable || 'asset';
+  const [currentTableSchema, setCurrentTableSchema] = useState(() => getTableSchema(currentTargetTable) || DEFAULT_SCHEMA_DEF);
 
+  // ⭐️ 타겟 테이블 변경 시 Supabase 실제 스키마 실시간 비동기 로드
+  useEffect(() => {
+    let isMounted = true;
+    fetchTableSchema(currentTargetTable).then(s => {
+      if (isMounted && s && Array.isArray(s.fields) && s.fields.length > 0) {
+        setCurrentTableSchema(s);
+      }
+    }).catch(err => {
+      console.warn('라벨 디자이너 스키마 로드 예외:', err);
+    });
+    return () => { isMounted = false; };
+  }, [currentTargetTable]);
+
+  const tableFields = useMemo(() => currentTableSchema.fields || [], [currentTableSchema]);
   const selectedElem = (template.elements || []).find(e => e.id === selectedElemId) || null;
 
   // ⭐️ 초기 로드: 백엔드 전체 라벨 서식 목록 & 로컬 프린터 하드웨어 동기화
@@ -144,65 +157,69 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
     });
   }, []);
 
-  // ★ 대상 테이블 스키마에 따라 template.elements의 표시명 및 신규 필드 자동 동기화
+  // ★ 대상 테이블 스키마에 따라 template.elements의 헤더 항목을 정확히 1:1 동기화 (이전 테이블 잔재 완벽 청소)
   useEffect(() => {
-    if (!currentTableSchema || !currentTableSchema.fields || !template || !template.elements) return;
+    if (!currentTableSchema || !Array.isArray(currentTableSchema.fields) || currentTableSchema.fields.length === 0 || !template || !Array.isArray(template.elements)) return;
 
     const schemaFieldMap = new Map();
     currentTableSchema.fields.forEach(f => schemaFieldMap.set(f.id, f));
 
-    let hasChanges = false;
-    const updatedElements = template.elements.map(elem => {
-      if (elem.type === 'text' && elem.field && schemaFieldMap.has(elem.field)) {
-        const schemaField = schemaFieldMap.get(elem.field);
-        if (elem.name !== schemaField.name) {
-          hasChanges = true;
-          return { ...elem, name: schemaField.name };
+    // 1. 공통 요소 보존 (바코드, 구분선, 추가 텍스트 1~4, 이미지)
+    const nonSchemaElements = template.elements.filter(elem => {
+      if (elem.type === 'barcode' || elem.type === 'line' || elem.type === 'image') return true;
+      if (elem.field?.startsWith('custom_text_')) return true;
+      return false;
+    });
+
+    // 2. 현재 스키마의 실제 필드들로만 텍스트 요소 구성
+    const schemaElements = currentTableSchema.fields.map((f, idx) => {
+      // 기존에 동일 필드로 설정된 좌표/크기/폰트/가시성이 있다면 승계
+      const existing = template.elements.find(e => e.field === f.id || e.id === `elem_${f.id}`);
+      if (existing) {
+        return {
+          ...existing,
+          id: `elem_${f.id}`,
+          name: f.name,
+          field: f.id,
+          prefix: existing.prefix !== undefined ? existing.prefix : (f.isKey ? '' : `${f.name}: `)
+        };
+      }
+      return {
+        id: `elem_${f.id}`,
+        name: f.name,
+        type: 'text',
+        field: f.id,
+        prefix: f.isKey ? '' : `${f.name}: `,
+        xMm: 2.0,
+        yMm: Math.min(35, 2.0 + (idx * 4.0)),
+        fontSizePt: f.isKey ? 20 : 15,
+        fontFamily: 'A0N',
+        visible: idx === 0 || f.isKey
+      };
+    });
+
+    // 3. 바코드 요소의 targetField가 현재 테이블 스키마에 없으면 PK 또는 첫 필드로 자동 보정
+    const updatedNonSchema = nonSchemaElements.map(elem => {
+      if (elem.type === 'barcode') {
+        const isTargetValid = currentTableSchema.fields.some(f => f.id === elem.targetField);
+        if (!isTargetValid) {
+          const defaultKey = currentTableSchema.fields.find(f => f.isKey || f.isBarcodeTarget)?.id || currentTableSchema.fields[0]?.id || 'asset_no';
+          return { ...elem, targetField: defaultKey };
         }
       }
       return elem;
     });
 
-    const existingFieldIds = new Set(
-      template.elements.filter(e => e.type === 'text').map(e => e.field)
-    );
-
-    currentTableSchema.fields.forEach((f, idx) => {
-      if (!existingFieldIds.has(f.id)) {
-        hasChanges = true;
-        updatedElements.push({
-          id: `elem_${f.id}`,
-          name: f.name,
+    // 4. 추가 텍스트 1~4 보장
+    for (let i = 1; i <= 4; i++) {
+      const ctId = `elem_custom_text_${i}`;
+      if (!updatedNonSchema.some(e => e.id === ctId)) {
+        updatedNonSchema.push({
+          id: ctId,
+          name: `추가 텍스트 ${i}`,
           type: 'text',
-          field: f.id,
-          prefix: `${f.name}: `,
-          xMm: 2.0,
-          yMm: Math.min(35, 14.0 + (idx * 3.5)),
-          fontSizePt: 16,
-          fontFamily: 'A0N',
-          visible: false
-        });
-      }
-    });
-
-    // ⭐️ 3. 임의 추가 텍스트 1 ~ 4 요소 자동 보장
-    const customTexts = [
-      { id: 'elem_custom_text_1', name: '추가 텍스트 1', defaultVal: '(주)드래곤렌탈' },
-      { id: 'elem_custom_text_2', name: '추가 텍스트 2', defaultVal: '검수완료' },
-      { id: 'elem_custom_text_3', name: '추가 텍스트 3', defaultVal: '취급주의' },
-      { id: 'elem_custom_text_4', name: '추가 텍스트 4', defaultVal: '' }
-    ];
-
-    customTexts.forEach((ct, i) => {
-      const found = updatedElements.find(e => e.id === ct.id);
-      if (!found) {
-        hasChanges = true;
-        updatedElements.push({
-          id: ct.id,
-          name: ct.name,
-          type: 'text',
-          field: `custom_text_${i + 1}`,
-          customValue: ct.defaultVal,
+          field: `custom_text_${i}`,
+          customValue: '',
           prefix: '',
           xMm: 2.0,
           yMm: 24.0 + (i * 3.5),
@@ -211,12 +228,11 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
           visible: false
         });
       }
-    });
+    }
 
-    // ⭐️ 4. 자유 비율 이미지 / 로고 요소 자동 보장
-    if (!updatedElements.some(e => e.id === 'elem_image' || e.type === 'image')) {
-      hasChanges = true;
-      updatedElements.push({
+    // 5. 이미지 / 로고 보장
+    if (!updatedNonSchema.some(e => e.id === 'elem_image' || e.type === 'image')) {
+      updatedNonSchema.push({
         id: 'elem_image',
         name: '이미지 / 로고',
         type: 'image',
@@ -229,10 +245,16 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
       });
     }
 
-    if (hasChanges) {
+    const combinedElements = [...schemaElements, ...updatedNonSchema];
+
+    // 요소 목록이 변경되었는지 검사하여 업데이트
+    const isDifferent = combinedElements.length !== template.elements.length ||
+      combinedElements.some((el, i) => el.id !== template.elements[i]?.id || el.name !== template.elements[i]?.name || el.field !== template.elements[i]?.field);
+
+    if (isDifferent) {
       setTemplate(prev => ({
         ...prev,
-        elements: updatedElements
+        elements: combinedElements
       }));
     }
   }, [currentTableSchema]);
@@ -485,19 +507,27 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
   };
 
   // ⭐️ [디자인 추가] 확인 및 템플릿 생성
-  const handleCreateNewDesign = () => {
+  const handleCreateNewDesign = async () => {
     if (!newDesignName.trim()) {
       alert('서식 명칭을 입력하세요.');
       return;
     }
     const foundPrn = printers.find(p => p.id === newDesignPrinterId);
+    
+    // 대상 테이블 최신 스키마 실시간 조회
+    let targetSchema = await fetchTableSchema(newDesignTable);
+    if (!targetSchema || !Array.isArray(targetSchema.fields)) {
+      targetSchema = getTableSchema(newDesignTable);
+    }
+
     const newPreset = createEmptyTemplate(
       newDesignName.trim(),
       newDesignTable,
       Number(newDesignWidth) || 72,
       Number(newDesignHeight) || 40,
       newDesignPrinterId || '',
-      foundPrn?.name || ''
+      foundPrn?.name || '',
+      targetSchema?.fields || []
     );
     saveStoredLabelTemplate(newPreset);
     const updated = getAllPresets();
@@ -704,7 +734,7 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
       }}>
         {/* ── [1/2] Left Panel: 설정 및 속성 편집기 ───────────────────── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', minWidth: 0 }}>
-          {/* 0. 디자인 명칭 */}
+          {/* 0. 디자인 명칭 & 대상 테이블 */}
           <div style={{
             backgroundColor: '#1e293b',
             border: '1px solid #38bdf8',
@@ -714,32 +744,73 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
             width: '100%',
             display: 'flex',
             flexDirection: 'column',
-            gap: '4px'
+            gap: '8px'
           }}>
-            <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#38bdf8' }}>
-              디자인 명칭
-            </label>
-            <input
-              type="text"
-              value={template.name || ''}
-              onChange={(e) => {
-                const val = e.target.value;
-                setTemplate(prev => ({ ...prev, name: val }));
-                setIsSaved(false);
-              }}
-              placeholder="서식 명칭을 입력하세요"
-              style={{
-                width: '100%',
-                boxSizing: 'border-box',
-                backgroundColor: '#0f172a',
-                border: '1px solid #475569',
-                borderRadius: '4px',
-                padding: '5px 8px',
-                color: '#f8fafc',
-                fontSize: '0.78rem',
-                fontWeight: 600
-              }}
-            />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#38bdf8' }}>
+                디자인 명칭
+              </label>
+              <input
+                type="text"
+                value={template.name || ''}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setTemplate(prev => ({ ...prev, name: val }));
+                  setIsSaved(false);
+                }}
+                placeholder="서식 명칭을 입력하세요"
+                style={{
+                  width: '100%',
+                  boxSizing: 'border-box',
+                  backgroundColor: '#0f172a',
+                  border: '1px solid #475569',
+                  borderRadius: '4px',
+                  padding: '5px 8px',
+                  color: '#f8fafc',
+                  fontSize: '0.78rem',
+                  fontWeight: 600
+                }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#38bdf8' }}>
+                  대상 테이블 선택
+                </label>
+                <span style={{ fontSize: '0.62rem', color: '#38bdf8', fontWeight: 600 }}>
+                  {currentTargetTable === 'temp_asset' ? '임시 데이터 스키마' : '정규 자산 스키마'}
+                </span>
+              </div>
+              <select
+                value={currentTargetTable}
+                onChange={e => {
+                  const val = e.target.value;
+                  setTemplate(prev => ({
+                    ...prev,
+                    targetTable: val,
+                    paper: {
+                      ...(prev.paper || {}),
+                      targetTable: val
+                    }
+                  }));
+                  setIsSaved(false);
+                }}
+                style={{
+                  width: '100%',
+                  backgroundColor: '#0f172a',
+                  border: '1px solid #38bdf8',
+                  borderRadius: '4px',
+                  padding: '5px 8px',
+                  color: '#38bdf8',
+                  fontSize: '0.75rem',
+                  fontWeight: 700
+                }}
+              >
+                <option value="asset">asset (자산 관리 - 정규 헤더)</option>
+                <option value="temp_asset">temp_asset (임시 데이터 - 스캔/검수 헤더)</option>
+              </select>
+            </div>
           </div>
 
           {/* 0-1. ⭐️ 출력 대상 프린터 지정 (서식-프린터 1:1 고정) */}
