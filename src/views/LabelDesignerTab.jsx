@@ -429,7 +429,7 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
     }
   };
 
-  const currentZpl = useMemo(() => generateDynamicZpl(SAMPLE_ITEM, template), [template]);
+  const currentZpl = useMemo(() => (template ? generateDynamicZpl(SAMPLE_ITEM, template) : ''), [template, SAMPLE_ITEM]);
 
   useEffect(() => {
     if (!isZplCustomized) {
@@ -439,11 +439,12 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
 
   // ⭐️ [수정된 ZPL로 직접 즉시 테스트 인쇄]
   const handleManualCustomZplPrint = async () => {
+    if (!template) return;
     setIsPrinting(true);
     try {
       const zplToSend = customZpl || currentZpl;
       const registered = getRegisteredPrinters();
-      const targetId = template.targetPrinterId || getActivePrinterId();
+      const targetId = template?.targetPrinterId || getActivePrinterId();
       const targetPrinter = registered.find(p => p.id === targetId) || registered[0] || { type: 'agent_auto', name: '기본 라벨 프린터' };
 
       const res = await sendZplToPrinter(zplToSend, targetPrinter);
@@ -535,9 +536,9 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
       await deleteStoredLabelTemplate(presetId);
       const updated = getAllPresets();
       setPresets(updated);
-      if (template.templateId === presetId) {
-        setTemplate(updated[0] || DEFAULT_LABEL_TEMPLATE);
-        setSelectedElemId(updated[0]?.elements[0]?.id || 'elem_asset_no');
+      if (template?.templateId === presetId) {
+        setTemplate(null);
+        setSelectedElemId('elem_asset_no');
       }
     }
   };
@@ -2730,7 +2731,7 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
             {/* Presets List */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', overflowY: 'auto', maxHeight: '420px', paddingRight: '4px' }} className="grid-scrollbar">
               {presets.map(p => {
-                const isCurrent = p.templateId === template.templateId;
+                const isCurrent = template ? (p.templateId === template.templateId) : false;
                 const isTemp = p.targetTable === 'temp_asset';
 
                 return (
