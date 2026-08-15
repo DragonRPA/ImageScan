@@ -676,8 +676,8 @@ export async function syncTemplatesWithBackend() {
       // 백엔드 데이터를 템플릿 포맷으로 매핑
       const backendPresets = data.map(row => ({
         templateId: row.id,
-        targetTable: row.target_table || (row.schema_id?.includes('temp') ? 'temp_asset' : 'asset'),
-        schemaId: row.schema_id || (row.target_table === 'temp_asset' ? 'temp_asset_schema' : 'asset_schema'),
+        targetTable: row.paper?.targetTable || row.target_table || (row.name?.includes('임시') ? 'temp_asset' : 'asset'),
+        schemaId: row.schema_id || 'main_schema',
         name: row.name,
         isDefault: Boolean(row.is_default),
         paper: row.paper || { widthMm: 72, heightMm: 40, dpi: 203, dotsWidth: 576, dotsHeight: 320 },
@@ -719,8 +719,8 @@ export async function fetchBackendLabelTemplate() {
     if (!error && data && data.paper && Array.isArray(data.elements)) {
       const tpl = {
         templateId: data.id,
-        targetTable: data.target_table || 'asset',
-        schemaId: data.schema_id,
+        targetTable: data.paper?.targetTable || data.target_table || 'asset',
+        schemaId: data.schema_id || 'main_schema',
         name: data.name,
         paper: data.paper,
         elements: data.elements,
@@ -736,21 +736,26 @@ export async function fetchBackendLabelTemplate() {
 }
 
 /**
- * Supabase 백엔드에 라벨 서식 저장 (온라인 DB + 로컬 동시 보존)
+ * ⭐️ Supabase 백엔드에 라벨 서식 저장 (온라인 DB + 로컬 동시 보존)
  */
 export async function saveBackendLabelTemplate(template) {
   saveStoredLabelTemplate(template);
   const client = getSupabaseClient();
-  if (!client) return { success: true, message: '로컬 서식 저장 완료' };
+  if (!client) return { success: true, message: '로컬 서식 저장 완료 (DB 클라이언트 없음)' };
 
   try {
+    const targetTable = template.targetTable || template.paper?.targetTable || 'asset';
+    const paperObj = {
+      ...(template.paper || { widthMm: 72, heightMm: 40, dpi: 203, dotsWidth: 576, dotsHeight: 320 }),
+      targetTable: targetTable
+    };
+
     const payload = {
       id: template.templateId || `tpl_custom_${Date.now()}`,
-      schema_id: template.schemaId || 'main_schema',
-      target_table: template.targetTable || 'asset',
+      schema_id: null,
       name: template.name || '자산 대형 72×40mm',
-      paper: template.paper,
-      elements: template.elements,
+      paper: paperObj,
+      elements: Array.isArray(template.elements) ? template.elements : [],
       is_default: Boolean(template.isDefault),
       updated_at: new Date().toISOString()
     };
@@ -759,8 +764,8 @@ export async function saveBackendLabelTemplate(template) {
     if (error) throw error;
     return { success: true, message: '온라인 DB 서식 저장 완료' };
   } catch (err) {
-    console.warn('백엔드 라벨 서식 저장 오류 (로컬만 저장됨):', err);
-    return { success: true, message: '로컬 서식 저장 완료' };
+    console.error('백엔드 라벨 서식 저장 오류:', err);
+    return { success: false, message: `DB 저장 오류: ${err.message}` };
   }
 }
 

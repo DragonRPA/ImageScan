@@ -1,5 +1,17 @@
 # 릴리즈 노트 (RELEASE_NOTES.md)
 
+## [v1.6.0.Build.11] - 2026-08-15 20:15:00 (KST)
+
+### ☁️ [라벨 서식 DB 저장] Supabase `label_templates` 스키마 정합성 및 저장 오류 수정
+
+1. **Supabase `label_templates` 저장 페이로드 스키마 정합성 보정 (`saveBackendLabelTemplate`)**
+   - DB 테이블에 없던 `target_table` 단독 컬럼 대신 `paper: { ...paper, targetTable }` 내장 및 `schema_id: null`로 스키마 캐시 불일치 에러(`PGRST204`)를 완벽히 해결
+2. **빌트인 기본 서식 3종 Supabase 원격 DB 시딩 완료**
+   - `tpl_asset_default_72x40`, `tpl_asset_compact_50x30`, `tpl_temp_asset_default_72x40` 원격 DB 적재 완료
+3. **디자이너 화면에서 서식 저장 시 성공/실패 명확한 피드백 반영**
+
+---
+
 ## [v1.6.0.Build.10] - 2026-08-15 20:08:00 (KST)
 
 ### ⚡ [블루투스 스캐너] 슬립 고스트 세션 1초 강제 리셋 & 윈도우 원클릭 재연결 완비

@@ -366,14 +366,22 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
     }
   };
 
-  // ⭐️ [수정 저장] 현재 서식 저장
+  // ⭐️ [수정 저장] 현재 서식 저장 (온라인 DB + 로컬 동시 보존)
   const handleSave = async () => {
     saveStoredLabelTemplate(template);
     setPresets(getAllPresets());
     try {
-      await saveBackendLabelTemplate(template);
+      const res = await saveBackendLabelTemplate(template);
+      if (res && res.success === false) {
+        alert(`⚠️ 온라인 DB 저장 실패: ${res.message}\n(로컬 브라우저에만 임시 보존되었습니다)`);
+      } else {
+        // 서버 DB 동기화 최신 목록 갱신
+        syncTemplatesWithBackend().then(synced => {
+          if (synced && synced.length > 0) setPresets(synced);
+        });
+      }
     } catch (err) {
-      console.warn('백엔드 템플릿 저장 실패 (로컬 보존됨):', err);
+      alert(`⚠️ 온라인 DB 저장 오류: ${err.message}`);
     }
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 2500);
