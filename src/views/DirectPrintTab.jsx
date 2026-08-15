@@ -319,6 +319,19 @@ export default function DirectPrintTab({ onError, onOpenPrintModal }) {
               if (!error && data) matchedItem = data;
             } catch (e) {}
           }
+
+          // 로컬 스토리지 temp_asset 폴백
+          if (!matchedItem) {
+            try {
+              const localTemp = JSON.parse(localStorage.getItem('IMAGE_SCAN_TEMP_ASSET_ITEMS') || '[]');
+              matchedItem = localTemp.find(it =>
+                it.asset_no === query ||
+                it.id === query ||
+                it.serial_no === query ||
+                Object.values(it).some(v => String(v).toLowerCase() === query.toLowerCase())
+              );
+            } catch (e) {}
+          }
         } else {
           // 2. asset 정규 마스터 테이블 최우선 조회 (데이터 목록 탭과 100% 동일)
           try {

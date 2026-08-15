@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import DirectPrintTab from './DirectPrintTab';
 import PCDashboard from '../components/PCDashboard';
+import TempDataTab from './TempDataTab';
 import LabelDesignerTab from './LabelDesignerTab';
 import SchemaBuilderTab from './SchemaBuilderTab';
 import RPADashboardTab from './RPADashboardTab';
@@ -295,11 +296,11 @@ export default function PCDashboardView({
             데이터 목록
           </button>
           <button
-            onClick={() => handleTabClick('rpa-run', 'RPA 실행', false)}
-            className={`btn ${activeTab === 'rpa-run' ? 'btn-primary' : 'btn-outline'}`}
-            style={{ fontSize: '0.75rem', padding: '4px 10px', border: activeTab === 'rpa-run' ? 'none' : '1px solid #475569' }}
+            onClick={() => handleTabClick('temp-data', '임시 데이터 관리', false)}
+            className={`btn ${activeTab === 'temp-data' ? 'btn-primary' : 'btn-outline'}`}
+            style={{ fontSize: '0.75rem', padding: '4px 10px', border: activeTab === 'temp-data' ? 'none' : '1px solid #38bdf8', color: activeTab === 'temp-data' ? '#fff' : '#38bdf8', fontWeight: 600 }}
           >
-            <Play size={12} /> RPA 실행
+            <FolderOpen size={12} /> 임시 데이터 관리
           </button>
           <button
             onClick={() => handleTabClick('designer', '라벨 서식 디자인', false)}
@@ -309,11 +310,25 @@ export default function PCDashboardView({
             라벨 서식 디자인
           </button>
           <button
+            onClick={() => handleTabClick('schema', '스키마 빌더', false)}
+            className={`btn ${activeTab === 'schema' ? 'btn-primary' : 'btn-outline'}`}
+            style={{ fontSize: '0.75rem', padding: '4px 10px', border: activeTab === 'schema' ? 'none' : '1px solid #475569' }}
+          >
+            <Database size={12} /> 스키마 빌더
+          </button>
+          <button
             onClick={() => handleTabClick('queue', '프린트 큐 모니터', false)}
             className={`btn ${activeTab === 'queue' ? 'btn-primary' : 'btn-outline'}`}
             style={{ fontSize: '0.75rem', padding: '4px 10px', border: activeTab === 'queue' ? 'none' : '1px solid #475569' }}
           >
             프린트 큐 모니터
+          </button>
+          <button
+            onClick={() => handleTabClick('rpa-run', 'RPA 실행', false)}
+            className={`btn ${activeTab === 'rpa-run' ? 'btn-primary' : 'btn-outline'}`}
+            style={{ fontSize: '0.75rem', padding: '4px 10px', border: activeTab === 'rpa-run' ? 'none' : '1px solid #475569' }}
+          >
+            <Play size={12} /> RPA 실행
           </button>
 
           {/* 관리자 전용 탭 */}
@@ -331,19 +346,6 @@ export default function PCDashboardView({
             }}
           >
             <Bot size={12} /> RPA 시나리오 편집
-          </button>
-          <button
-            onClick={() => handleTabClick('schema', '스키마 빌더', true)}
-            className={`btn ${activeTab === 'schema' ? 'btn-primary' : 'btn-outline'}`}
-            style={{
-              fontSize: '0.75rem',
-              padding: '4px 10px',
-              border: activeTab === 'schema' ? 'none' : '1px solid #f59e0b44',
-              color: activeTab === 'schema' ? '#000' : '#f59e0b',
-              backgroundColor: activeTab === 'schema' ? '#f59e0b' : 'transparent'
-            }}
-          >
-            <Lock size={11} /> 스키마 빌더
           </button>
         </div>
 
@@ -385,13 +387,21 @@ export default function PCDashboardView({
         />
       )}
 
-      {/* Tab 1: 데이터 목록 */}
+      {/* Tab 1: 데이터 목록 (정규 자산) */}
       {activeTab === 'data' && (
         <PCDashboard
           onError={onError}
           onOpenExportModal={onOpenExportModal}
           onOpenPrintModal={onOpenPrintModal}
           onOpenImportModal={onOpenImportModal}
+        />
+      )}
+
+      {/* Tab 2: 임시 데이터 관리 (temp_asset) */}
+      {activeTab === 'temp-data' && (
+        <TempDataTab
+          onError={onError}
+          onOpenPrintModal={onOpenPrintModal}
         />
       )}
 

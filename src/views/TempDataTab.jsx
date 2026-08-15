@@ -1,0 +1,688 @@
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import {
+  FolderOpen,
+  Upload,
+  Download,
+  Plus,
+  Trash2,
+  Edit2,
+  RefreshCw,
+  Search,
+  CheckSquare,
+  Square,
+  Printer,
+  FileSpreadsheet,
+  AlertCircle,
+  CheckCircle,
+  X,
+  Database
+} from 'lucide-react';
+import * as XLSX from 'xlsx';
+import { getSupabaseClient } from '../utils/supabaseClient';
+import { getTableSchema, TEMP_ASSET_SCHEMA_DEF } from '../utils/dynamicSchema';
+import { getAllPresets, generateDynamicZpl } from '../utils/labelTemplate';
+import { getRegisteredPrinters, getActivePrinterId, sendZplToPrinter } from '../utils/printerManager';
+
+const LOCAL_KEY_TEMP_ASSETS = 'IMAGE_SCAN_TEMP_ASSET_ITEMS';
+
+export default function TempDataTab({ onError, onOpenPrintModal }) {
+  const [schema, setSchema] = useState(TEMP_ASSET_SCHEMA_DEF);
+  const [items, setItems] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [statusMessage, setStatusMessage] = useState(null);
+
+  // 모달 상태 (단건 등록 / 수정)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
+  const [isNewRecord, setIsNewRecord] = useState(false);
+
+  const fileInputRef = useRef(null);
+
+  // 1. 스키마 로드
+  const loadSchema = () => {
+    const currentSchema = getTableSchema('temp_asset') || TEMP_ASSET_SCHEMA_DEF;
+    setSchema(currentSchema);
+  };
+
+  // 2. 데이터 로드 (Supabase 우선 ➔ 로컬 캐시 폴백)
+  const loadData = async () => {
+    setIsLoading(true);
+    setStatusMessage(null);
+    try {
+      const client = getSupabaseClient();
+      if (client) {
+        const { data, error } = await client
+          .from('temp_asset')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (!error && Array.isArray(data)) {
+          setItems(data);
+          localStorage.setItem(LOCAL_KEY_TEMP_ASSETS, JSON.stringify(data));
+          setIsLoading(false);
+          return;
+        }
+      }
+      // 로컬 스토리지 캐시 로드
+      const localData = localStorage.getItem(LOCAL_KEY_TEMP_ASSETS);
+      if (localData) {
+        setItems(JSON.parse(localData));
+      } else {
+        const sampleData = [
+          {
+            id: 'temp_001',
+            asset_no: 'TEMP-2026-001',
+            category_major: '행사용',
+            product_name: '무선 마이크 세트',
+            model_name: 'WM-900',
+            serial_no: 'MIC260801',
+            asset_status: '대기',
+            shelf_no: 'T-01',
+            remark: '8월 전사 워크숍'
+          },
+          {
+            id: 'temp_002',
+            asset_no: 'TEMP-2026-002',
+            category_major: '협력사',
+            product_name: '빔프로젝터 5000안시',
+            model_name: 'EB-L510U',
+            serial_no: 'PRJ260802',
+            asset_status: '사용중',
+            shelf_no: 'T-02',
+            remark: '외부 렌탈 장비'
+          }
+        ];
+        setItems(sampleData);
+        localStorage.setItem(LOCAL_KEY_TEMP_ASSETS, JSON.stringify(sampleData));
+      }
+    } catch (err) {
+      console.warn('temp_asset 데이터 로드 예외:', err);
+      const localData = localStorage.getItem(LOCAL_KEY_TEMP_ASSETS);
+      if (localData) setItems(JSON.parse(localData));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadSchema();
+    loadData();
+  }, []);
+
+  const fields = useMemo(() => schema.fields || [], [schema]);
+  const keyField = schema.key_field || 'asset_no';
+
+  // 3. 필터링된 데이터
+  const filteredItems = useMemo(() => {
+    if (!searchQuery.trim()) return items;
+    const q = searchQuery.toLowerCase().trim();
+    return items.filter(item => {
+      return Object.values(item).some(val =>
+        String(val || '').toLowerCase().includes(q)
+      );
+    });
+  }, [items, searchQuery]);
+
+  // 4. 단건 저장 (추가 / 수정)
+  const handleSaveItem = async (e) => {
+    e.preventDefault();
+    if (!editingItem[keyField] || !String(editingItem[keyField]).trim()) {
+      alert(`기본 식별자(${schema.key_field_name || keyField})는 필수 입력 항목입니다.`);
+      return;
+    }
+
+    const payload = {
+      ...editingItem,
+      updated_at: new Date().toISOString()
+    };
+
+    let updatedList = [];
+    if (isNewRecord) {
+      payload.id = payload.id || `temp_${Date.now()}`;
+      payload.created_at = new Date().toISOString();
+      updatedList = [payload, ...items];
+    } else {
+      updatedList = items.map(it => (it.id === payload.id || it[keyField] === payload[keyField]) ? payload : it);
+    }
+
+    setItems(updatedList);
+    localStorage.setItem(LOCAL_KEY_TEMP_ASSETS, JSON.stringify(updatedList));
+
+    // Supabase 온라인 DB 동기화
+    try {
+      const client = getSupabaseClient();
+      if (client) {
+        await client.from('temp_asset').upsert(payload);
+      }
+    } catch (err) {
+      console.warn('Supabase 단건 저장 실패 (로컬 유지):', err);
+    }
+
+    setIsEditModalOpen(false);
+    setEditingItem(null);
+    setStatusMessage({ type: 'success', text: `[${payload[keyField]}] 데이터가 저장되었습니다.` });
+    setTimeout(() => setStatusMessage(null), 3000);
+  };
+
+  // 5. 단건 삭제
+  const handleDeleteItem = async (item, e) => {
+    e.stopPropagation();
+    if (!window.confirm(`'${item[keyField]}' 데이터를 삭제하시겠습니까?`)) return;
+
+    const updated = items.filter(it => it.id !== item.id && it[keyField] !== item[keyField]);
+    setItems(updated);
+    localStorage.setItem(LOCAL_KEY_TEMP_ASSETS, JSON.stringify(updated));
+
+    try {
+      const client = getSupabaseClient();
+      if (client && item.id) {
+        await client.from('temp_asset').delete().eq('id', item.id);
+      }
+    } catch (err) {
+      console.warn('Supabase 삭제 실패:', err);
+    }
+  };
+
+  // 6. 전체 비우기 (초기화)
+  const handleClearAll = async () => {
+    if (items.length === 0) return;
+    if (!window.confirm(`임시 자산 데이터 전체(${items.length}건)를 모두 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) return;
+
+    setItems([]);
+    setSelectedIds(new Set());
+    localStorage.removeItem(LOCAL_KEY_TEMP_ASSETS);
+
+    try {
+      const client = getSupabaseClient();
+      if (client) {
+        await client.from('temp_asset').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      }
+    } catch (err) {
+      console.warn('Supabase 전체 삭제 실패:', err);
+    }
+
+    setStatusMessage({ type: 'success', text: '임시 데이터가 모두 초기화되었습니다.' });
+    setTimeout(() => setStatusMessage(null), 3000);
+  };
+
+  // 7. 엑셀 양식 다운로드 (.xlsx)
+  const handleDownloadExcelTemplate = () => {
+    const sampleRow = {};
+    fields.forEach(f => {
+      sampleRow[f.name] = f.isKey ? 'TEMP-2026-001' : (f.id === 'product_name' ? '예시 품목' : '');
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet([sampleRow], { header: fields.map(f => f.name) });
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, '임시데이터_양식');
+    worksheet['!cols'] = fields.map(() => ({ wch: 18 }));
+    XLSX.writeFile(workbook, `임시데이터_업로드양식_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  };
+
+  // 8. 엑셀 대량 업로드
+  const handleExcelUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const bstr = evt.target.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const wsName = wb.SheetNames[0];
+        const ws = wb.Sheets[wsName];
+        const rawJson = XLSX.utils.sheet_to_json(ws, { defval: '' });
+
+        if (!rawJson || rawJson.length === 0) {
+          alert('엑셀 파일에 데이터가 없습니다.');
+          return;
+        }
+
+        const nameToIdMap = new Map();
+        fields.forEach(f => {
+          nameToIdMap.set(f.name, f.id);
+          nameToIdMap.set(f.id, f.id);
+        });
+
+        const parsedRows = rawJson.map((row, idx) => {
+          const item = {
+            id: `temp_${Date.now()}_${idx}`,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          };
+
+          Object.entries(row).forEach(([colName, val]) => {
+            const trimmedCol = String(colName).trim();
+            const matchedFieldId = nameToIdMap.get(trimmedCol) || trimmedCol;
+            item[matchedFieldId] = String(val).trim();
+          });
+
+          if (!item[keyField]) {
+            item[keyField] = `TEMP-${Date.now().toString().slice(-4)}-${idx + 1}`;
+          }
+
+          return item;
+        });
+
+        const combined = [...parsedRows, ...items];
+        setItems(combined);
+        localStorage.setItem(LOCAL_KEY_TEMP_ASSETS, JSON.stringify(combined));
+
+        try {
+          const client = getSupabaseClient();
+          if (client) {
+            await client.from('temp_asset').upsert(parsedRows);
+          }
+        } catch (err) {
+          console.warn('Supabase 벌크 저장 실패 (로컬 유지):', err);
+        }
+
+        setStatusMessage({
+          type: 'success',
+          text: `엑셀에서 ${parsedRows.length}건의 데이터를 성공적으로 주입하였습니다!`
+        });
+        setTimeout(() => setStatusMessage(null), 4000);
+      } catch (err) {
+        alert(`엑셀 파일 파싱 오류: ${err.message}`);
+      } finally {
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }
+    };
+    reader.readAsBinaryString(file);
+  };
+
+  // 9. 선택 항목 체크박스 토글
+  const handleToggleSelectAll = () => {
+    if (selectedIds.size === filteredItems.length && filteredItems.length > 0) {
+      setSelectedIds(new Set());
+    } else {
+      const allIds = new Set(filteredItems.map(it => it.id || it[keyField]));
+      setSelectedIds(allIds);
+    }
+  };
+
+  const handleToggleSelectRow = (id, e) => {
+    e.stopPropagation();
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  // 10. 선택 항목 일괄 인쇄
+  const handlePrintSelected = async () => {
+    const targetItems = items.filter(it => selectedIds.has(it.id || it[keyField]));
+    if (targetItems.length === 0) {
+      alert('인쇄할 항목을 1개 이상 선택하세요.');
+      return;
+    }
+
+    const allPresets = getAllPresets();
+    const tempPreset = allPresets.find(p => p.targetTable === 'temp_asset') || allPresets[0];
+
+    const registered = getRegisteredPrinters();
+    const targetId = tempPreset?.targetPrinterId || getActivePrinterId();
+    const targetPrinter = registered.find(p => p.id === targetId) || registered[0] || { type: 'agent_auto', name: '기본 라벨 프린터' };
+
+    try {
+      for (const item of targetItems) {
+        const zpl = generateDynamicZpl(item, tempPreset);
+        await sendZplToPrinter(zpl, targetPrinter);
+      }
+      alert(`[임시 데이터 ${targetItems.length}건 출력 완료] ${targetPrinter.name}으로 전송되었습니다.`);
+    } catch (err) {
+      if (onOpenPrintModal) {
+        onOpenPrintModal(targetItems);
+      } else {
+        alert(`인쇄 오류: ${err.message}`);
+      }
+    }
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', color: '#f8fafc' }}>
+      {/* Top Control Bar */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        backgroundColor: '#1e293b',
+        border: '1px solid #334155',
+        borderRadius: '8px',
+        padding: '8px 12px',
+        flexWrap: 'wrap',
+        gap: '6px'
+      }}>
+        {/* Left Title & Status */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <FolderOpen size={16} style={{ color: '#38bdf8' }} />
+          <span style={{ fontSize: '0.85rem', fontWeight: 700 }}>
+            임시 데이터 관리 (temp_asset)
+          </span>
+          <span style={{
+            fontSize: '0.68rem',
+            backgroundColor: '#0f172a',
+            color: '#38bdf8',
+            padding: '2px 8px',
+            borderRadius: '4px',
+            border: '1px solid #334155',
+            fontWeight: 700
+          }}>
+            총 {items.length}건
+          </span>
+        </div>
+
+        {/* Right Action Buttons */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <Search size={12} style={{ position: 'absolute', left: '8px', color: '#94a3b8' }} />
+            <input
+              type="text"
+              placeholder="데이터 검색..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              style={{
+                backgroundColor: '#0f172a',
+                border: '1px solid #475569',
+                borderRadius: '4px',
+                padding: '4px 8px 4px 26px',
+                color: '#f8fafc',
+                fontSize: '0.72rem',
+                width: '130px'
+              }}
+            />
+          </div>
+
+          <button
+            onClick={handleDownloadExcelTemplate}
+            className="btn btn-outline"
+            style={{ fontSize: '0.72rem', padding: '4px 10px', borderColor: '#10b981', color: '#34d399' }}
+            title="현재 스키마에 맞는 엑셀 업로드 양식 다운로드"
+          >
+            <Download size={12} /> 엑셀 양식 다운
+          </button>
+
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleExcelUpload}
+            accept=".xlsx, .xls, .csv"
+            style={{ display: 'none' }}
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="btn btn-outline"
+            style={{ fontSize: '0.72rem', padding: '4px 10px', borderColor: '#38bdf8', color: '#38bdf8' }}
+            title="엑셀 파일 대량 업로드 및 데이터 주입"
+          >
+            <Upload size={12} /> 엑셀 대량 업로드
+          </button>
+
+          <button
+            onClick={() => {
+              const newItem = { id: `temp_${Date.now()}` };
+              fields.forEach(f => { newItem[f.id] = ''; });
+              newItem[keyField] = `TEMP-${Date.now().toString().slice(-4)}`;
+              setEditingItem(newItem);
+              setIsNewRecord(true);
+              setIsEditModalOpen(true);
+            }}
+            className="btn btn-primary"
+            style={{ fontSize: '0.72rem', padding: '4px 10px' }}
+          >
+            <Plus size={12} /> 신규 등록
+          </button>
+
+          {selectedIds.size > 0 && (
+            <button
+              onClick={handlePrintSelected}
+              className="btn btn-primary"
+              style={{ fontSize: '0.72rem', padding: '4px 12px', backgroundColor: '#0284c7' }}
+            >
+              <Printer size={12} /> 선택 출력 ({selectedIds.size})
+            </button>
+          )}
+
+          <button
+            onClick={loadData}
+            className="btn btn-outline"
+            style={{ fontSize: '0.72rem', padding: '4px 8px' }}
+            title="새로고침"
+          >
+            <RefreshCw size={12} />
+          </button>
+
+          <button
+            onClick={handleClearAll}
+            className="btn btn-outline"
+            style={{ fontSize: '0.72rem', padding: '4px 8px', borderColor: '#ef444444', color: '#f87171' }}
+            title="임시 데이터 전체 삭제"
+          >
+            <Trash2 size={12} /> 전체 비우기
+          </button>
+        </div>
+      </div>
+
+      {/* Status Notice Toast */}
+      {statusMessage && (
+        <div style={{
+          padding: '6px 12px',
+          borderRadius: '6px',
+          fontSize: '0.75rem',
+          backgroundColor: statusMessage.type === 'success' ? '#052e16' : '#450a0a',
+          color: statusMessage.type === 'success' ? '#4ade80' : '#f87171',
+          border: `1px solid ${statusMessage.type === 'success' ? '#10b981' : '#ef4444'}`,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px'
+        }}>
+          <CheckCircle size={14} /> {statusMessage.text}
+        </div>
+      )}
+
+      {/* Main Data Table */}
+      <div style={{
+        backgroundColor: '#0f172a',
+        border: '1px solid #334155',
+        borderRadius: '8px',
+        overflowX: 'auto',
+        maxHeight: 'calc(100vh - 220px)',
+        position: 'relative'
+      }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.72rem' }}>
+          <thead>
+            <tr style={{ backgroundColor: '#1e293b', color: '#94a3b8', borderBottom: '1px solid #334155', position: 'sticky', top: 0, zIndex: 10 }}>
+              <th style={{ padding: '6px 8px', width: '32px', textAlign: 'center' }}>
+                <button
+                  onClick={handleToggleSelectAll}
+                  style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                >
+                  {selectedIds.size === filteredItems.length && filteredItems.length > 0 ? (
+                    <CheckSquare size={13} style={{ color: '#38bdf8' }} />
+                  ) : (
+                    <Square size={13} />
+                  )}
+                </button>
+              </th>
+              <th style={{ padding: '6px 8px', textAlign: 'center', width: '60px', whiteSpace: 'nowrap' }}>관리</th>
+              {fields.map(f => (
+                <th key={f.id} style={{ padding: '6px 8px', textAlign: 'left', whiteSpace: 'nowrap' }}>
+                  {f.name}
+                  {f.isKey && <span style={{ color: '#facc15', marginLeft: '3px' }}>*</span>}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {isLoading ? (
+              <tr>
+                <td colSpan={fields.length + 2} style={{ padding: '30px', textAlign: 'center', color: '#64748b' }}>
+                  데이터를 불러오는 중...
+                </td>
+              </tr>
+            ) : filteredItems.length === 0 ? (
+              <tr>
+                <td colSpan={fields.length + 2} style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
+                  등록된 임시 데이터가 없습니다. [엑셀 대량 업로드] 또는 [신규 등록]을 이용해 데이터를 채워주세요.
+                </td>
+              </tr>
+            ) : (
+              filteredItems.map(row => {
+                const isSelected = selectedIds.has(row.id || row[keyField]);
+                return (
+                  <tr
+                    key={row.id || row[keyField]}
+                    onClick={() => {
+                      setEditingItem({ ...row });
+                      setIsNewRecord(false);
+                      setIsEditModalOpen(true);
+                    }}
+                    style={{
+                      borderBottom: '1px solid #1e293b',
+                      backgroundColor: isSelected ? 'rgba(56, 189, 248, 0.1)' : 'transparent',
+                      cursor: 'pointer',
+                      transition: 'background-color 0.15s'
+                    }}
+                  >
+                    <td style={{ padding: '6px 8px', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+                      <button
+                        onClick={(e) => handleToggleSelectRow(row.id || row[keyField], e)}
+                        style={{ background: 'none', border: 'none', color: isSelected ? '#38bdf8' : '#64748b', cursor: 'pointer' }}
+                      >
+                        {isSelected ? <CheckSquare size={13} /> : <Square size={13} />}
+                      </button>
+                    </td>
+                    <td style={{ padding: '6px 8px', textAlign: 'center', whiteSpace: 'nowrap' }} onClick={e => e.stopPropagation()}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                        <button
+                          onClick={() => {
+                            setEditingItem({ ...row });
+                            setIsNewRecord(false);
+                            setIsEditModalOpen(true);
+                          }}
+                          className="btn btn-outline"
+                          style={{ padding: '2px 5px', fontSize: '0.65rem' }}
+                          title="수정"
+                        >
+                          <Edit2 size={10} />
+                        </button>
+                        <button
+                          onClick={(e) => handleDeleteItem(row, e)}
+                          className="btn btn-outline"
+                          style={{ padding: '2px 5px', fontSize: '0.65rem', borderColor: '#ef444444', color: '#f87171' }}
+                          title="삭제"
+                        >
+                          <Trash2 size={10} />
+                        </button>
+                      </div>
+                    </td>
+                    {fields.map(f => (
+                      <td
+                        key={f.id}
+                        style={{
+                          padding: '6px 8px',
+                          color: f.isKey ? '#facc15' : '#f8fafc',
+                          fontWeight: f.isKey ? 700 : 400,
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        {row[f.id] || '-'}
+                      </td>
+                    ))}
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* [모달] 데이터 단건 추가 / 수정 모달 */}
+      {isEditModalOpen && editingItem && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.75)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 99999
+        }}>
+          <div style={{
+            backgroundColor: '#1e293b',
+            border: '1px solid #38bdf8',
+            borderRadius: '8px',
+            padding: '16px',
+            width: '460px',
+            maxWidth: '95vw',
+            maxHeight: '90vh',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '12px'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #334155', paddingBottom: '8px' }}>
+              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#38bdf8' }}>
+                {isNewRecord ? '임시 데이터 신규 등록' : '임시 데이터 수정'}
+              </span>
+              <button
+                onClick={() => setIsEditModalOpen(false)}
+                style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveItem} style={{ display: 'flex', flexDirection: 'column', gap: '10px', overflowY: 'auto', maxHeight: '60vh', paddingRight: '4px' }}>
+              {fields.map(f => (
+                <div key={f.id} style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                  <label style={{ fontSize: '0.70rem', color: '#cbd5e1', fontWeight: 600 }}>
+                    {f.name} {f.isKey && <span style={{ color: '#facc15' }}>(식별키 PK)</span>}
+                  </label>
+                  <input
+                    type="text"
+                    required={f.isRequired || f.isKey}
+                    value={editingItem[f.id] || ''}
+                    onChange={e => setEditingItem(prev => ({ ...prev, [f.id]: e.target.value }))}
+                    style={{
+                      backgroundColor: '#0f172a',
+                      border: '1px solid #475569',
+                      borderRadius: '4px',
+                      padding: '5px 8px',
+                      color: f.isKey ? '#facc15' : '#f8fafc',
+                      fontSize: '0.75rem'
+                    }}
+                  />
+                </div>
+              ))}
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px', marginTop: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="btn btn-outline"
+                  style={{ fontSize: '0.72rem', padding: '5px 12px' }}
+                >
+                  취소
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  style={{ fontSize: '0.72rem', padding: '5px 16px' }}
+                >
+                  저장
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
