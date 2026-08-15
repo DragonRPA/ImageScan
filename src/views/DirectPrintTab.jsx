@@ -181,10 +181,27 @@ export default function DirectPrintTab({ onError, onOpenPrintModal }) {
     }
   };
 
-  // 프린터 선택 변경
-  const handleSelectPrinter = (printerId) => {
+  // 프린터 선택 변경 (브라우저 localStorage + 로컬 에이전트 agent-config.json 동시 영구 기억)
+  const handleSelectPrinter = async (printerId) => {
     setActivePrinterIdState(printerId);
     setActivePrinterId(printerId);
+
+    const selectedPrn = printers.find(p => p.id === printerId);
+    if (selectedPrn && selectedPrn.rawName) {
+      try {
+        await fetch('http://127.0.0.1:9988/api/select-printer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            printerName: selectedPrn.rawName,
+            connectionType: selectedPrn.type === 'agent_usb' ? 'USB_RAW' : 'TCP',
+            usbPort: selectedPrn.portName || 'USB001',
+            printerHost: selectedPrn.portName ? selectedPrn.portName.replace(/^IP_/i, '') : '127.0.0.1',
+            printerPort: 9100
+          })
+        }).catch(() => {});
+      } catch (e) {}
+    }
   };
 
   // ⭐️ 신규 프린터 등록
