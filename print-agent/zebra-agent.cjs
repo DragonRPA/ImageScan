@@ -11,6 +11,15 @@
  */
 'use strict';
 
+// ⭐️ Node 18 pkg 환경용 WebSocket 폴리필 (Supabase Realtime용)
+let WebSocketImpl = null;
+try {
+  WebSocketImpl = require('ws');
+  if (typeof global !== 'undefined' && !global.WebSocket) {
+    global.WebSocket = WebSocketImpl;
+  }
+} catch (e) {}
+
 const { createClient } = require('@supabase/supabase-js');
 const net       = require('net');
 const os        = require('os');
@@ -1511,7 +1520,11 @@ async function main() {
   startUiServer();
 
   // Supabase + 프린터 초기화
-  supabaseCli = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false } });
+  const supabaseOptions = { auth: { persistSession: false } };
+  if (WebSocketImpl) {
+    supabaseOptions.realtime = { WebSocket: WebSocketImpl };
+  }
+  supabaseCli = createClient(SUPABASE_URL, SUPABASE_KEY, supabaseOptions);
   await checkPrinterConnection(config);
   await processPendingOnStartup(supabaseCli);
   setupRealtimeSubscription(supabaseCli);
@@ -1533,12 +1546,7 @@ async function main() {
 }
 
 main().catch(err => {
-  console.error('[XX] 초기화 실패:', err.message);
-  // GUI 모드에서 바로 꺼지지 않도록 잠시 대기
-  if (!IS_INTERACTIVE) {
-    console.error('   → 브라우저에서 http://127.0.0.1:' + UI_PORT + ' 를 열어 상태를 확인하세요.');
-    setTimeout(() => process.exit(1), 5000);
-  } else {
-    process.exit(1);
-  }
+  log('ERR', '에이전트 백그라운드 동기화 오류:', err.message);
+  console.error('[XX] 백그라운드 동기화 경고:', err.message);
+  // UI 서버(127.0.0.1:9988)는 프로세스가 죽지 않고 계속 살아있도록 유지
 });
