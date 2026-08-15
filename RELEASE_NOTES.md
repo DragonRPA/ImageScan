@@ -1,5 +1,18 @@
 # 릴리즈 노트 (RELEASE_NOTES.md)
 
+## [v1.4.0.Build.9] - 2026-08-15 17:37:00 (KST)
+
+### 🎯 엑셀 대분류(category_major), 회수율 소수점(earning_ratio NUMERIC), IMEI 매핑 완전 정상화
+
+1. **엑셀 업로드 모달 매핑 보강 (`DataImportModal.jsx`)**
+   - 누락되었던 `category_major`, `earning_ratio`(소수점 유지), `imei` 3대 핵심 필드를 1:1 완벽 바인딩하여 DB로 정상 전송
+2. **엑셀 파서 초기 객체 정돈 (`excelParserEngine.js`)**
+   - 정규 15대 비즈니스 필드 초기화 객체 완비
+3. **회수율 소수점(83.5%) 정밀 파싱 지원 (`supabaseClient.js`, `dynamicSchema.js`)**
+   - `parseFloat` 기반 소수점 1자리(NUMERIC(5,1)) 정밀 보존
+
+---
+
 ## [v1.4.0.Build.8] - 2026-08-15 17:28:00 (KST)
 
 ### 🏷️ 엑셀 복사 순서 100% 보존 검색 & 화면 순서 일치 라벨 일괄 출력 파이프라인 탑재

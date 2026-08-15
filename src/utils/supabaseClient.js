@@ -181,7 +181,7 @@ export async function saveScansToSupabaseBatch(scans, onProgressCallback, import
     const modelName = item.model_name || item.modelName || item['모델명'] || '';
     const serialNo = item.serial_no || item.serialNo || item['제조번호'] || item['시리얼'] || '';
     const assetStatus = item.asset_status || item['자산상태'] || 'AVAILABLE';
-    const earningRatio = parseInt(item.earning_ratio ?? item['회수율'] ?? 0, 10) || 0;
+    const earningRatio = parseFloat(item.earning_ratio ?? item['회수율'] ?? 0) || 0;
     const shelfNo = item.shelf_no || item['선반번호'] || '';
     const assetOption = item.asset_option || item['옵션'] || '';
     const calibrationDate = item.calibration_date || item['교정일자'] || '';

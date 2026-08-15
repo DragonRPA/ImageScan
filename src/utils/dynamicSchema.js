@@ -77,7 +77,7 @@ export const DEFAULT_SCHEMA_DEF = {
     {
       id: 'earning_ratio',
       name: '회수율',
-      type: 'INTEGER',
+      type: 'NUMERIC(5,1)',
       isKey: false,
       isRequired: false,
       isBarcodeTarget: false,

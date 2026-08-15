@@ -174,17 +174,20 @@ export function parseAndValidateExcel(fileData, requiredFieldKeys = ['asset_no']
       const rowObj = {
         _rowIndex: r + 1,
         asset_no: '',
+        category_major: '',
         product_name: '',
         model_name: '',
         serial_no: '',
-        shelf_no: '',
         asset_status: '',
+        earning_ratio: '',
+        shelf_no: '',
         asset_option: '',
         calibration_date: '',
-        remark: '',
         mac_wlan: '',
         mac_lan: '',
-        components: ''
+        imei: '',
+        components: '',
+        remark: ''
       };
 
       // columnMap에 매핑된 위치에서 정확히 값 추출

@@ -28,7 +28,7 @@
 | **4** | **모델명** | `model_name` | VARCHAR(100) | NULLABLE | 제조사 모델 코드 (예: SM-S921N, 21CD001LKR 등) |
 | **5** | **제조번호(시리얼)** | `serial_no` | VARCHAR(50) | INDEX | 제조사 기기 일련번호 (S/N) |
 | **6** | **자산상태** | `asset_status` | VARCHAR(50) | NULLABLE | 자산 상태 (임대가능, 임대중, 출고완료, 수리대기, 수리중, 사내사용중, 입고검수중, 팩토리상품, 출고검수중, 교정중) |
-| **7** | **회수율** | `earning_ratio` | INTEGER | NULLABLE | 취득가 대비 매출 (회수율 %) |
+| **7** | **회수율** | `earning_ratio` | NUMERIC(5,1) | NULLABLE | 취득가 대비 매출 (회수율 소수점 1자리 %) |
 | **8** | **선반번호** | `shelf_no` | VARCHAR(50) | NULLABLE | 물류/창고 보관 로케이션 위치 (예: A-01-02) |
 | **9** | **옵션** | `asset_option` | VARCHAR(100) | NULLABLE | 단말 옵션 및 추가 사양 (예: 512GB, LTE/5G) |
 | **10**| **교정일자** | `calibration_date`| VARCHAR(50) | NULLABLE | 장비/계측기 정기 교정일자 |
