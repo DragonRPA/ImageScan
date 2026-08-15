@@ -101,7 +101,7 @@ export default function TempDataTab({ onError, onOpenPrintModal }) {
   };
 
   // 2. ⭐️ 데이터 로드 (Supabase 실제 DB 최우선 1:1 전수 페칭 & JSONB 자동 매핑)
-  const loadData = async () => {
+  const loadData = async (isManualQuery = false) => {
     setIsLoading(true);
     setStatusMessage(null);
     setCellSelection(null);
@@ -116,11 +116,11 @@ export default function TempDataTab({ onError, onOpenPrintModal }) {
           const { data, error } = await client
             .from('temp_asset')
             .select('*')
-            .order('created_at', { ascending: false, nullsFirst: false })
             .range(from, from + PAGE_SIZE - 1);
 
           if (error) {
             console.error('Supabase temp_asset 페칭 오류:', error);
+            setStatusMessage({ type: 'error', text: `DB 조회 실패: ${error.message}` });
             break;
           }
           if (!data || data.length === 0) break;
@@ -134,7 +134,7 @@ export default function TempDataTab({ onError, onOpenPrintModal }) {
           ...(r.data || {}),
           id: r.id,
           asset_no: r.asset_no || r.data?.asset_no || '',
-          imei: r.imei || r.data?.imei || '',
+          imei: r.imei || r.data?.imei || r.key_value || '',
           serial_no: r.serial_no || r.data?.serial_no || '',
           mac_address: r.mac_wlan || r.data?.mac_address || r.data?.mac_wlan || '',
           mac_wlan: r.mac_wlan || r.data?.mac_wlan || '',
@@ -144,6 +144,10 @@ export default function TempDataTab({ onError, onOpenPrintModal }) {
         setItems(formatted);
         localStorage.setItem(LOCAL_KEY_TEMP_ASSETS, JSON.stringify(formatted));
         setIsLoading(false);
+        if (isManualQuery) {
+          setStatusMessage({ type: 'success', text: `DB에서 총 ${formatted.length}건의 데이터를 성공적으로 조회하였습니다.` });
+          setTimeout(() => setStatusMessage(null), 3000);
+        }
         return;
       }
       // 오프라인/DB 미연결 시에만 로컬 캐시 폴백
@@ -160,6 +164,7 @@ export default function TempDataTab({ onError, onOpenPrintModal }) {
       }
     } catch (err) {
       console.warn('temp_asset 데이터 로드 예외:', err);
+      setStatusMessage({ type: 'error', text: `데이터 조회 오류: ${err.message}` });
       setItems([]);
     } finally {
       setIsLoading(false);
@@ -630,12 +635,23 @@ export default function TempDataTab({ onError, onOpenPrintModal }) {
           )}
 
           <button
-            onClick={loadData}
-            className="btn btn-outline"
-            style={{ fontSize: '0.72rem', padding: '4px 8px' }}
-            title="새로고침"
+            onClick={() => loadData(true)}
+            disabled={isLoading}
+            className="btn btn-primary"
+            style={{
+              fontSize: '0.72rem',
+              padding: '4px 10px',
+              backgroundColor: '#0284c7',
+              borderColor: '#38bdf8',
+              color: '#ffffff',
+              fontWeight: 700,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}
+            title="Supabase 실제 DB에서 최신 데이터 전수 조회"
           >
-            <RefreshCw size={12} />
+            <Search size={12} className={isLoading ? 'animate-spin' : ''} /> DB 조회
           </button>
 
           <button
