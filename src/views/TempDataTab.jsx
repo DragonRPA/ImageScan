@@ -100,7 +100,7 @@ export default function TempDataTab({ onError, onOpenPrintModal }) {
     return dbRow;
   };
 
-  // 2. ⭐️ 데이터 로드 (Supabase 실제 DB 최우선 1:1 동기화 & JSONB 자동 매핑)
+  // 2. ⭐️ 데이터 로드 (Supabase 실제 DB 최우선 1:1 전수 페칭 & JSONB 자동 매핑)
   const loadData = async () => {
     setIsLoading(true);
     setStatusMessage(null);
@@ -108,29 +108,43 @@ export default function TempDataTab({ onError, onOpenPrintModal }) {
     try {
       const client = getSupabaseClient();
       if (client) {
-        const { data, error } = await client
-          .from('temp_asset')
-          .select('*')
-          .order('created_at', { ascending: false });
+        let allData = [];
+        let from = 0;
+        const PAGE_SIZE = 1000;
 
-        if (!error && Array.isArray(data)) {
-          const formatted = data.map(r => ({
-            ...r,
-            ...(r.data || {}),
-            id: r.id,
-            asset_no: r.asset_no || r.data?.asset_no || '',
-            imei: r.imei || r.data?.imei || '',
-            serial_no: r.serial_no || r.data?.serial_no || '',
-            mac_address: r.mac_wlan || r.data?.mac_address || r.data?.mac_wlan || '',
-            mac_wlan: r.mac_wlan || r.data?.mac_wlan || '',
-            product_name: r.product_name || r.data?.product_name || '',
-            model_name: r.model_name || r.data?.model_name || ''
-          }));
-          setItems(formatted);
-          localStorage.setItem(LOCAL_KEY_TEMP_ASSETS, JSON.stringify(formatted));
-          setIsLoading(false);
-          return;
+        while (true) {
+          const { data, error } = await client
+            .from('temp_asset')
+            .select('*')
+            .order('created_at', { ascending: false, nullsFirst: false })
+            .range(from, from + PAGE_SIZE - 1);
+
+          if (error) {
+            console.error('Supabase temp_asset 페칭 오류:', error);
+            break;
+          }
+          if (!data || data.length === 0) break;
+          allData.push(...data);
+          if (data.length < PAGE_SIZE) break;
+          from += PAGE_SIZE;
         }
+
+        const formatted = allData.map(r => ({
+          ...r,
+          ...(r.data || {}),
+          id: r.id,
+          asset_no: r.asset_no || r.data?.asset_no || '',
+          imei: r.imei || r.data?.imei || '',
+          serial_no: r.serial_no || r.data?.serial_no || '',
+          mac_address: r.mac_wlan || r.data?.mac_address || r.data?.mac_wlan || '',
+          mac_wlan: r.mac_wlan || r.data?.mac_wlan || '',
+          product_name: r.product_name || r.data?.product_name || '',
+          model_name: r.model_name || r.data?.model_name || ''
+        }));
+        setItems(formatted);
+        localStorage.setItem(LOCAL_KEY_TEMP_ASSETS, JSON.stringify(formatted));
+        setIsLoading(false);
+        return;
       }
       // 오프라인/DB 미연결 시에만 로컬 캐시 폴백
       const localData = localStorage.getItem(LOCAL_KEY_TEMP_ASSETS);
@@ -353,7 +367,6 @@ export default function TempDataTab({ onError, onOpenPrintModal }) {
     if (items.length === 0) return;
     if (!window.confirm(`임시 자산 데이터 전체(${items.length}건)를 모두 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) return;
 
-    setItems([]);
     setSelectedIds(new Set());
     localStorage.removeItem(LOCAL_KEY_TEMP_ASSETS);
 
@@ -366,6 +379,7 @@ export default function TempDataTab({ onError, onOpenPrintModal }) {
       console.warn('Supabase 전체 삭제 실패:', err);
     }
 
+    await loadData();
     setStatusMessage({ type: 'success', text: '임시 데이터가 모두 초기화되었습니다.' });
     setTimeout(() => setStatusMessage(null), 3000);
   };
@@ -419,9 +433,19 @@ export default function TempDataTab({ onError, onOpenPrintModal }) {
           return item;
         });
 
-        // ⭐️ Supabase 실제 DB 100% 동기 벌크 주입 (전사 표준 1,000건 초고속 원샷 배치)
+        // ⭐️ 1. 기존 DB temp_asset 테이블의 모든 기존 데이터를 100% 완전 삭제 (기존 데이터 삭제 후 최종 데이터만 교체 적재)
         const client = getSupabaseClient();
         if (client) {
+          const { error: delErr } = await client
+            .from('temp_asset')
+            .delete()
+            .neq('id', '00000000-0000-0000-0000-000000000000');
+          if (delErr) {
+            console.error('기존 DB 삭제 오류:', delErr);
+            throw new Error(`기존 데이터 초기화 실패: ${delErr.message}`);
+          }
+
+          // ⭐️ 2. 이번에 업로드된 최종 엑셀 행들만 초고속 벌크 INSERT (전사 표준 1,000건 단위)
           const dbRows = parsedRows.map(row => normalizeRowForDb(row, keyField));
           const chunkSize = 1000;
           for (let i = 0; i < dbRows.length; i += chunkSize) {
@@ -434,7 +458,7 @@ export default function TempDataTab({ onError, onOpenPrintModal }) {
           }
         }
 
-        // DB 저장 완료 후 최신 DB 데이터 재조회
+        // ⭐️ 3. DB 저장 완료 후 최신 DB 데이터 전수 재조회 (DB 건수와 UI 건수 100% 1:1 일치)
         await loadData();
 
         setStatusMessage({
