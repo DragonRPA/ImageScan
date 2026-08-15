@@ -927,7 +927,9 @@ export default function DirectPrintTab({ onError, onOpenPrintModal }) {
               if (elem.type === 'barcode') {
                 const bcVal = currentData[elem.targetField] || currentData.asset_no || '224011319';
                 const heightPx = (elem.heightMm || 10) * PX_PER_MM;
-                const qrSizePx = (elem.qrScale || 4) * 8.5 * (PX_PER_MM / 8.5);
+                const qrScale = Math.max(1, Math.min(10, Number(elem.qrScale) || 3));
+                const qrSizeMm = (qrScale * 25.0) / 8.0;
+                const qrSizePx = qrSizeMm * PX_PER_MM;
 
                 return (
                   <div
@@ -945,17 +947,58 @@ export default function DirectPrintTab({ onError, onOpenPrintModal }) {
                       <div style={{
                         width: `${qrSizePx}px`,
                         height: `${qrSizePx}px`,
-                        backgroundColor: '#000',
-                        color: '#fff',
+                        backgroundColor: '#ffffff',
+                        border: '1px solid #000000',
+                        color: '#000000',
                         display: 'flex',
+                        flexDirection: 'column',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        fontSize: '9px',
-                        fontWeight: 700,
-                        letterSpacing: '-0.5px',
-                        borderRadius: '2px'
+                        boxSizing: 'border-box',
+                        padding: '1px',
+                        position: 'relative'
                       }}>
-                        QR CODE
+                        <svg viewBox="0 0 29 29" width="100%" height="100%" shapeRendering="crispEdges">
+                          {/* Corner Top-Left */}
+                          <rect x="0" y="0" width="7" height="7" fill="#000" />
+                          <rect x="1" y="1" width="5" height="5" fill="#fff" />
+                          <rect x="2" y="2" width="3" height="3" fill="#000" />
+                          {/* Corner Top-Right */}
+                          <rect x="22" y="0" width="7" height="7" fill="#000" />
+                          <rect x="23" y="1" width="5" height="5" fill="#fff" />
+                          <rect x="24" y="2" width="3" height="3" fill="#000" />
+                          {/* Corner Bottom-Left */}
+                          <rect x="0" y="22" width="7" height="7" fill="#000" />
+                          <rect x="1" y="23" width="5" height="5" fill="#fff" />
+                          <rect x="2" y="24" width="3" height="3" fill="#000" />
+                          {/* Pattern Dots */}
+                          <rect x="9" y="2" width="2" height="2" fill="#000" />
+                          <rect x="13" y="2" width="2" height="2" fill="#000" />
+                          <rect x="17" y="2" width="2" height="2" fill="#000" />
+                          <rect x="9" y="6" width="3" height="2" fill="#000" />
+                          <rect x="14" y="6" width="2" height="3" fill="#000" />
+                          <rect x="18" y="7" width="2" height="2" fill="#000" />
+                          <rect x="2" y="9" width="2" height="3" fill="#000" />
+                          <rect x="6" y="10" width="2" height="2" fill="#000" />
+                          <rect x="10" y="10" width="3" height="3" fill="#000" />
+                          <rect x="15" y="11" width="4" height="2" fill="#000" />
+                          <rect x="21" y="10" width="2" height="4" fill="#000" />
+                          <rect x="25" y="11" width="3" height="2" fill="#000" />
+                          <rect x="2" y="14" width="3" height="2" fill="#000" />
+                          <rect x="7" y="14" width="2" height="3" fill="#000" />
+                          <rect x="11" y="15" width="2" height="2" fill="#000" />
+                          <rect x="15" y="15" width="3" height="3" fill="#000" />
+                          <rect x="20" y="16" width="3" height="2" fill="#000" />
+                          <rect x="25" y="15" width="2" height="3" fill="#000" />
+                          <rect x="9" y="20" width="3" height="2" fill="#000" />
+                          <rect x="14" y="20" width="2" height="3" fill="#000" />
+                          <rect x="18" y="21" width="4" height="2" fill="#000" />
+                          <rect x="24" y="20" width="3" height="2" fill="#000" />
+                          <rect x="9" y="24" width="2" height="3" fill="#000" />
+                          <rect x="13" y="25" width="3" height="2" fill="#000" />
+                          <rect x="18" y="25" width="2" height="3" fill="#000" />
+                          <rect x="22" y="24" width="3" height="3" fill="#000" />
+                        </svg>
                       </div>
                     ) : (
                       <RealBarcodeSvg
