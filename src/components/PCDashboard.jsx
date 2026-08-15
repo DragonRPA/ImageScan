@@ -38,6 +38,24 @@ export default function PCDashboard({
   // 선택된 항목 IDs (자산번호 또는 ID)
   const [selectedIds, setSelectedIds] = useState([]);
 
+  // ⭐️ 엑셀 스타일 마우스 드래그 다중 행 선택 상태 머신
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStartIndex, setDragStartIndex] = useState(null);
+  const [dragMode, setDragMode] = useState('select'); // 'select' | 'deselect'
+  const [initialSelectedIds, setInitialSelectedIds] = useState([]);
+
+  // 전역 마우스 업 감지 (드래그 종료)
+  useEffect(() => {
+    const handleGlobalMouseUp = () => {
+      setIsDragging(false);
+      setDragStartIndex(null);
+    };
+    window.addEventListener('mouseup', handleGlobalMouseUp);
+    return () => {
+      window.removeEventListener('mouseup', handleGlobalMouseUp);
+    };
+  }, []);
+
   // 데이터 로드 (기본 대분류: IT)
   const loadData = async () => {
     setLoading(true);
@@ -224,7 +242,7 @@ export default function PCDashboard({
     return result;
   }, [items, filterCategory, filterModel, filterSerial, filterStatus, searchGeneral]);
 
-  // 체크박스 선택/해제
+  // 체크박스 선택/해제 (전체 선택)
   const handleSelectAll = (e) => {
     if (e.target.checked) {
       setSelectedIds(filteredItems.map((i) => i.id || i.asset_no));
@@ -237,6 +255,47 @@ export default function PCDashboard({
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
     );
+  };
+
+  // ⭐️ 엑셀 스타일 마우스 드래그 시작 (MouseDown)
+  const handleRowMouseDown = (idx, id, e) => {
+    if (e.button !== 0) return; // 왼쪽 클릭만
+    e.preventDefault(); // 텍스트 긁힘 원천 차단
+
+    const isAlreadySelected = selectedIds.includes(id);
+    const mode = isAlreadySelected ? 'deselect' : 'select';
+
+    setIsDragging(true);
+    setDragStartIndex(idx);
+    setDragMode(mode);
+    setInitialSelectedIds([...selectedIds]);
+
+    if (mode === 'select') {
+      setSelectedIds((prev) => Array.from(new Set([...prev, id])));
+    } else {
+      setSelectedIds((prev) => prev.filter((item) => item !== id));
+    }
+  };
+
+  // ⭐️ 엑셀 스타일 마우스 드래그 이동 (MouseEnter)
+  const handleRowMouseEnter = (idx) => {
+    if (!isDragging || dragStartIndex === null) return;
+
+    const start = Math.min(dragStartIndex, idx);
+    const end = Math.max(dragStartIndex, idx);
+
+    // 드래그 영역의 모든 행 ID 추출
+    const rangeIds = filteredItems.slice(start, end + 1).map((item) => item.id || item.asset_no);
+
+    if (dragMode === 'select') {
+      const nextSet = new Set(initialSelectedIds);
+      rangeIds.forEach((id) => nextSet.add(id));
+      setSelectedIds(Array.from(nextSet));
+    } else {
+      const nextSet = new Set(initialSelectedIds);
+      rangeIds.forEach((id) => nextSet.delete(id));
+      setSelectedIds(Array.from(nextSet));
+    }
   };
 
   // ⭐️ [라벨 출력] 화면에 정렬된 순서 100% 보존하여 인쇄 파이프라인 전달
@@ -656,16 +715,18 @@ export default function PCDashboard({
         </div>
       </div>
 
-      {/* ── [2] 12대 필드 전면 자산목록 데이터 그리드 ──────────────────── */}
+      {/* ── [2] 12대 필드 전면 자산목록 데이터 그리드 (엑셀식 마우스 드래그 지원) ── */}
       <div style={{
         backgroundColor: '#1e293b',
         border: '1px solid #334155',
         borderRadius: '8px',
         overflow: 'hidden',
-        boxShadow: '0 4px 6px -1px rgba(0,0,0,0.2)'
+        boxShadow: '0 4px 6px -1px rgba(0,0,0,0.2)',
+        userSelect: 'none',
+        WebkitUserSelect: 'none'
       }}>
         <div className="grid-scrollbar" style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: 'calc(100vh - 280px)', minHeight: '380px', width: '100%' }}>
-          <table style={{ width: '100%', minWidth: '1600px', borderCollapse: 'collapse', fontSize: '0.72rem' }}>
+          <table style={{ width: '100%', minWidth: '1600px', borderCollapse: 'collapse', fontSize: '0.72rem', userSelect: 'none', WebkitUserSelect: 'none' }}>
             <thead>
               <tr style={{
                 backgroundColor: '#0f172a',
@@ -673,7 +734,8 @@ export default function PCDashboard({
                 borderBottom: '1px solid #334155',
                 position: 'sticky',
                 top: 0,
-                zIndex: 10
+                zIndex: 10,
+                userSelect: 'none'
               }}>
                 <th style={{ padding: '6px 8px', textAlign: 'center', width: '36px', whiteSpace: 'nowrap' }}>
                   <input
@@ -734,11 +796,18 @@ export default function PCDashboard({
                   return (
                     <tr
                       key={row.asset_no || row.id || idx}
-                      onClick={() => handleToggleSelect(row.id || row.asset_no)}
+                      onMouseDown={(e) => handleRowMouseDown(idx, row.id || row.asset_no, e)}
+                      onMouseEnter={() => handleRowMouseEnter(idx)}
                       style={{
                         borderBottom: '1px solid #1e293b',
-                        backgroundColor: isSelected ? 'rgba(56, 189, 248, 0.12)' : (idx % 2 === 0 ? '#0f172a' : '#141e30'),
-                        cursor: 'pointer'
+                        backgroundColor: isSelected 
+                          ? 'rgba(2, 132, 199, 0.25)' 
+                          : (idx % 2 === 0 ? '#0f172a' : '#141e30'),
+                        borderLeft: isSelected ? '4px solid #38bdf8' : '4px solid transparent',
+                        boxShadow: isSelected ? 'inset 0 0 0 1px rgba(56, 189, 248, 0.35)' : 'none',
+                        cursor: 'pointer',
+                        userSelect: 'none',
+                        WebkitUserSelect: 'none'
                       }}
                     >
                       <td style={{ padding: '6px 8px', textAlign: 'center', whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
