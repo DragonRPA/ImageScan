@@ -19,6 +19,25 @@ import {
   deleteAllScansFromSupabase
 } from '../utils/supabaseClient';
 
+// ── 15대 표준 컬럼 순서 (엑셀 셀 범위 선택 및 복사용) ───────────────────
+const COLUMN_KEYS = [
+  'asset_no',
+  'category_major',
+  'product_name',
+  'model_name',
+  'serial_no',
+  'asset_status',
+  'earning_ratio',
+  'shelf_no',
+  'asset_option',
+  'calibration_date',
+  'mac_wlan',
+  'mac_lan',
+  'imei',
+  'components',
+  'remark'
+];
+
 export default function PCDashboard({
   onError,
   onOpenExportModal,
@@ -35,20 +54,18 @@ export default function PCDashboard({
   const [filterStatus, setFilterStatus] = useState('ALL');
   const [searchGeneral, setSearchGeneral] = useState('');
 
-  // 선택된 항목 IDs (자산번호 또는 ID)
+  // 선택된 항목 IDs (오직 체크박스 직접 클릭 시에만 토글)
   const [selectedIds, setSelectedIds] = useState([]);
 
-  // ⭐️ 엑셀 스타일 마우스 드래그 다중 행 선택 상태 머신
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStartIndex, setDragStartIndex] = useState(null);
-  const [dragMode, setDragMode] = useState('select'); // 'select' | 'deselect'
-  const [initialSelectedIds, setInitialSelectedIds] = useState([]);
+  // ⭐️ 엑셀 스타일 셀 범위 선택(Cell Range Selection) 상태 머신
+  const [cellSelection, setCellSelection] = useState(null); // { startRow, startCol, endRow, endCol }
+  const [isSelectingCells, setIsSelectingCells] = useState(false);
+  const [copyToast, setCopyToast] = useState('');
 
-  // 전역 마우스 업 감지 (드래그 종료)
+  // 전역 마우스 업 감지 (셀 선택 드래그 종료)
   useEffect(() => {
     const handleGlobalMouseUp = () => {
-      setIsDragging(false);
-      setDragStartIndex(null);
+      setIsSelectingCells(false);
     };
     window.addEventListener('mouseup', handleGlobalMouseUp);
     return () => {
@@ -242,7 +259,7 @@ export default function PCDashboard({
     return result;
   }, [items, filterCategory, filterModel, filterSerial, filterStatus, searchGeneral]);
 
-  // 체크박스 선택/해제 (전체 선택)
+  // ── [1] 체크박스 선택/해제 (오직 체크박스 직접 클릭 시에만 작동) ─────────
   const handleSelectAll = (e) => {
     if (e.target.checked) {
       setSelectedIds(filteredItems.map((i) => i.id || i.asset_no));
@@ -257,48 +274,87 @@ export default function PCDashboard({
     );
   };
 
-  // ⭐️ 엑셀 스타일 마우스 드래그 시작 (MouseDown)
-  const handleRowMouseDown = (idx, id, e) => {
-    if (e.button !== 0) return; // 왼쪽 클릭만
-    e.preventDefault(); // 텍스트 긁힘 원천 차단
+  // ── [2] ⭐️ 엑셀식 셀/컬럼 드래그 범위 선택 & Ctrl+C 복사 엔진 ─────────────
+  const handleCellMouseDown = (rowIdx, colIdx, e) => {
+    if (e.button !== 0) return; // 마우스 좌클릭만
+    e.preventDefault(); // 브라우저 파란 텍스트 긁힘 방지
 
-    const isAlreadySelected = selectedIds.includes(id);
-    const mode = isAlreadySelected ? 'deselect' : 'select';
-
-    setIsDragging(true);
-    setDragStartIndex(idx);
-    setDragMode(mode);
-    setInitialSelectedIds([...selectedIds]);
-
-    if (mode === 'select') {
-      setSelectedIds((prev) => Array.from(new Set([...prev, id])));
-    } else {
-      setSelectedIds((prev) => prev.filter((item) => item !== id));
-    }
+    setIsSelectingCells(true);
+    setCellSelection({
+      startRow: rowIdx,
+      startCol: colIdx,
+      endRow: rowIdx,
+      endCol: colIdx
+    });
   };
 
-  // ⭐️ 엑셀 스타일 마우스 드래그 이동 (MouseEnter)
-  const handleRowMouseEnter = (idx) => {
-    if (!isDragging || dragStartIndex === null) return;
-
-    const start = Math.min(dragStartIndex, idx);
-    const end = Math.max(dragStartIndex, idx);
-
-    // 드래그 영역의 모든 행 ID 추출
-    const rangeIds = filteredItems.slice(start, end + 1).map((item) => item.id || item.asset_no);
-
-    if (dragMode === 'select') {
-      const nextSet = new Set(initialSelectedIds);
-      rangeIds.forEach((id) => nextSet.add(id));
-      setSelectedIds(Array.from(nextSet));
-    } else {
-      const nextSet = new Set(initialSelectedIds);
-      rangeIds.forEach((id) => nextSet.delete(id));
-      setSelectedIds(Array.from(nextSet));
-    }
+  const handleCellMouseEnter = (rowIdx, colIdx) => {
+    if (!isSelectingCells || !cellSelection) return;
+    setCellSelection((prev) => ({
+      ...prev,
+      endRow: rowIdx,
+      endCol: colIdx
+    }));
   };
 
-  // ⭐️ [라벨 출력] 화면에 정렬된 순서 100% 보존하여 인쇄 파이프라인 전달
+  // 특정 셀이 현재 선택 범위에 포함되는지 검사
+  const isCellInSelection = (rowIdx, colIdx) => {
+    if (!cellSelection) return false;
+    const minRow = Math.min(cellSelection.startRow, cellSelection.endRow);
+    const maxRow = Math.max(cellSelection.startRow, cellSelection.endRow);
+    const minCol = Math.min(cellSelection.startCol, cellSelection.endCol);
+    const maxCol = Math.max(cellSelection.startCol, cellSelection.endCol);
+    return rowIdx >= minRow && rowIdx <= maxRow && colIdx >= minCol && colIdx <= maxCol;
+  };
+
+  // ⭐️ Ctrl + C 키보드 복사 이벤트 리스너
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // 일반 input/textarea 입력창에 포커스가 있을 때는 기본 복사 동작 유지
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) {
+        return;
+      }
+
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'C')) {
+        if (!cellSelection) return;
+
+        const minRow = Math.min(cellSelection.startRow, cellSelection.endRow);
+        const maxRow = Math.max(cellSelection.startRow, cellSelection.endRow);
+        const minCol = Math.min(cellSelection.startCol, cellSelection.endCol);
+        const maxCol = Math.max(cellSelection.startCol, cellSelection.endCol);
+
+        const selectedRows = filteredItems.slice(minRow, maxRow + 1);
+        const lines = selectedRows.map((row) => {
+          const rowValues = [];
+          for (let c = minCol; c <= maxCol; c++) {
+            const key = COLUMN_KEYS[c];
+            let val = row[key] ?? '';
+            if (key === 'earning_ratio' && val !== '') {
+              val = `${val}%`;
+            }
+            rowValues.push(val);
+          }
+          return rowValues.join('\t');
+        });
+
+        const copyText = lines.join('\r\n');
+        if (copyText) {
+          navigator.clipboard.writeText(copyText).then(() => {
+            const cellCount = (maxRow - minRow + 1) * (maxCol - minCol + 1);
+            setCopyToast(`${cellCount}개 셀 복사 완료 (${minRow + 1}~${maxRow + 1}행)`);
+            setTimeout(() => setCopyToast(''), 2500);
+          });
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [cellSelection, filteredItems]);
+
+  // ── [3] 라벨 출력 및 엑셀 내보내기 ────────────────────────────────────
   const handlePrintSelected = () => {
     if (selectedIds.length === 0) return;
     const orderedSelectedItems = filteredItems.filter(item => 
@@ -796,70 +852,276 @@ export default function PCDashboard({
                   return (
                     <tr
                       key={row.asset_no || row.id || idx}
-                      onMouseDown={(e) => handleRowMouseDown(idx, row.id || row.asset_no, e)}
-                      onMouseEnter={() => handleRowMouseEnter(idx)}
                       style={{
                         borderBottom: '1px solid #1e293b',
                         backgroundColor: isSelected 
-                          ? 'rgba(2, 132, 199, 0.25)' 
+                          ? 'rgba(2, 132, 199, 0.12)' 
                           : (idx % 2 === 0 ? '#0f172a' : '#141e30'),
-                        borderLeft: isSelected ? '4px solid #38bdf8' : '4px solid transparent',
-                        boxShadow: isSelected ? 'inset 0 0 0 1px rgba(56, 189, 248, 0.35)' : 'none',
-                        cursor: 'pointer',
                         userSelect: 'none',
                         WebkitUserSelect: 'none'
                       }}
                     >
-                      <td style={{ padding: '6px 8px', textAlign: 'center', whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
+                      {/* 0. 체크박스 열 (오직 직접 클릭 시에만 작동) */}
+                      <td style={{ padding: '6px 8px', textAlign: 'center', whiteSpace: 'nowrap' }}>
                         <input
                           type="checkbox"
                           checked={isSelected}
                           onChange={() => handleToggleSelect(row.id || row.asset_no)}
+                          style={{ cursor: 'pointer' }}
                         />
                       </td>
-                      <td style={{ padding: '6px 8px', color: '#38bdf8', fontWeight: 700, whiteSpace: 'nowrap' }}>
+
+                      {/* 1. 자산번호 */}
+                      <td
+                        onMouseDown={(e) => handleCellMouseDown(idx, 0, e)}
+                        onMouseEnter={() => handleCellMouseEnter(idx, 0)}
+                        style={{
+                          padding: '6px 8px',
+                          color: '#38bdf8',
+                          fontWeight: 700,
+                          whiteSpace: 'nowrap',
+                          cursor: 'cell',
+                          backgroundColor: isCellInSelection(idx, 0) ? 'rgba(2, 132, 199, 0.35)' : 'transparent',
+                          outline: isCellInSelection(idx, 0) ? '1px solid #38bdf8' : 'none'
+                        }}
+                      >
                         {assetNo}
                       </td>
-                      <td style={{ padding: '6px 8px', color: '#93c5fd', fontWeight: 600, whiteSpace: 'nowrap' }}>
+
+                      {/* 2. 대분류 */}
+                      <td
+                        onMouseDown={(e) => handleCellMouseDown(idx, 1, e)}
+                        onMouseEnter={() => handleCellMouseEnter(idx, 1)}
+                        style={{
+                          padding: '6px 8px',
+                          color: '#93c5fd',
+                          fontWeight: 600,
+                          whiteSpace: 'nowrap',
+                          cursor: 'cell',
+                          backgroundColor: isCellInSelection(idx, 1) ? 'rgba(2, 132, 199, 0.35)' : 'transparent',
+                          outline: isCellInSelection(idx, 1) ? '1px solid #38bdf8' : 'none'
+                        }}
+                      >
                         {categoryMajor}
                       </td>
-                      <td style={{ padding: '6px 8px', color: '#f8fafc', fontWeight: 600, whiteSpace: 'nowrap' }}>
+
+                      {/* 3. 제품명 */}
+                      <td
+                        onMouseDown={(e) => handleCellMouseDown(idx, 2, e)}
+                        onMouseEnter={() => handleCellMouseEnter(idx, 2)}
+                        style={{
+                          padding: '6px 8px',
+                          color: '#f8fafc',
+                          fontWeight: 600,
+                          whiteSpace: 'nowrap',
+                          cursor: 'cell',
+                          backgroundColor: isCellInSelection(idx, 2) ? 'rgba(2, 132, 199, 0.35)' : 'transparent',
+                          outline: isCellInSelection(idx, 2) ? '1px solid #38bdf8' : 'none'
+                        }}
+                      >
                         {productName}
                       </td>
-                      <td style={{ padding: '6px 8px', color: '#cbd5e1', whiteSpace: 'nowrap' }}>
+
+                      {/* 4. 모델명 */}
+                      <td
+                        onMouseDown={(e) => handleCellMouseDown(idx, 3, e)}
+                        onMouseEnter={() => handleCellMouseEnter(idx, 3)}
+                        style={{
+                          padding: '6px 8px',
+                          color: '#cbd5e1',
+                          whiteSpace: 'nowrap',
+                          cursor: 'cell',
+                          backgroundColor: isCellInSelection(idx, 3) ? 'rgba(2, 132, 199, 0.35)' : 'transparent',
+                          outline: isCellInSelection(idx, 3) ? '1px solid #38bdf8' : 'none'
+                        }}
+                      >
                         {modelName}
                       </td>
-                      <td style={{ padding: '6px 8px', color: '#cbd5e1', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
+
+                      {/* 5. 제조번호(시리얼) */}
+                      <td
+                        onMouseDown={(e) => handleCellMouseDown(idx, 4, e)}
+                        onMouseEnter={() => handleCellMouseEnter(idx, 4)}
+                        style={{
+                          padding: '6px 8px',
+                          color: '#cbd5e1',
+                          fontFamily: 'monospace',
+                          whiteSpace: 'nowrap',
+                          cursor: 'cell',
+                          backgroundColor: isCellInSelection(idx, 4) ? 'rgba(2, 132, 199, 0.35)' : 'transparent',
+                          outline: isCellInSelection(idx, 4) ? '1px solid #38bdf8' : 'none'
+                        }}
+                      >
                         {serialNo}
                       </td>
-                      <td style={{ padding: '6px 8px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                      {/* 6. 자산상태 */}
+                      <td
+                        onMouseDown={(e) => handleCellMouseDown(idx, 5, e)}
+                        onMouseEnter={() => handleCellMouseEnter(idx, 5)}
+                        style={{
+                          padding: '6px 8px',
+                          textAlign: 'center',
+                          whiteSpace: 'nowrap',
+                          cursor: 'cell',
+                          backgroundColor: isCellInSelection(idx, 5) ? 'rgba(2, 132, 199, 0.35)' : 'transparent',
+                          outline: isCellInSelection(idx, 5) ? '1px solid #38bdf8' : 'none'
+                        }}
+                      >
                         {renderStatusBadge(status)}
                       </td>
-                      <td style={{ padding: '6px 8px', textAlign: 'right', color: '#34d399', fontWeight: 700, whiteSpace: 'nowrap' }}>
+
+                      {/* 7. 회수율 */}
+                      <td
+                        onMouseDown={(e) => handleCellMouseDown(idx, 6, e)}
+                        onMouseEnter={() => handleCellMouseEnter(idx, 6)}
+                        style={{
+                          padding: '6px 8px',
+                          textAlign: 'right',
+                          color: '#34d399',
+                          fontWeight: 700,
+                          whiteSpace: 'nowrap',
+                          cursor: 'cell',
+                          backgroundColor: isCellInSelection(idx, 6) ? 'rgba(2, 132, 199, 0.35)' : 'transparent',
+                          outline: isCellInSelection(idx, 6) ? '1px solid #38bdf8' : 'none'
+                        }}
+                      >
                         {earningRatio}
                       </td>
-                      <td style={{ padding: '6px 8px', color: '#94a3b8', whiteSpace: 'nowrap' }}>
+
+                      {/* 8. 선반번호 */}
+                      <td
+                        onMouseDown={(e) => handleCellMouseDown(idx, 7, e)}
+                        onMouseEnter={() => handleCellMouseEnter(idx, 7)}
+                        style={{
+                          padding: '6px 8px',
+                          color: '#94a3b8',
+                          whiteSpace: 'nowrap',
+                          cursor: 'cell',
+                          backgroundColor: isCellInSelection(idx, 7) ? 'rgba(2, 132, 199, 0.35)' : 'transparent',
+                          outline: isCellInSelection(idx, 7) ? '1px solid #38bdf8' : 'none'
+                        }}
+                      >
                         {shelfNo}
                       </td>
-                      <td style={{ padding: '6px 8px', color: '#94a3b8', whiteSpace: 'nowrap' }}>
+
+                      {/* 9. 옵션 */}
+                      <td
+                        onMouseDown={(e) => handleCellMouseDown(idx, 8, e)}
+                        onMouseEnter={() => handleCellMouseEnter(idx, 8)}
+                        style={{
+                          padding: '6px 8px',
+                          color: '#94a3b8',
+                          whiteSpace: 'nowrap',
+                          cursor: 'cell',
+                          backgroundColor: isCellInSelection(idx, 8) ? 'rgba(2, 132, 199, 0.35)' : 'transparent',
+                          outline: isCellInSelection(idx, 8) ? '1px solid #38bdf8' : 'none'
+                        }}
+                      >
                         {option}
                       </td>
-                      <td style={{ padding: '6px 8px', color: '#94a3b8', whiteSpace: 'nowrap' }}>
+
+                      {/* 10. 교정일자 */}
+                      <td
+                        onMouseDown={(e) => handleCellMouseDown(idx, 9, e)}
+                        onMouseEnter={() => handleCellMouseEnter(idx, 9)}
+                        style={{
+                          padding: '6px 8px',
+                          color: '#94a3b8',
+                          whiteSpace: 'nowrap',
+                          cursor: 'cell',
+                          backgroundColor: isCellInSelection(idx, 9) ? 'rgba(2, 132, 199, 0.35)' : 'transparent',
+                          outline: isCellInSelection(idx, 9) ? '1px solid #38bdf8' : 'none'
+                        }}
+                      >
                         {calDate}
                       </td>
-                      <td style={{ padding: '6px 8px', color: '#94a3b8', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
+
+                      {/* 11. MAC wlan */}
+                      <td
+                        onMouseDown={(e) => handleCellMouseDown(idx, 10, e)}
+                        onMouseEnter={() => handleCellMouseEnter(idx, 10)}
+                        style={{
+                          padding: '6px 8px',
+                          color: '#94a3b8',
+                          fontFamily: 'monospace',
+                          whiteSpace: 'nowrap',
+                          cursor: 'cell',
+                          backgroundColor: isCellInSelection(idx, 10) ? 'rgba(2, 132, 199, 0.35)' : 'transparent',
+                          outline: isCellInSelection(idx, 10) ? '1px solid #38bdf8' : 'none'
+                        }}
+                      >
                         {macWlan}
                       </td>
-                      <td style={{ padding: '6px 8px', color: '#94a3b8', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
+
+                      {/* 12. MAC lan */}
+                      <td
+                        onMouseDown={(e) => handleCellMouseDown(idx, 11, e)}
+                        onMouseEnter={() => handleCellMouseEnter(idx, 11)}
+                        style={{
+                          padding: '6px 8px',
+                          color: '#94a3b8',
+                          fontFamily: 'monospace',
+                          whiteSpace: 'nowrap',
+                          cursor: 'cell',
+                          backgroundColor: isCellInSelection(idx, 11) ? 'rgba(2, 132, 199, 0.35)' : 'transparent',
+                          outline: isCellInSelection(idx, 11) ? '1px solid #38bdf8' : 'none'
+                        }}
+                      >
                         {macLan}
                       </td>
-                      <td style={{ padding: '6px 8px', color: '#a78bfa', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
+
+                      {/* 13. IMEI */}
+                      <td
+                        onMouseDown={(e) => handleCellMouseDown(idx, 12, e)}
+                        onMouseEnter={() => handleCellMouseEnter(idx, 12)}
+                        style={{
+                          padding: '6px 8px',
+                          color: '#a78bfa',
+                          fontFamily: 'monospace',
+                          whiteSpace: 'nowrap',
+                          cursor: 'cell',
+                          backgroundColor: isCellInSelection(idx, 12) ? 'rgba(2, 132, 199, 0.35)' : 'transparent',
+                          outline: isCellInSelection(idx, 12) ? '1px solid #38bdf8' : 'none'
+                        }}
+                      >
                         {imei}
                       </td>
-                      <td style={{ padding: '6px 8px', color: '#94a3b8', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+
+                      {/* 14. 구성요소(사양) */}
+                      <td
+                        onMouseDown={(e) => handleCellMouseDown(idx, 13, e)}
+                        onMouseEnter={() => handleCellMouseEnter(idx, 13)}
+                        style={{
+                          padding: '6px 8px',
+                          color: '#94a3b8',
+                          maxWidth: '140px',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          cursor: 'cell',
+                          backgroundColor: isCellInSelection(idx, 13) ? 'rgba(2, 132, 199, 0.35)' : 'transparent',
+                          outline: isCellInSelection(idx, 13) ? '1px solid #38bdf8' : 'none'
+                        }}
+                      >
                         {components}
                       </td>
-                      <td style={{ padding: '6px 8px', color: '#64748b', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+
+                      {/* 15. 비고 */}
+                      <td
+                        onMouseDown={(e) => handleCellMouseDown(idx, 14, e)}
+                        onMouseEnter={() => handleCellMouseEnter(idx, 14)}
+                        style={{
+                          padding: '6px 8px',
+                          color: '#64748b',
+                          maxWidth: '140px',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          cursor: 'cell',
+                          backgroundColor: isCellInSelection(idx, 14) ? 'rgba(2, 132, 199, 0.35)' : 'transparent',
+                          outline: isCellInSelection(idx, 14) ? '1px solid #38bdf8' : 'none'
+                        }}
+                      >
                         {remark}
                       </td>
                     </tr>
@@ -870,6 +1132,28 @@ export default function PCDashboard({
           </table>
         </div>
       </div>
+
+      {/* ⭐️ 복사 완료 플로팅 토스트 알림 */}
+      {copyToast && (
+        <div style={{
+          position: 'fixed',
+          bottom: '24px',
+          right: '24px',
+          backgroundColor: '#0284c7',
+          color: '#ffffff',
+          padding: '8px 16px',
+          borderRadius: '6px',
+          fontSize: '0.78rem',
+          fontWeight: 700,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+          zIndex: 9999,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px'
+        }}>
+          📋 {copyToast}
+        </div>
+      )}
     </div>
   );
 }
