@@ -30,6 +30,20 @@ const { exec, spawn }  = require('child_process');
 const http      = require('http');
 const https     = require('https');
 
+// ⭐️ Zebra 한글 폰트(KFONT3/UHANGUL) 전용 CP949(EUC-KR) 인코더
+let iconv = null;
+try {
+  iconv = require('iconv-lite');
+} catch (e) {}
+
+function encodeZpl(zpl) {
+  if (!zpl) return Buffer.alloc(0);
+  if (iconv && (zpl.includes('^CI26') || /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/.test(zpl))) {
+    return iconv.encode(zpl, 'cp949');
+  }
+  return Buffer.from(zpl, 'utf8');
+}
+
 // ── 전역 크래시 핸들러 (exe 더블클릭 시 창 닫힘 방지) ─────────────────────
 const CRASH_LOG = path.join(process.cwd(), 'agent-crash.log');
 function writeCrashLog(label, err) {
@@ -341,7 +355,8 @@ function downloadBinary(urlStr, destPath) {
 // ── [모드1] TCP 전송 ──────────────────────────────────────────────────────
 function sendZplViaTcp(zpl, host, port) {
   return new Promise((resolve, reject) => {
-    const s = net.createConnection({ host, port }, () => s.write(zpl, 'utf8', () => s.end()));
+    const payload = encodeZpl(zpl);
+    const s = net.createConnection({ host, port }, () => s.write(payload, () => s.end()));
     s.on('close', resolve);
     s.on('error', reject);
     s.setTimeout(8000, () => { s.destroy(); reject(new Error(`TCP 타임아웃 (${host}:${port})`)); });
@@ -375,8 +390,7 @@ function sendZplViaWindowsPort(zpl, printerName) {
       '  [DllImport("winspool.Drv",EntryPoint="WritePrinter")] public static extern bool Write(IntPtr h,byte[] b,int n,out int w);',
       '}',
       '"@',
-      '$text=[System.IO.File]::ReadAllText($fp,[System.Text.Encoding]::UTF8)',
-      'if($text -match "\^CI26"){$bytes=[System.Text.Encoding]::GetEncoding(949).GetBytes($text)}else{$bytes=[System.Text.Encoding]::UTF8.GetBytes($text)}',
+      '$bytes=[System.IO.File]::ReadAllBytes($fp)',
       '$h=[IntPtr]::Zero',
       'if(-not [WP]::Open($pn,[ref]$h,[IntPtr]::Zero)){throw "OpenPrinter 실패: $pn"}',
       '$di=New-Object WP+DI;$di.n="ZPL";$di.t="RAW"',
@@ -397,10 +411,12 @@ function sendZplViaWindowsPort(zpl, printerName) {
     };
 
     try {
-      fs.writeFileSync(zplFile, Buffer.from(zpl, 'utf8'));
+      // ⭐️ CP949(EUC-KR 완성형 한글) 바이트 버퍼를 직접 파일로 작성
+      const encodedBuffer = encodeZpl(zpl);
+      fs.writeFileSync(zplFile, encodedBuffer);
       fs.writeFileSync(psFile,  psScript, 'utf8');
       const cmd = `powershell -NoProfile -ExecutionPolicy Bypass -File "${psFile}" -pn "${printerName.replace(/"/g,'\\"')}" -fp "${zplFile.replace(/\\/g,'\\\\')}"`;
-      log('PRINT', `winspool RAW 전송: ${printerName}`);
+      log('PRINT', `winspool RAW 전송: ${printerName} (${encodedBuffer.length} bytes / CP949 한글 바이트)`);
       exec(cmd, { timeout: 15000 }, (err, stdout, stderr) => {
         const out    = (stdout  || '').trim();
         const errMsg = (stderr  || '').trim();

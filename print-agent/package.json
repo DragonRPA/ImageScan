@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.3",
+    "iconv-lite": "^0.7.3",
     "ws": "^8.21.3"
   },
   "engines": {
