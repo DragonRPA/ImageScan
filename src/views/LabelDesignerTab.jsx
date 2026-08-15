@@ -67,6 +67,57 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
     });
   }, []);
 
+  // ★ 스키마 정의 변경 시 template.elements의 표시명(name)과 신규 필드를 자동 동기화 (SSOT)
+  useEffect(() => {
+    if (!schemaDef || !schemaDef.fields || !template || !template.elements) return;
+
+    const schemaFieldMap = new Map();
+    schemaDef.fields.forEach(f => schemaFieldMap.set(f.id, f));
+
+    let hasChanges = false;
+    // 1. 기존 text 요소의 name을 최신 스키마 표시명으로 동기화
+    const updatedElements = template.elements.map(elem => {
+      if (elem.type === 'text' && elem.field && schemaFieldMap.has(elem.field)) {
+        const schemaField = schemaFieldMap.get(elem.field);
+        if (elem.name !== schemaField.name) {
+          hasChanges = true;
+          return { ...elem, name: schemaField.name };
+        }
+      }
+      return elem;
+    });
+
+    // 2. 스키마에 새로 추가된 필드가 템플릿 elements에 없으면 자동 추가
+    const existingFieldIds = new Set(
+      template.elements.filter(e => e.type === 'text').map(e => e.field)
+    );
+
+    schemaDef.fields.forEach((f, idx) => {
+      if (!existingFieldIds.has(f.id)) {
+        hasChanges = true;
+        updatedElements.push({
+          id: `elem_${f.id}`,
+          name: f.name,
+          type: 'text',
+          field: f.id,
+          prefix: `${f.name}: `,
+          xMm: 2.0,
+          yMm: Math.min(35, 14.0 + (idx * 3.5)),
+          fontSizePt: 16,
+          fontFamily: 'A0N',
+          visible: false
+        });
+      }
+    });
+
+    if (hasChanges) {
+      setTemplate(prev => ({
+        ...prev,
+        elements: updatedElements
+      }));
+    }
+  }, [schemaDef]);
+
   // 동적 샘플 데이터 생성
   const SAMPLE_ITEM = React.useMemo(() => {
     const item = { ...DEFAULT_SAMPLE_ITEM };
@@ -77,6 +128,16 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
     });
     return item;
   }, [schemaDef]);
+
+  // 요소의 실시간 동적 표시명 조회
+  const getElemDisplayName = (elem) => {
+    if (!elem) return '';
+    if (elem.type === 'text' && elem.field && schemaDef.fields) {
+      const matched = schemaDef.fields.find(f => f.id === elem.field);
+      if (matched) return matched.name;
+    }
+    return elem.name;
+  };
 
   // 바코드 대상 가능 필드 목록 (동적 스키마 연동)
   const barcodeFields = (schemaDef.fields || []).filter(f => f.isBarcodeTarget !== false);
@@ -425,7 +486,7 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                         fontWeight: 600,
                         color: elem.visible ? '#f8fafc' : '#64748b'
                       }}>
-                        {elem.name}
+                        {getElemDisplayName(elem)}
                       </span>
                     </div>
                     <span style={{ fontSize: '0.65rem', color: '#94a3b8', fontFamily: 'monospace' }}>
@@ -450,7 +511,7 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#38bdf8' }}>
-                  {selectedElem.name}
+                  {getElemDisplayName(selectedElem)}
                 </span>
                 <span style={{ fontSize: '0.65rem', color: '#94a3b8' }}>
                   {selectedElem.type}
