@@ -27,7 +27,7 @@ import {
   getAllPresets,
   createEmptyTemplate
 } from '../utils/labelTemplate';
-import { generateCode39DataUrl } from '../utils/barcode39';
+import { generateCode39DataUrl, RealBarcodeSvg } from '../utils/barcode39';
 import { insertPrintQueue } from '../utils/supabaseClient';
 
 import {
@@ -620,6 +620,44 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
       }}>
         {/* ── [1/2] Left Panel: 설정 및 속성 편집기 ───────────────────── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', minWidth: 0 }}>
+          {/* 0. 디자인 명칭 */}
+          <div style={{
+            backgroundColor: '#1e293b',
+            border: '1px solid #38bdf8',
+            borderRadius: '8px',
+            padding: '10px',
+            boxSizing: 'border-box',
+            width: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '4px'
+          }}>
+            <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#38bdf8' }}>
+              디자인 명칭
+            </label>
+            <input
+              type="text"
+              value={template.name || ''}
+              onChange={(e) => {
+                const val = e.target.value;
+                setTemplate(prev => ({ ...prev, name: val }));
+                setIsSaved(false);
+              }}
+              placeholder="서식 명칭을 입력하세요"
+              style={{
+                width: '100%',
+                boxSizing: 'border-box',
+                backgroundColor: '#0f172a',
+                border: '1px solid #475569',
+                borderRadius: '4px',
+                padding: '5px 8px',
+                color: '#f8fafc',
+                fontSize: '0.78rem',
+                fontWeight: 600
+              }}
+            />
+          </div>
+
           {/* 1. 용지 규격 */}
           <div style={{
             backgroundColor: '#1e293b',
@@ -1296,21 +1334,19 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                         justifyContent: 'center',
                         fontSize: '9px',
                         fontWeight: 700,
-                        letterSpacing: '-0.5px'
+                        letterSpacing: '-0.5px',
+                        borderRadius: '2px'
                       }}>
                         QR CODE
                       </div>
                     ) : (
-                      <img
-                        src={generateCode39DataUrl(bcVal)}
-                        alt={bcVal}
-                        style={{ height: `${heightPx}px`, maxWidth: `${canvasWidthPx - leftPx - 10}px` }}
+                      <RealBarcodeSvg
+                        value={bcVal}
+                        type={elem.barcodeType || 'CODE128'}
+                        heightPx={heightPx}
+                        showText={elem.showText !== false}
+                        scale={PX_PER_MM / 9.0}
                       />
-                    )}
-                    {elem.showText && elem.barcodeType !== 'QR' && (
-                      <div style={{ fontSize: '9px', fontWeight: 700, marginTop: '1px' }}>
-                        *{bcVal}*
-                      </div>
                     )}
                   </div>
                 );
