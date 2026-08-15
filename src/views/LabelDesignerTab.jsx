@@ -21,7 +21,13 @@ import {
 import { generateCode39DataUrl } from '../utils/barcode39';
 import { insertPrintQueue } from '../utils/supabaseClient';
 
-const SAMPLE_ITEM = {
+import {
+  DEFAULT_SCHEMA_DEF,
+  fetchActiveSchema,
+  getLocalSchemaDef
+} from '../utils/dynamicSchema';
+
+const DEFAULT_SAMPLE_ITEM = {
   asset_no: 'TEST0001',
   imei: '351379300225052',
   serial_no: 'R5KL60F0CZW',
@@ -30,6 +36,7 @@ const SAMPLE_ITEM = {
 };
 
 export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
+  const [schemaDef, setSchemaDef] = useState(getLocalSchemaDef);
   const [template, setTemplate] = useState(getStoredLabelTemplate);
   const [selectedElemId, setSelectedElemId] = useState('elem_asset_no');
   const [activeRightTab, setActiveRightTab] = useState('preview');
@@ -49,11 +56,31 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
 
   const selectedElem = (template.elements || []).find(e => e.id === selectedElemId) || null;
 
+  // 스키마 및 백엔드 라벨 서식 동시 로드
   useEffect(() => {
+    fetchActiveSchema().then(def => {
+      if (def) setSchemaDef(def);
+    });
+
     fetchBackendLabelTemplate().then(tpl => {
       if (tpl) setTemplate(tpl);
     });
   }, []);
+
+  // 동적 샘플 데이터 생성
+  const SAMPLE_ITEM = React.useMemo(() => {
+    const item = { ...DEFAULT_SAMPLE_ITEM };
+    (schemaDef.fields || []).forEach(f => {
+      if (!item[f.id]) {
+        item[f.id] = f.id.toUpperCase();
+      }
+    });
+    return item;
+  }, [schemaDef]);
+
+  // 바코드 대상 가능 필드 목록 (동적 스키마 연동)
+  const barcodeFields = (schemaDef.fields || []).filter(f => f.isBarcodeTarget !== false);
+  const allSchemaFields = schemaDef.fields || [];
 
   const handlePaperChange = (field, val) => {
     const num = Number(val) || 0;
@@ -474,6 +501,48 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
               {selectedElem.type === 'text' && (
                 <>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <label style={{ fontSize: '0.68rem', color: '#cbd5e1' }}>바인딩 필드</label>
+                    <select
+                      value={selectedElem.field || 'asset_no'}
+                      onChange={e => handleElemPropChange('field', e.target.value)}
+                      style={{
+                        backgroundColor: '#0f172a',
+                        border: '1px solid #475569',
+                        borderRadius: '4px',
+                        padding: '3px 6px',
+                        color: '#f8fafc',
+                        fontSize: '0.72rem'
+                      }}
+                    >
+                      {allSchemaFields.map(f => (
+                        <option key={f.id} value={f.id}>
+                          {f.name} ({f.id})
+                        </option>
+                      ))}
+                      <option value="custom">고정 텍스트 (직접 입력)</option>
+                    </select>
+                  </div>
+
+                  {selectedElem.field === 'custom' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <label style={{ fontSize: '0.68rem', color: '#cbd5e1' }}>고정 문구</label>
+                      <input
+                        type="text"
+                        value={selectedElem.customValue || ''}
+                        onChange={e => handleElemPropChange('customValue', e.target.value)}
+                        style={{
+                          backgroundColor: '#0f172a',
+                          border: '1px solid #475569',
+                          borderRadius: '4px',
+                          padding: '3px 6px',
+                          color: '#f8fafc',
+                          fontSize: '0.72rem'
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                     <label style={{ fontSize: '0.68rem', color: '#cbd5e1' }}>접두어</label>
                     <input
                       type="text"
@@ -532,20 +601,23 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                     <label style={{ fontSize: '0.68rem', color: '#cbd5e1' }}>대상 필드</label>
                     <select
-                      value={selectedElem.targetField || 'asset_no'}
+                      value={selectedElem.targetField || schemaDef.key_field || 'asset_no'}
                       onChange={e => handleElemPropChange('targetField', e.target.value)}
                       style={{
                         backgroundColor: '#0f172a',
                         border: '1px solid #475569',
                         borderRadius: '4px',
                         padding: '3px 6px',
-                        color: '#f8fafc',
+                        color: '#38bdf8',
+                        fontWeight: 600,
                         fontSize: '0.72rem'
                       }}
                     >
-                      <option value="asset_no">관리번호</option>
-                      <option value="imei">IMEI</option>
-                      <option value="serial_no">시리얼번호</option>
+                      {barcodeFields.map(f => (
+                        <option key={f.id} value={f.id}>
+                          {f.name} ({f.id})
+                        </option>
+                      ))}
                     </select>
                   </div>
 
@@ -667,12 +739,11 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                 const topPx = elem.yMm * PX_PER_MM;
 
                 let displayText = `${elem.prefix || ''}`;
-                if (elem.field === 'asset_no') displayText += SAMPLE_ITEM.asset_no;
-                else if (elem.field === 'imei') displayText += SAMPLE_ITEM.imei;
-                else if (elem.field === 'serial_no') displayText += SAMPLE_ITEM.serial_no;
-                else if (elem.field === 'mac_address') displayText += SAMPLE_ITEM.mac_address;
-                else if (elem.field === 'scanned_at') displayText += SAMPLE_ITEM.scanned_at;
-                else if (elem.field === 'custom') displayText += elem.customValue || '';
+                if (elem.field === 'custom') {
+                  displayText += (elem.customValue || '');
+                } else {
+                  displayText += (SAMPLE_ITEM[elem.field] || elem.field?.toUpperCase() || '');
+                }
 
                 if (elem.type === 'line') {
                   const lineWPx = (elem.widthMm || 60) * PX_PER_MM;
@@ -698,9 +769,7 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
 
                 if (elem.type === 'barcode') {
                   const barcodeHeightPx = (elem.heightMm || 10) * PX_PER_MM;
-                  let bcVal = SAMPLE_ITEM.asset_no;
-                  if (elem.targetField === 'imei') bcVal = SAMPLE_ITEM.imei;
-                  else if (elem.targetField === 'serial_no') bcVal = SAMPLE_ITEM.serial_no;
+                  const bcVal = String(SAMPLE_ITEM[elem.targetField] || SAMPLE_ITEM[schemaDef.key_field] || 'TEST0001');
 
                   const barcodeDataUrl = generateCode39DataUrl(bcVal, { height: barcodeHeightPx * 2 });
 
@@ -863,9 +932,7 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                     return <div key={el.id} style={{ borderBottom: '1.5px solid #000', margin: '3px 0' }} />;
                   }
                   if (el.type === 'barcode') {
-                    let bcVal = SAMPLE_ITEM.asset_no;
-                    if (el.targetField === 'imei') bcVal = SAMPLE_ITEM.imei;
-                    else if (el.targetField === 'serial_no') bcVal = SAMPLE_ITEM.serial_no;
+                    const bcVal = String(SAMPLE_ITEM[el.targetField] || SAMPLE_ITEM[schemaDef.key_field] || 'TEST0001');
                     const url = generateCode39DataUrl(bcVal, { height: 28 });
                     return (
                       <div key={el.id} style={{ textAlign: 'center', margin: '4px 0 0 0' }}>
@@ -879,12 +946,11 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                     );
                   }
                   let text = el.prefix || '';
-                  if (el.field === 'asset_no') text += SAMPLE_ITEM.asset_no;
-                  else if (el.field === 'imei') text += SAMPLE_ITEM.imei;
-                  else if (el.field === 'serial_no') text += SAMPLE_ITEM.serial_no;
-                  else if (el.field === 'mac_address') text += SAMPLE_ITEM.mac_address;
-                  else if (el.field === 'scanned_at') text += SAMPLE_ITEM.scanned_at;
-                  else if (el.field === 'custom') text += el.customValue || '';
+                  if (el.field === 'custom') {
+                    text += (el.customValue || '');
+                  } else {
+                    text += (SAMPLE_ITEM[el.field] || el.field?.toUpperCase() || '');
+                  }
                   return (
                     <div key={el.id} style={{ fontWeight: 700, fontSize: `${(el.fontSizePt || 20) * 0.6}px` }}>
                       {text}

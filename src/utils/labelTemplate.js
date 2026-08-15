@@ -235,13 +235,10 @@ export function generateDynamicZpl(item = {}, template = DEFAULT_LABEL_TEMPLATE)
 
   const getValue = (elem) => {
     if (elem.field === 'custom') return elem.customValue || '';
-    const raw = item[elem.field] || item.data?.[elem.field] || '';
-    if (elem.field === 'asset_no') return String(raw || item.key_value || 'TEST0001').replace(/[^A-Z0-9\-_\. ]/gi, '');
-    if (elem.field === 'imei') return String(raw || '351379300225052').replace(/[^0-9]/g, '');
-    if (elem.field === 'serial_no') return String(raw || 'R5KL60F0CZW').slice(0, 24);
-    if (elem.field === 'mac_address') return String(raw || '4CEBB0B57A51').replace(/[^A-F0-9\-:]/gi, '').slice(0, 24);
-    if (elem.field === 'scanned_at') return String(raw || new Date().toISOString().slice(0, 10));
-    return String(raw || '');
+    const raw = item[elem.field] || item.data?.[elem.field] || item[elem.id];
+    if (raw !== undefined && raw !== null && raw !== '') return String(raw);
+    if (elem.field === 'asset_no' || elem.field === 'key_field') return String(item.key_value || item.asset_no || 'TEST0001');
+    return '';
   };
 
   (t.elements || []).forEach(elem => {

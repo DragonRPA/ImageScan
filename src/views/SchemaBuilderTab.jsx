@@ -107,15 +107,97 @@ export default function SchemaBuilderTab({ onError, onSchemaUpdated }) {
 
     try {
       const res = await applySchemaPatch(schemaDef, resetData);
-      setStatusMessage({ type: 'success', text: res.message || '스키마 DDL 패치 완료' });
+      setStatusMessage({
+        type: res.localOnly ? 'warning' : 'success',
+        text: res.message || '스키마 DDL 패치 완료'
+      });
       if (onSchemaUpdated) onSchemaUpdated(schemaDef);
-      setTimeout(() => setStatusMessage(null), 3000);
+      setTimeout(() => setStatusMessage(null), 5000);
     } catch (err) {
       setStatusMessage({ type: 'error', text: err.message });
       if (onError) onError(err.message);
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleCopyDdl = () => {
+    const ddlSql = `-- 1. 스키마 정의 테이블
+CREATE TABLE IF NOT EXISTS public.schema_definitions (
+    id VARCHAR(64) PRIMARY KEY,
+    schema_name VARCHAR(100) NOT NULL,
+    key_field VARCHAR(64) NOT NULL,
+    key_field_name VARCHAR(100) NOT NULL,
+    fields JSONB NOT NULL,
+    table_version INT DEFAULT 1,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 2. 동적 스캔 큐 & 데이터 레코드 테이블
+CREATE TABLE IF NOT EXISTS public.scan_records (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    key_value VARCHAR(100) NOT NULL,
+    data JSONB NOT NULL DEFAULT '{}'::jsonb,
+    scan_status VARCHAR(20) DEFAULT 'SCANNED',
+    scanned_by VARCHAR(50) DEFAULT 'MOBILE_APP',
+    scanned_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_scan_records_key ON public.scan_records (key_value);
+CREATE INDEX IF NOT EXISTS idx_scan_records_data ON public.scan_records USING GIN (data);
+
+-- 3. 백엔드 라벨 서식 템플릿 테이블
+CREATE TABLE IF NOT EXISTS public.label_templates (
+    id VARCHAR(64) PRIMARY KEY,
+    schema_id VARCHAR(64) REFERENCES public.schema_definitions(id) ON DELETE CASCADE,
+    name VARCHAR(100) NOT NULL,
+    paper JSONB NOT NULL,
+    elements JSONB NOT NULL,
+    is_default BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 4. 범용 프린트 큐 테이블
+CREATE TABLE IF NOT EXISTS public.print_queue (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    scan_record_id UUID REFERENCES public.scan_records(id) ON DELETE SET NULL,
+    template_id VARCHAR(64) REFERENCES public.label_templates(id),
+    key_value VARCHAR(100) NOT NULL,
+    record_data JSONB NOT NULL DEFAULT '{}'::jsonb,
+    zpl_payload TEXT NOT NULL,
+    print_status VARCHAR(20) DEFAULT 'PENDING',
+    print_error TEXT DEFAULT NULL,
+    agent_id VARCHAR(100) DEFAULT NULL,
+    requested_by VARCHAR(50) DEFAULT 'SYSTEM',
+    printed_at TIMESTAMPTZ DEFAULT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 5. RLS 정책 일괄 허용
+ALTER TABLE public.schema_definitions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.scan_records ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.label_templates ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.print_queue ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Allow all schema_definitions" ON public.schema_definitions;
+CREATE POLICY "Allow all schema_definitions" ON public.schema_definitions FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow all scan_records" ON public.scan_records;
+CREATE POLICY "Allow all scan_records" ON public.scan_records FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow all label_templates" ON public.label_templates;
+CREATE POLICY "Allow all label_templates" ON public.label_templates FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow all print_queue" ON public.print_queue;
+CREATE POLICY "Allow all print_queue" ON public.print_queue FOR ALL USING (true) WITH CHECK (true);`;
+
+    navigator.clipboard.writeText(ddlSql).then(() => {
+      alert('전체 DDL SQL이 클립보드에 복사되었습니다!\nSupabase 대시보드 > SQL Editor에 붙여넣고 RUN을 실행하세요.');
+    }).catch(() => {
+      alert('클립보드 복사 실패. schema.sql 파일을 확인해 주세요.');
+    });
   };
 
   return (
@@ -163,6 +245,14 @@ export default function SchemaBuilderTab({ onError, onSchemaUpdated }) {
             />
             데이터 초기화
           </label>
+          <button
+            onClick={handleCopyDdl}
+            className="btn btn-outline"
+            style={{ fontSize: '0.72rem', padding: '4px 10px', borderColor: '#38bdf8', color: '#38bdf8' }}
+            title="Supabase SQL Editor 실행용 DDL 복사"
+          >
+            DDL 복사
+          </button>
           <button
             onClick={handleAddField}
             className="btn btn-outline"

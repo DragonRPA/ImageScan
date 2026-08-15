@@ -171,8 +171,16 @@ export async function applySchemaPatch(schemaDef, resetData = false) {
 
     return { success: true, message: '스키마 정의 저장 완료' };
   } catch (err) {
+    const errMsg = err.message || '';
+    if (errMsg.includes('schema_definitions') || errMsg.includes('schema cache') || errMsg.includes('404')) {
+      return {
+        success: true,
+        localOnly: true,
+        message: '로컬 스키마 저장 완료 (원격 DB 테이블 미생성 - 상단 [DDL 복사] 후 Supabase SQL Editor에서 1회 실행 필요)'
+      };
+    }
     console.error('스키마 패치 오류:', err);
-    throw new Error(`스키마 패치 실패: ${err.message}`);
+    throw new Error(`스키마 패치 실패: ${errMsg}`);
   }
 }
 
