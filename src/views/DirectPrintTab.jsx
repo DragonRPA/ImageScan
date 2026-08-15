@@ -884,8 +884,8 @@ export default function DirectPrintTab({ onError, onOpenPrintModal }) {
             }}
           >
             {selectedTemplate.elements.filter(e => e.visible).map(elem => {
-              const leftPx = ((Number(elem.xMm) || 0) + (Number(elem.offsetX) || 0)) * PX_PER_MM;
-              const topPx = ((Number(elem.yMm) || 0) + (Number(elem.offsetY) || 0)) * PX_PER_MM;
+              const leftPx = Math.max(0, ((Number(elem.xMm) || 0) + (Number(elem.offsetX) || 0))) * PX_PER_MM;
+              const topPx = Math.max(0, ((Number(elem.yMm) || 0) + (Number(elem.offsetY) || 0))) * PX_PER_MM;
               const currentData = lastScannedItem || {
                 asset_no: '224011319',
                 product_name: '아이패드 9세대',

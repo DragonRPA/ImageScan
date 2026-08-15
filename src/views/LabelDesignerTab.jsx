@@ -814,24 +814,6 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                 />
               </div>
             </div>
-
-            {/* ⭐️ ZPL 공식 원점 규약 자동 산출 표시 */}
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              backgroundColor: '#0f172a',
-              padding: '4px 6px',
-              borderRadius: '4px',
-              border: '1px solid #1e293b',
-              fontSize: '0.62rem',
-              color: '#94a3b8'
-            }}>
-              <span>ZPL 자동 원점 (^LH):</span>
-              <span style={{ color: '#38bdf8', fontWeight: 700, fontFamily: 'monospace' }}>
-                ^LH{Number(template.paper?.widthMm || 72) < 104 ? Math.max(0, Math.round(((104 - Number(template.paper?.widthMm || 72)) / 2.0) * 8.0)) : 0},0 (^PW{Math.round(Number(template.paper?.widthMm || 72) * 8.0)})
-              </span>
-            </div>
           </div>
 
           {/* ═════════════════════════════════════════════════════════════════════ */}
@@ -1007,7 +989,7 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                     </div>
                   </div>
 
-                  {/* ⭐️ X / Y 인쇄 미세 보정 (mm) */}
+                  {/* ⭐️ X / Y 인쇄 미세 보정 (mm) - 음수 및 양수 자유 조절 */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', backgroundColor: '#0f172a', padding: '4px 6px', borderRadius: '4px', border: '1px dashed #334155' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1016,21 +998,39 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                           {selectedElem.offsetX > 0 ? `+${selectedElem.offsetX}` : (selectedElem.offsetX || 0)}
                         </span>
                       </div>
-                      <input
-                        type="number"
-                        step="0.5"
-                        value={selectedElem.offsetX || 0}
-                        onChange={e => handleElemPropChange('offsetX', parseFloat(e.target.value) || 0)}
-                        style={{
-                          backgroundColor: '#1e293b',
-                          border: '1px solid #0284c7',
-                          borderRadius: '3px',
-                          padding: '2px 4px',
-                          color: '#facc15',
-                          fontSize: '0.70rem',
-                          fontWeight: 700
-                        }}
-                      />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                        <button
+                          onClick={() => handleElemPropChange('offsetX', Math.round(((Number(selectedElem.offsetX) || 0) - 0.5) * 10) / 10)}
+                          style={{ background: '#1e293b', border: '1px solid #475569', color: '#cbd5e1', borderRadius: '3px', padding: '2px 4px', cursor: 'pointer', display: 'flex' }}
+                        >
+                          <Minus size={9} />
+                        </button>
+                        <input
+                          type="number"
+                          step="0.5"
+                          min="-100"
+                          max="100"
+                          value={selectedElem.offsetX || 0}
+                          onChange={e => handleElemPropChange('offsetX', parseFloat(e.target.value) || 0)}
+                          style={{
+                            width: '100%',
+                            backgroundColor: '#1e293b',
+                            border: '1px solid #0284c7',
+                            borderRadius: '3px',
+                            padding: '2px 2px',
+                            color: '#facc15',
+                            fontSize: '0.70rem',
+                            fontWeight: 700,
+                            textAlign: 'center'
+                          }}
+                        />
+                        <button
+                          onClick={() => handleElemPropChange('offsetX', Math.round(((Number(selectedElem.offsetX) || 0) + 0.5) * 10) / 10)}
+                          style={{ background: '#1e293b', border: '1px solid #475569', color: '#cbd5e1', borderRadius: '3px', padding: '2px 4px', cursor: 'pointer', display: 'flex' }}
+                        >
+                          <Plus size={9} />
+                        </button>
+                      </div>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1039,21 +1039,39 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                           {selectedElem.offsetY > 0 ? `+${selectedElem.offsetY}` : (selectedElem.offsetY || 0)}
                         </span>
                       </div>
-                      <input
-                        type="number"
-                        step="0.5"
-                        value={selectedElem.offsetY || 0}
-                        onChange={e => handleElemPropChange('offsetY', parseFloat(e.target.value) || 0)}
-                        style={{
-                          backgroundColor: '#1e293b',
-                          border: '1px solid #0284c7',
-                          borderRadius: '3px',
-                          padding: '2px 4px',
-                          color: '#facc15',
-                          fontSize: '0.70rem',
-                          fontWeight: 700
-                        }}
-                      />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                        <button
+                          onClick={() => handleElemPropChange('offsetY', Math.round(((Number(selectedElem.offsetY) || 0) - 0.5) * 10) / 10)}
+                          style={{ background: '#1e293b', border: '1px solid #475569', color: '#cbd5e1', borderRadius: '3px', padding: '2px 4px', cursor: 'pointer', display: 'flex' }}
+                        >
+                          <Minus size={9} />
+                        </button>
+                        <input
+                          type="number"
+                          step="0.5"
+                          min="-100"
+                          max="100"
+                          value={selectedElem.offsetY || 0}
+                          onChange={e => handleElemPropChange('offsetY', parseFloat(e.target.value) || 0)}
+                          style={{
+                            width: '100%',
+                            backgroundColor: '#1e293b',
+                            border: '1px solid #0284c7',
+                            borderRadius: '3px',
+                            padding: '2px 2px',
+                            color: '#facc15',
+                            fontSize: '0.70rem',
+                            fontWeight: 700,
+                            textAlign: 'center'
+                          }}
+                        />
+                        <button
+                          onClick={() => handleElemPropChange('offsetY', Math.round(((Number(selectedElem.offsetY) || 0) + 0.5) * 10) / 10)}
+                          style={{ background: '#1e293b', border: '1px solid #475569', color: '#cbd5e1', borderRadius: '3px', padding: '2px 4px', cursor: 'pointer', display: 'flex' }}
+                        >
+                          <Plus size={9} />
+                        </button>
+                      </div>
                     </div>
                   </div>
 
@@ -1186,7 +1204,7 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                     </div>
                   </div>
 
-                  {/* ⭐️ X / Y 인쇄 미세 보정 (mm) */}
+                  {/* ⭐️ X / Y 인쇄 미세 보정 (mm) - 음수 및 양수 자유 조절 */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', backgroundColor: '#0f172a', padding: '4px 6px', borderRadius: '4px', border: '1px dashed #334155' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1195,21 +1213,39 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                           {selectedElem.offsetX > 0 ? `+${selectedElem.offsetX}` : (selectedElem.offsetX || 0)}
                         </span>
                       </div>
-                      <input
-                        type="number"
-                        step="0.5"
-                        value={selectedElem.offsetX || 0}
-                        onChange={e => handleElemPropChange('offsetX', parseFloat(e.target.value) || 0)}
-                        style={{
-                          backgroundColor: '#1e293b',
-                          border: '1px solid #0284c7',
-                          borderRadius: '3px',
-                          padding: '2px 4px',
-                          color: '#facc15',
-                          fontSize: '0.70rem',
-                          fontWeight: 700
-                        }}
-                      />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                        <button
+                          onClick={() => handleElemPropChange('offsetX', Math.round(((Number(selectedElem.offsetX) || 0) - 0.5) * 10) / 10)}
+                          style={{ background: '#1e293b', border: '1px solid #475569', color: '#cbd5e1', borderRadius: '3px', padding: '2px 4px', cursor: 'pointer', display: 'flex' }}
+                        >
+                          <Minus size={9} />
+                        </button>
+                        <input
+                          type="number"
+                          step="0.5"
+                          min="-100"
+                          max="100"
+                          value={selectedElem.offsetX || 0}
+                          onChange={e => handleElemPropChange('offsetX', parseFloat(e.target.value) || 0)}
+                          style={{
+                            width: '100%',
+                            backgroundColor: '#1e293b',
+                            border: '1px solid #0284c7',
+                            borderRadius: '3px',
+                            padding: '2px 2px',
+                            color: '#facc15',
+                            fontSize: '0.70rem',
+                            fontWeight: 700,
+                            textAlign: 'center'
+                          }}
+                        />
+                        <button
+                          onClick={() => handleElemPropChange('offsetX', Math.round(((Number(selectedElem.offsetX) || 0) + 0.5) * 10) / 10)}
+                          style={{ background: '#1e293b', border: '1px solid #475569', color: '#cbd5e1', borderRadius: '3px', padding: '2px 4px', cursor: 'pointer', display: 'flex' }}
+                        >
+                          <Plus size={9} />
+                        </button>
+                      </div>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1218,21 +1254,39 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                           {selectedElem.offsetY > 0 ? `+${selectedElem.offsetY}` : (selectedElem.offsetY || 0)}
                         </span>
                       </div>
-                      <input
-                        type="number"
-                        step="0.5"
-                        value={selectedElem.offsetY || 0}
-                        onChange={e => handleElemPropChange('offsetY', parseFloat(e.target.value) || 0)}
-                        style={{
-                          backgroundColor: '#1e293b',
-                          border: '1px solid #0284c7',
-                          borderRadius: '3px',
-                          padding: '2px 4px',
-                          color: '#facc15',
-                          fontSize: '0.70rem',
-                          fontWeight: 700
-                        }}
-                      />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                        <button
+                          onClick={() => handleElemPropChange('offsetY', Math.round(((Number(selectedElem.offsetY) || 0) - 0.5) * 10) / 10)}
+                          style={{ background: '#1e293b', border: '1px solid #475569', color: '#cbd5e1', borderRadius: '3px', padding: '2px 4px', cursor: 'pointer', display: 'flex' }}
+                        >
+                          <Minus size={9} />
+                        </button>
+                        <input
+                          type="number"
+                          step="0.5"
+                          min="-100"
+                          max="100"
+                          value={selectedElem.offsetY || 0}
+                          onChange={e => handleElemPropChange('offsetY', parseFloat(e.target.value) || 0)}
+                          style={{
+                            width: '100%',
+                            backgroundColor: '#1e293b',
+                            border: '1px solid #0284c7',
+                            borderRadius: '3px',
+                            padding: '2px 2px',
+                            color: '#facc15',
+                            fontSize: '0.70rem',
+                            fontWeight: 700,
+                            textAlign: 'center'
+                          }}
+                        />
+                        <button
+                          onClick={() => handleElemPropChange('offsetY', Math.round(((Number(selectedElem.offsetY) || 0) + 0.5) * 10) / 10)}
+                          style={{ background: '#1e293b', border: '1px solid #475569', color: '#cbd5e1', borderRadius: '3px', padding: '2px 4px', cursor: 'pointer', display: 'flex' }}
+                        >
+                          <Plus size={9} />
+                        </button>
+                      </div>
                     </div>
                   </div>
 
@@ -1462,7 +1516,7 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                     </div>
                   </div>
 
-                  {/* ⭐️ X / Y 인쇄 미세 보정 (mm) - QR 및 바코드 위치 오차 정밀 극복 */}
+                  {/* ⭐️ X / Y 인쇄 미세 보정 (mm) - QR 및 바코드 위치 오차 정밀 극복 (음수 및 양수 자유 조절) */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', backgroundColor: '#0f172a', padding: '4px 6px', borderRadius: '4px', border: '1px dashed #38bdf8', marginTop: '2px' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1471,21 +1525,39 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                           {selectedElem.offsetX > 0 ? `+${selectedElem.offsetX}` : (selectedElem.offsetX || 0)}
                         </span>
                       </div>
-                      <input
-                        type="number"
-                        step="0.5"
-                        value={selectedElem.offsetX || 0}
-                        onChange={e => handleElemPropChange('offsetX', parseFloat(e.target.value) || 0)}
-                        style={{
-                          backgroundColor: '#1e293b',
-                          border: '1px solid #38bdf8',
-                          borderRadius: '3px',
-                          padding: '2px 4px',
-                          color: '#facc15',
-                          fontSize: '0.70rem',
-                          fontWeight: 700
-                        }}
-                      />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                        <button
+                          onClick={() => handleElemPropChange('offsetX', Math.round(((Number(selectedElem.offsetX) || 0) - 0.5) * 10) / 10)}
+                          style={{ background: '#1e293b', border: '1px solid #475569', color: '#cbd5e1', borderRadius: '3px', padding: '2px 4px', cursor: 'pointer', display: 'flex' }}
+                        >
+                          <Minus size={9} />
+                        </button>
+                        <input
+                          type="number"
+                          step="0.5"
+                          min="-100"
+                          max="100"
+                          value={selectedElem.offsetX || 0}
+                          onChange={e => handleElemPropChange('offsetX', parseFloat(e.target.value) || 0)}
+                          style={{
+                            width: '100%',
+                            backgroundColor: '#1e293b',
+                            border: '1px solid #38bdf8',
+                            borderRadius: '3px',
+                            padding: '2px 2px',
+                            color: '#facc15',
+                            fontSize: '0.70rem',
+                            fontWeight: 700,
+                            textAlign: 'center'
+                          }}
+                        />
+                        <button
+                          onClick={() => handleElemPropChange('offsetX', Math.round(((Number(selectedElem.offsetX) || 0) + 0.5) * 10) / 10)}
+                          style={{ background: '#1e293b', border: '1px solid #475569', color: '#cbd5e1', borderRadius: '3px', padding: '2px 4px', cursor: 'pointer', display: 'flex' }}
+                        >
+                          <Plus size={9} />
+                        </button>
+                      </div>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1494,21 +1566,39 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                           {selectedElem.offsetY > 0 ? `+${selectedElem.offsetY}` : (selectedElem.offsetY || 0)}
                         </span>
                       </div>
-                      <input
-                        type="number"
-                        step="0.5"
-                        value={selectedElem.offsetY || 0}
-                        onChange={e => handleElemPropChange('offsetY', parseFloat(e.target.value) || 0)}
-                        style={{
-                          backgroundColor: '#1e293b',
-                          border: '1px solid #38bdf8',
-                          borderRadius: '3px',
-                          padding: '2px 4px',
-                          color: '#facc15',
-                          fontSize: '0.70rem',
-                          fontWeight: 700
-                        }}
-                      />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                        <button
+                          onClick={() => handleElemPropChange('offsetY', Math.round(((Number(selectedElem.offsetY) || 0) - 0.5) * 10) / 10)}
+                          style={{ background: '#1e293b', border: '1px solid #475569', color: '#cbd5e1', borderRadius: '3px', padding: '2px 4px', cursor: 'pointer', display: 'flex' }}
+                        >
+                          <Minus size={9} />
+                        </button>
+                        <input
+                          type="number"
+                          step="0.5"
+                          min="-100"
+                          max="100"
+                          value={selectedElem.offsetY || 0}
+                          onChange={e => handleElemPropChange('offsetY', parseFloat(e.target.value) || 0)}
+                          style={{
+                            width: '100%',
+                            backgroundColor: '#1e293b',
+                            border: '1px solid #38bdf8',
+                            borderRadius: '3px',
+                            padding: '2px 2px',
+                            color: '#facc15',
+                            fontSize: '0.70rem',
+                            fontWeight: 700,
+                            textAlign: 'center'
+                          }}
+                        />
+                        <button
+                          onClick={() => handleElemPropChange('offsetY', Math.round(((Number(selectedElem.offsetY) || 0) + 0.5) * 10) / 10)}
+                          style={{ background: '#1e293b', border: '1px solid #475569', color: '#cbd5e1', borderRadius: '3px', padding: '2px 4px', cursor: 'pointer', display: 'flex' }}
+                        >
+                          <Plus size={9} />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </>
@@ -1584,7 +1674,7 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                     </div>
                   </div>
 
-                  {/* ⭐️ X / Y 인쇄 미세 보정 (mm) */}
+                  {/* ⭐️ X / Y 인쇄 미세 보정 (mm) - 음수 및 양수 자유 조절 */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', backgroundColor: '#0f172a', padding: '4px 6px', borderRadius: '4px', border: '1px dashed #334155' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1593,21 +1683,39 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                           {selectedElem.offsetX > 0 ? `+${selectedElem.offsetX}` : (selectedElem.offsetX || 0)}
                         </span>
                       </div>
-                      <input
-                        type="number"
-                        step="0.5"
-                        value={selectedElem.offsetX || 0}
-                        onChange={e => handleElemPropChange('offsetX', parseFloat(e.target.value) || 0)}
-                        style={{
-                          backgroundColor: '#1e293b',
-                          border: '1px solid #0284c7',
-                          borderRadius: '3px',
-                          padding: '2px 4px',
-                          color: '#facc15',
-                          fontSize: '0.70rem',
-                          fontWeight: 700
-                        }}
-                      />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                        <button
+                          onClick={() => handleElemPropChange('offsetX', Math.round(((Number(selectedElem.offsetX) || 0) - 0.5) * 10) / 10)}
+                          style={{ background: '#1e293b', border: '1px solid #475569', color: '#cbd5e1', borderRadius: '3px', padding: '2px 4px', cursor: 'pointer', display: 'flex' }}
+                        >
+                          <Minus size={9} />
+                        </button>
+                        <input
+                          type="number"
+                          step="0.5"
+                          min="-100"
+                          max="100"
+                          value={selectedElem.offsetX || 0}
+                          onChange={e => handleElemPropChange('offsetX', parseFloat(e.target.value) || 0)}
+                          style={{
+                            width: '100%',
+                            backgroundColor: '#1e293b',
+                            border: '1px solid #0284c7',
+                            borderRadius: '3px',
+                            padding: '2px 2px',
+                            color: '#facc15',
+                            fontSize: '0.70rem',
+                            fontWeight: 700,
+                            textAlign: 'center'
+                          }}
+                        />
+                        <button
+                          onClick={() => handleElemPropChange('offsetX', Math.round(((Number(selectedElem.offsetX) || 0) + 0.5) * 10) / 10)}
+                          style={{ background: '#1e293b', border: '1px solid #475569', color: '#cbd5e1', borderRadius: '3px', padding: '2px 4px', cursor: 'pointer', display: 'flex' }}
+                        >
+                          <Plus size={9} />
+                        </button>
+                      </div>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1616,21 +1724,39 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                           {selectedElem.offsetY > 0 ? `+${selectedElem.offsetY}` : (selectedElem.offsetY || 0)}
                         </span>
                       </div>
-                      <input
-                        type="number"
-                        step="0.5"
-                        value={selectedElem.offsetY || 0}
-                        onChange={e => handleElemPropChange('offsetY', parseFloat(e.target.value) || 0)}
-                        style={{
-                          backgroundColor: '#1e293b',
-                          border: '1px solid #0284c7',
-                          borderRadius: '3px',
-                          padding: '2px 4px',
-                          color: '#facc15',
-                          fontSize: '0.70rem',
-                          fontWeight: 700
-                        }}
-                      />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                        <button
+                          onClick={() => handleElemPropChange('offsetY', Math.round(((Number(selectedElem.offsetY) || 0) - 0.5) * 10) / 10)}
+                          style={{ background: '#1e293b', border: '1px solid #475569', color: '#cbd5e1', borderRadius: '3px', padding: '2px 4px', cursor: 'pointer', display: 'flex' }}
+                        >
+                          <Minus size={9} />
+                        </button>
+                        <input
+                          type="number"
+                          step="0.5"
+                          min="-100"
+                          max="100"
+                          value={selectedElem.offsetY || 0}
+                          onChange={e => handleElemPropChange('offsetY', parseFloat(e.target.value) || 0)}
+                          style={{
+                            width: '100%',
+                            backgroundColor: '#1e293b',
+                            border: '1px solid #0284c7',
+                            borderRadius: '3px',
+                            padding: '2px 2px',
+                            color: '#facc15',
+                            fontSize: '0.70rem',
+                            fontWeight: 700,
+                            textAlign: 'center'
+                          }}
+                        />
+                        <button
+                          onClick={() => handleElemPropChange('offsetY', Math.round(((Number(selectedElem.offsetY) || 0) + 0.5) * 10) / 10)}
+                          style={{ background: '#1e293b', border: '1px solid #475569', color: '#cbd5e1', borderRadius: '3px', padding: '2px 4px', cursor: 'pointer', display: 'flex' }}
+                        >
+                          <Plus size={9} />
+                        </button>
+                      </div>
                     </div>
                   </div>
 
@@ -1703,7 +1829,7 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                     </div>
                   </div>
 
-                  {/* ⭐️ X / Y 인쇄 미세 보정 (mm) */}
+                  {/* ⭐️ X / Y 인쇄 미세 보정 (mm) - 음수 및 양수 자유 조절 */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', backgroundColor: '#0f172a', padding: '4px 6px', borderRadius: '4px', border: '1px dashed #334155' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1712,21 +1838,39 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                           {selectedElem.offsetX > 0 ? `+${selectedElem.offsetX}` : (selectedElem.offsetX || 0)}
                         </span>
                       </div>
-                      <input
-                        type="number"
-                        step="0.5"
-                        value={selectedElem.offsetX || 0}
-                        onChange={e => handleElemPropChange('offsetX', parseFloat(e.target.value) || 0)}
-                        style={{
-                          backgroundColor: '#1e293b',
-                          border: '1px solid #0284c7',
-                          borderRadius: '3px',
-                          padding: '2px 4px',
-                          color: '#facc15',
-                          fontSize: '0.70rem',
-                          fontWeight: 700
-                        }}
-                      />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                        <button
+                          onClick={() => handleElemPropChange('offsetX', Math.round(((Number(selectedElem.offsetX) || 0) - 0.5) * 10) / 10)}
+                          style={{ background: '#1e293b', border: '1px solid #475569', color: '#cbd5e1', borderRadius: '3px', padding: '2px 4px', cursor: 'pointer', display: 'flex' }}
+                        >
+                          <Minus size={9} />
+                        </button>
+                        <input
+                          type="number"
+                          step="0.5"
+                          min="-100"
+                          max="100"
+                          value={selectedElem.offsetX || 0}
+                          onChange={e => handleElemPropChange('offsetX', parseFloat(e.target.value) || 0)}
+                          style={{
+                            width: '100%',
+                            backgroundColor: '#1e293b',
+                            border: '1px solid #0284c7',
+                            borderRadius: '3px',
+                            padding: '2px 2px',
+                            color: '#facc15',
+                            fontSize: '0.70rem',
+                            fontWeight: 700,
+                            textAlign: 'center'
+                          }}
+                        />
+                        <button
+                          onClick={() => handleElemPropChange('offsetX', Math.round(((Number(selectedElem.offsetX) || 0) + 0.5) * 10) / 10)}
+                          style={{ background: '#1e293b', border: '1px solid #475569', color: '#cbd5e1', borderRadius: '3px', padding: '2px 4px', cursor: 'pointer', display: 'flex' }}
+                        >
+                          <Plus size={9} />
+                        </button>
+                      </div>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1735,21 +1879,39 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                           {selectedElem.offsetY > 0 ? `+${selectedElem.offsetY}` : (selectedElem.offsetY || 0)}
                         </span>
                       </div>
-                      <input
-                        type="number"
-                        step="0.5"
-                        value={selectedElem.offsetY || 0}
-                        onChange={e => handleElemPropChange('offsetY', parseFloat(e.target.value) || 0)}
-                        style={{
-                          backgroundColor: '#1e293b',
-                          border: '1px solid #0284c7',
-                          borderRadius: '3px',
-                          padding: '2px 4px',
-                          color: '#facc15',
-                          fontSize: '0.70rem',
-                          fontWeight: 700
-                        }}
-                      />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                        <button
+                          onClick={() => handleElemPropChange('offsetY', Math.round(((Number(selectedElem.offsetY) || 0) - 0.5) * 10) / 10)}
+                          style={{ background: '#1e293b', border: '1px solid #475569', color: '#cbd5e1', borderRadius: '3px', padding: '2px 4px', cursor: 'pointer', display: 'flex' }}
+                        >
+                          <Minus size={9} />
+                        </button>
+                        <input
+                          type="number"
+                          step="0.5"
+                          min="-100"
+                          max="100"
+                          value={selectedElem.offsetY || 0}
+                          onChange={e => handleElemPropChange('offsetY', parseFloat(e.target.value) || 0)}
+                          style={{
+                            width: '100%',
+                            backgroundColor: '#1e293b',
+                            border: '1px solid #0284c7',
+                            borderRadius: '3px',
+                            padding: '2px 2px',
+                            color: '#facc15',
+                            fontSize: '0.70rem',
+                            fontWeight: 700,
+                            textAlign: 'center'
+                          }}
+                        />
+                        <button
+                          onClick={() => handleElemPropChange('offsetY', Math.round(((Number(selectedElem.offsetY) || 0) + 0.5) * 10) / 10)}
+                          style={{ background: '#1e293b', border: '1px solid #475569', color: '#cbd5e1', borderRadius: '3px', padding: '2px 4px', cursor: 'pointer', display: 'flex' }}
+                        >
+                          <Plus size={9} />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </>
@@ -1823,8 +1985,8 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
           >
             {template.elements.filter(e => e.visible).map(elem => {
               const isElemSelected = elem.id === selectedElemId;
-              const leftPx = ((Number(elem.xMm) || 0) + (Number(elem.offsetX) || 0)) * PX_PER_MM;
-              const topPx = ((Number(elem.yMm) || 0) + (Number(elem.offsetY) || 0)) * PX_PER_MM;
+              const leftPx = Math.max(0, ((Number(elem.xMm) || 0) + (Number(elem.offsetX) || 0))) * PX_PER_MM;
+              const topPx = Math.max(0, ((Number(elem.yMm) || 0) + (Number(elem.offsetY) || 0))) * PX_PER_MM;
 
               // 1. 텍스트 요소
               if (elem.type === 'text') {

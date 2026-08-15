@@ -574,39 +574,19 @@ export function generateDynamicZpl(item = {}, template = DEFAULT_LABEL_TEMPLATE)
     return hasKorean(text);
   });
 
-  // ⭐️ Zebra 공식 규약: 4인치(104mm) 헤드 기준 물리적 라벨 원점(^LH) 및 인쇄폭(^PW) 자동 계산
-  const widthMm = Number(t.paper?.widthMm) || 72;
-  const heightMm = Number(t.paper?.heightMm) || 40;
-  const dotsPerMm = dpi / 25.4; // 203 DPI = 8.0 dots/mm
-  const printWidthDots = Math.round(widthMm * dotsPerMm);
-
-  // 중앙 정렬 데스크탑 프린터(GK420D/ZD420 등)의 물리적 좌측 여백(dots) 자동 산출
-  let homeXDots = 0;
-  if (t.paper?.labelOriginMode === 'left') {
-    homeXDots = 0;
-  } else if (typeof t.paper?.customHomeX === 'number' && !isNaN(t.paper.customHomeX)) {
-    homeXDots = Math.round(t.paper.customHomeX * dotsPerMm);
-  } else if (widthMm < 104) {
-    homeXDots = Math.max(0, Math.round(((104.0 - widthMm) / 2.0) * dotsPerMm));
-  }
-
-  const homeYDots = Math.max(0, Math.round((Number(t.paper?.customHomeY) || 0) * dotsPerMm));
-
   // ⭐️ 한글 포함 시: UBUS 대형 한글 헤더, 한글 미포함(소형 QR 등): ^XA^MD21
   const zplCommands = [
     containsKorean
       ? '^XA^MD21^BY2,2.0^FS^SEE:UHANGUL.DAT^FS^CW1,E:KFONT3.FNT^CI26^FS'
-      : '^XA^MD21',
-    `^LH${homeXDots},${homeYDots}`,
-    `^PW${printWidthDots}`
+      : '^XA^MD21'
   ];
 
   (t.elements || []).forEach(elem => {
     if (!elem.visible) return;
 
-    // ⭐️ 기본 X, Y 좌표 (mm) + 개별 요소 인쇄 미세 보정값 (mm) 정밀 합산
-    const finalXMm = (Number(elem.xMm) || 0) + (Number(elem.offsetX) || 0);
-    const finalYMm = (Number(elem.yMm) || 0) + (Number(elem.offsetY) || 0);
+    // ⭐️ 기본 X, Y 좌표 (mm) + 개별 요소 인쇄 미세 보정값 (mm, 음수/양수 자유 허용) 정밀 합산
+    const finalXMm = Math.max(0, (Number(elem.xMm) || 0) + (Number(elem.offsetX) || 0));
+    const finalYMm = Math.max(0, (Number(elem.yMm) || 0) + (Number(elem.offsetY) || 0));
 
     const posX = mmToDots(finalXMm, dpi);
     const posY = mmToDots(finalYMm, dpi);
