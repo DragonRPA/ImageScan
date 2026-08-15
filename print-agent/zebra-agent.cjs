@@ -1262,19 +1262,24 @@ function startUiServer() {
           await downloadBinary(updateUrl, tempExe);
           log('INFO', '다운로드 완료! updater.bat 워치독을 기동하고 에이전트를 자동 교체합니다.');
 
-          // updater.bat 생성
+          // updater.bat 생성 (Windows Defender / SmartScreen 차단 자동 해제 Unblock-File 탑재)
           const updaterBat = path.join(process.cwd(), 'updater.bat');
           const batContent = `@echo off
 chcp 65001 > nul
 timeout /t 1 /nobreak > nul
 if exist "temp\\agent-update.exe" (
+  powershell -NoProfile -Command "Unblock-File -Path 'temp\\agent-update.exe' -ErrorAction SilentlyContinue" > nul 2>&1
+  taskkill /f /im UBUS_DragonRPA_Agent.exe /im zebra-agent.exe > nul 2>&1
+  timeout /t 1 /nobreak > nul
   copy /y "temp\\agent-update.exe" "UBUS_DragonRPA_Agent.exe" > nul
   copy /y "temp\\agent-update.exe" "zebra-agent.exe" > nul
   del /f /q "temp\\agent-update.exe" > nul
 )
 if exist "UBUS_DragonRPA_Agent.exe" (
+  powershell -NoProfile -Command "Unblock-File -Path 'UBUS_DragonRPA_Agent.exe' -ErrorAction SilentlyContinue" > nul 2>&1
   start "" "UBUS_DragonRPA_Agent.exe"
 ) else if exist "zebra-agent.exe" (
+  powershell -NoProfile -Command "Unblock-File -Path 'zebra-agent.exe' -ErrorAction SilentlyContinue" > nul 2>&1
   start "" "zebra-agent.exe"
 )
 del "%~f0"

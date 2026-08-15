@@ -543,10 +543,9 @@ export async function generateWysiwygZpl(item = {}, template = DEFAULT_LABEL_TEM
     if (elem.type === 'text') {
       const val = getValue(elem);
       const prefix = elem.prefix || '';
-      const text = `${prefix}${val}`;
-      const fontPt = elem.fontSizePt || 20;
-      // 203 DPI 기준 Pt -> Dots (1pt ≈ 2.82 dots)
-      const fontDots = Math.round(fontPt * (dpi / 72) * 0.78);
+      const fontPt = elem.fontSizePt || 12;
+      // ⭐️ 203 DPI 기준 Pt -> Dots 정밀 변환 (1pt = 203/72 ≈ 2.82 dots)
+      const fontDots = Math.round(fontPt * (dpi / 72));
 
       ctx.fillStyle = '#000000';
       ctx.font = `bold ${fontDots}px 'Malgun Gothic', 'Noto Sans KR', sans-serif`;

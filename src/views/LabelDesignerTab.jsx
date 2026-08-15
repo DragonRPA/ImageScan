@@ -1411,8 +1411,8 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                   displayVal += (SAMPLE_ITEM[elem.field] || elem.field?.toUpperCase() || '');
                 }
 
-                // 폰트 크기 비례 변환
-                const fontSizePx = (elem.fontSizePt || 20) * 0.46 * (PX_PER_MM / 8.5);
+                // ⭐️ 물리적 폰트 크기 정밀 변환 (1 pt = 25.4/72 mm ≈ 0.3528mm)
+                const fontSizePx = (elem.fontSizePt || 12) * (25.4 / 72) * PX_PER_MM;
 
                 return (
                   <div
