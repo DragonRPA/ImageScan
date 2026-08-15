@@ -1,5 +1,14 @@
 # 릴리즈 노트 (RELEASE_NOTES.md)
 
+## [v1.3.0.Build.5] - 2026-08-15 15:26:00 (KST)
+
+### 🐛 라벨 서식 디자인 탭 getAllPresets import 누락 핫픽스 패치
+
+1. **라벨 디자이너 탭 렌더링 오류 즉시 해결 (`LabelDesignerTab.jsx`)**
+   - `labelTemplate.js`의 `getAllPresets` import 선언 누락 긴급 패치 완료
+
+---
+
 ## [v1.3.0.Build.4] - 2026-08-15 15:12:00 (KST)
 
 ### 📂 ZPL 텍스트 파일 드롭 실시간 감시 & 2개월 전 DB 이력 로컬 자동 백업/경량화 엔진 탑재
