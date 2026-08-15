@@ -1,5 +1,17 @@
 # 릴리즈 노트 (RELEASE_NOTES.md)
 
+## [v1.6.0.Build.13] - 2026-08-15 20:21:00 (KST)
+
+### 🤖 [에이전트 버전관리] 더미 제거 & GitHub 원격 `version.json` 실시간 조회 및 CORS Preflight 완비
+
+1. **에이전트 원격 실시간 버전 SSOT 파이프라인 구축 (`print-agent/version.json`)**
+   - 하드코딩된 더미 버전 대신 GitHub 원격 `version.json` 메타데이터를 실시간 비동기 조회하여 실제 배포 버전과 1:1 비교
+2. **로컬 에이전트 CORS Preflight (`OPTIONS` 204) 및 Private Network Access (PNA) 완벽 지원**
+   - 브라우저 HTTPS 환경에서 로컬 에이전트 HTTP 호출 시 발생하던 `Failed to fetch` 통신 차단 이슈 완벽 해결
+3. **업데이트 모달 내 실제 릴리즈 노트 표출 및 최신 바이너리 직접 다운로드 링크 제공**
+
+---
+
 ## [v1.6.0.Build.12] - 2026-08-15 20:17:00 (KST)
 
 ### 🧹 [로컬 시드 완전 박멸] 로컬 하드코딩 시드 데이터 전면 제거 & 100% DB SSOT 확립

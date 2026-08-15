@@ -1,0 +1,10 @@
+{
+  "printerName": "Zebra GK-420D",
+  "connectionType": "USB_RAW",
+  "usbPort": "USB001",
+  "printerHost": "127.0.0.1",
+  "printerPort": 9100,
+  "labelWidthMm": 72,
+  "labelHeightMm": 40,
+  "lastConfigured": "2026-08-15T11:20:45.240Z"
+}

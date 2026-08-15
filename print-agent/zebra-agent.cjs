@@ -1086,7 +1086,18 @@ setInterval(refreshQueue, 12000);
 function startUiServer() {
   const server = http.createServer(async (req, res) => {
     const url = req.url.split('?')[0];
+
+    // ⭐️ CORS & Private Network Access (PNA) 전면 허용
     res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Range, Accept');
+    res.setHeader('Access-Control-Allow-Private-Network', 'true');
+
+    // ⭐️ OPTIONS Preflight 즉시 204 반환
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204);
+      return res.end();
+    }
 
     if (url === '/' || url === '/index.html') {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
