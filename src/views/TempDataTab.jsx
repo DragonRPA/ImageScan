@@ -405,26 +405,61 @@ export default function TempDataTab({ onError, onOpenPrintModal }) {
     XLSX.writeFile(workbook, `임시데이터_업로드양식_${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
 
-  // 8. ⭐️ 엑셀 대량 업로드 (Supabase 실제 DB 100% 실시간 일괄 저장)
+  // 8. ⭐️ 엑셀 대량 업로드 (Supabase 실제 DB 100% 실시간 일괄 저장 및 정밀 예외처리)
   const handleExcelUpload = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // 1. 파일 확장자 검사
+    const fileName = file.name || '';
+    const fileExt = fileName.slice(fileName.lastIndexOf('.')).toLowerCase();
+    if (!['.xlsx', '.xls', '.csv'].includes(fileExt)) {
+      const errMsg = `지원하지 않는 파일 형식입니다 (${fileExt}).\n.xlsx, .xls, .csv 형식의 파일만 업로드할 수 있습니다.`;
+      setStatusMessage({ type: 'error', text: errMsg });
+      alert(`[업로드 실패] ${errMsg}`);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    setIsLoading(true);
+    setStatusMessage({ type: 'success', text: '엑셀 파일을 분석하고 데이터베이스에 동기화하는 중...' });
+
     const reader = new FileReader();
+
+    reader.onerror = () => {
+      setIsLoading(false);
+      const errMsg = '파일을 읽는 중 I/O 오류가 발생했습니다. 파일이 손상되었거나 열려 있는지 확인하세요.';
+      setStatusMessage({ type: 'error', text: errMsg });
+      alert(`[파일 읽기 실패]\n\n${errMsg}`);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+
     reader.onload = async (evt) => {
       try {
         const bstr = evt.target.result;
-        const wb = XLSX.read(bstr, { type: 'binary' });
+        let wb;
+        try {
+          wb = XLSX.read(bstr, { type: 'binary' });
+        } catch (parseErr) {
+          throw new Error(`엑셀 파일 구조 파싱 실패: 손상되었거나 암호화된 파일입니다 (${parseErr.message})`);
+        }
+
         const wsName = wb.SheetNames[0];
+        if (!wsName) {
+          throw new Error('엑셀 파일 내에 유효한 워크시트가 존재하지 않습니다.');
+        }
+
         const ws = wb.Sheets[wsName];
         const rawJson = XLSX.utils.sheet_to_json(ws, { defval: '' });
 
         if (!rawJson || rawJson.length === 0) {
-          alert('엑셀 파일에 데이터가 없습니다.');
-          return;
+          throw new Error('선택한 엑셀 시트에 데이터 행이 존재하지 않습니다. 헤더와 데이터를 확인하세요.');
         }
 
-        const parsedRows = rawJson.map((row, idx) => {
+        // 2. 엑셀 열 이름 매핑 및 행 정규화
+        const parsedRows = [];
+        for (let idx = 0; idx < rawJson.length; idx++) {
+          const row = rawJson[idx];
           const item = {
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
@@ -436,45 +471,72 @@ export default function TempDataTab({ onError, onOpenPrintModal }) {
             item[matchedFieldId] = String(val).trim();
           });
 
-          return item;
-        });
-
-        // ⭐️ 1. 기존 DB temp_asset 테이블의 모든 기존 데이터를 100% 완전 삭제 (기존 데이터 삭제 후 최종 데이터만 교체 적재)
-        const client = getSupabaseClient();
-        if (client) {
-          const { error: delErr } = await client
-            .from('temp_asset')
-            .delete()
-            .neq('id', '00000000-0000-0000-0000-000000000000');
-          if (delErr) {
-            console.error('기존 DB 삭제 오류:', delErr);
-            throw new Error(`기존 데이터 초기화 실패: ${delErr.message}`);
+          // 키 인덱스 값 유효성 사전 검증
+          const rowKeyVal = item[keyField] || item.key_value || item.imei || item.asset_no;
+          if (!rowKeyVal && fields.some(f => f.id === keyField && (f.isRequired || f.isKey))) {
+            const keyLabel = getMainFieldName(schema.key_field_name) || keyField;
+            throw new Error(`엑셀 ${idx + 2}번째 행에서 필수 키 항목인 [${keyLabel}] 값이 누락되었습니다.`);
           }
 
-          // ⭐️ 2. 이번에 업로드된 최종 엑셀 행들만 초고속 벌크 INSERT (전사 표준 1,000건 단위)
-          const dbRows = parsedRows.map(row => normalizeRowForDb(row, keyField));
-          const chunkSize = 1000;
-          for (let i = 0; i < dbRows.length; i += chunkSize) {
-            const chunk = dbRows.slice(i, i + chunkSize);
-            const { error: chunkErr } = await client.from('temp_asset').insert(chunk);
-            if (chunkErr) {
-              console.error('Supabase 벌크 주입 오류:', chunkErr);
-              throw new Error(`DB 벌크 저장 실패: ${chunkErr.message}`);
-            }
+          parsedRows.push(item);
+        }
+
+        // ⭐️ 3. 기존 DB temp_asset 테이블의 모든 기존 데이터 완전 삭제 (최종 데이터로 교체 적재)
+        const client = getSupabaseClient();
+        if (!client) {
+          throw new Error('Supabase 데이터베이스 클라이언트 연결 객체를 생성할 수 없습니다. DB 설정을 확인하세요.');
+        }
+
+        const { error: delErr } = await client
+          .from('temp_asset')
+          .delete()
+          .neq('id', '00000000-0000-0000-0000-000000000000');
+
+        if (delErr) {
+          console.error('기존 DB 삭제 오류:', delErr);
+          const detail = delErr.code === '42501'
+            ? 'DB 삭제 권한이 부족합니다 (Supabase RLS Policy를 확인하세요).'
+            : delErr.message;
+          throw new Error(`기존 데이터 초기화 실패: ${detail}`);
+        }
+
+        // ⭐️ 4. 이번에 업로드된 최종 엑셀 행들만 초고속 벌크 INSERT (전사 표준 1,000건 단위)
+        const dbRows = parsedRows.map(row => normalizeRowForDb(row, keyField));
+        const chunkSize = 1000;
+        for (let i = 0; i < dbRows.length; i += chunkSize) {
+          const chunk = dbRows.slice(i, i + chunkSize);
+          const chunkIndex = Math.floor(i / chunkSize) + 1;
+          const totalChunks = Math.ceil(dbRows.length / chunkSize);
+
+          const { error: chunkErr } = await client.from('temp_asset').insert(chunk);
+          if (chunkErr) {
+            console.error('Supabase 벌크 주입 오류:', chunkErr);
+            let detail = chunkErr.message;
+            if (chunkErr.code === '23505') detail = `중복된 고유 키(PK)가 존재합니다 (${chunkErr.details || chunkErr.message})`;
+            else if (chunkErr.code === '42703') detail = `DB 테이블에 존재하지 않는 컬럼이 포함되었습니다 (${chunkErr.message})`;
+            else if (chunkErr.code === '22001') detail = `데이터 길이가 DB 컬럼 허용 길이를 초과했습니다 (${chunkErr.message})`;
+            else if (chunkErr.code === '42501') detail = `DB INSERT 권한(RLS)이 없습니다 (${chunkErr.message})`;
+
+            throw new Error(`DB 벌크 저장 실패 (청크 ${chunkIndex}/${totalChunks}, 행 ${i + 1}~${i + chunk.length}): ${detail}`);
           }
         }
 
-        // ⭐️ 3. DB 저장 완료 후 최신 DB 데이터 전수 재조회 (DB 건수와 UI 건수 100% 1:1 일치)
+        // ⭐️ 5. DB 저장 완료 후 최신 DB 데이터 전수 재조회 (DB 건수와 UI 건수 100% 1:1 일치)
         await loadData();
 
         setStatusMessage({
           type: 'success',
-          text: `엑셀에서 ${parsedRows.length}건의 데이터를 Supabase DB에 성공적으로 저장하였습니다!`
+          text: `엑셀에서 ${parsedRows.length}건의 데이터를 Supabase DB에 성공적으로 업로드 및 반영하였습니다!`
         });
         setTimeout(() => setStatusMessage(null), 4000);
       } catch (err) {
-        alert(`엑셀 파일 업로드/DB 저장 오류: ${err.message}`);
+        console.error('엑셀 업로드 종합 실패:', err);
+        const failMessage = `엑셀 업로드 실패: ${err.message}`;
+        setStatusMessage({ type: 'error', text: failMessage });
+        alert(`[엑셀 업로드 실패 원인 안내]\n\n${err.message}`);
+        if (onError) onError(failMessage);
       } finally {
+        setIsLoading(false);
         if (fileInputRef.current) fileInputRef.current.value = '';
       }
     };
