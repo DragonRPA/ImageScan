@@ -410,6 +410,8 @@ export async function syncTemplatesWithBackend() {
         targetTable: row.paper?.targetTable || row.target_table || (row.name?.includes('임시') ? 'temp_asset' : 'asset'),
         schemaId: row.schema_id || 'main_schema',
         name: row.name,
+        targetPrinterId: row.paper?.targetPrinterId || row.target_printer_id || '',
+        targetPrinterName: row.paper?.targetPrinterName || row.target_printer_name || '',
         isDefault: Boolean(row.is_default),
         paper: row.paper || { widthMm: 72, heightMm: 40, dpi: 203, dotsWidth: 576, dotsHeight: 320 },
         elements: Array.isArray(row.elements) ? row.elements : []
@@ -446,6 +448,8 @@ export async function fetchBackendLabelTemplate() {
         targetTable: data.paper?.targetTable || data.target_table || 'asset',
         schemaId: data.schema_id || 'main_schema',
         name: data.name,
+        targetPrinterId: data.paper?.targetPrinterId || data.target_printer_id || '',
+        targetPrinterName: data.paper?.targetPrinterName || data.target_printer_name || '',
         paper: data.paper,
         elements: data.elements,
         isDefault: data.is_default
@@ -471,7 +475,9 @@ export async function saveBackendLabelTemplate(template) {
     const targetTable = template.targetTable || template.paper?.targetTable || 'asset';
     const paperObj = {
       ...(template.paper || { widthMm: 72, heightMm: 40, dpi: 203, dotsWidth: 576, dotsHeight: 320 }),
-      targetTable: targetTable
+      targetTable: targetTable,
+      targetPrinterId: template.targetPrinterId || '',
+      targetPrinterName: template.targetPrinterName || ''
     };
 
     const payload = {

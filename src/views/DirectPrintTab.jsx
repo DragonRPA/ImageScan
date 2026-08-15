@@ -109,30 +109,38 @@ export default function DirectPrintTab({ onError, onOpenPrintModal }) {
 
   // ⭐️ 마운트 시 실제 연결된 프린터 및 온라인 DB 전체 서식 목록 동기화
   useEffect(() => {
-    // 1. 온라인 DB 서식 동기화
-    syncTemplatesWithBackend().then(syncedPresets => {
+    Promise.all([
+      syncTemplatesWithBackend(),
+      fetchActualConnectedPrinters()
+    ]).then(([syncedPresets, detectedPrinters]) => {
+      let currentPrinters = getRegisteredPrinters();
+      if (detectedPrinters && detectedPrinters.length > 0) {
+        currentPrinters = detectedPrinters;
+        setPrinters(detectedPrinters);
+      }
+
       if (syncedPresets && syncedPresets.length > 0) {
         setPresets(syncedPresets);
-        const active = getStoredLabelTemplate();
+        const active = getStoredLabelTemplate() || syncedPresets[0];
         if (active) {
           setSelectedTemplate(active);
           setTargetTable(active.targetTable || 'asset');
-        }
-      }
-    });
 
-    // 2. 실제 PC에 연결된 프린터 실시간 스캔 동기화
-    fetchActualConnectedPrinters().then(detectedPrinters => {
-      if (detectedPrinters && detectedPrinters.length > 0) {
-        setPrinters(detectedPrinters);
-        const currentActive = getActivePrinterId();
-        const exists = detectedPrinters.some(p => p.id === currentActive);
-        if (!exists) {
-          setActivePrinterIdState(detectedPrinters[0].id);
-          setActivePrinterId(detectedPrinters[0].id);
+          // ⭐️ 활성 서식에 지정된 프린터가 있으면 즉시 활성화!
+          const targetPrnId = active.targetPrinterId;
+          const targetPrnName = active.targetPrinterName;
+          if (targetPrnId || targetPrnName) {
+            const targetPrn = currentPrinters.find(p =>
+              (targetPrnId && p.id === targetPrnId) ||
+              (targetPrnName && (p.name === targetPrnName || p.rawName === targetPrnName))
+            );
+            if (targetPrn) {
+              handleSelectPrinter(targetPrn.id);
+            }
+          }
         }
       }
-    });
+    }).catch(() => {});
   }, []);
 
   // ⭐️ 실제 컴퓨터 연결 프린터 수동 재검색
@@ -171,8 +179,13 @@ export default function DirectPrintTab({ onError, onOpenPrintModal }) {
       saveStoredLabelTemplate(found);
 
       // ⭐️ 해당 서식에 지정된 전용 프린터가 있으면 자동 활성화 & 에이전트 동기화!
-      if (found.targetPrinterId) {
-        const targetPrn = printers.find(p => p.id === found.targetPrinterId);
+      const targetPrnId = found.targetPrinterId;
+      const targetPrnName = found.targetPrinterName;
+      if (targetPrnId || targetPrnName) {
+        const targetPrn = printers.find(p =>
+          (targetPrnId && p.id === targetPrnId) ||
+          (targetPrnName && (p.name === targetPrnName || p.rawName === targetPrnName))
+        );
         if (targetPrn) {
           handleSelectPrinter(targetPrn.id);
         }
@@ -187,8 +200,13 @@ export default function DirectPrintTab({ onError, onOpenPrintModal }) {
     if (matched) {
       setSelectedTemplate(matched);
       saveStoredLabelTemplate(matched);
-      if (matched.targetPrinterId) {
-        const targetPrn = printers.find(p => p.id === matched.targetPrinterId);
+      const targetPrnId = matched.targetPrinterId;
+      const targetPrnName = matched.targetPrinterName;
+      if (targetPrnId || targetPrnName) {
+        const targetPrn = printers.find(p =>
+          (targetPrnId && p.id === targetPrnId) ||
+          (targetPrnName && (p.name === targetPrnName || p.rawName === targetPrnName))
+        );
         if (targetPrn) {
           handleSelectPrinter(targetPrn.id);
         }

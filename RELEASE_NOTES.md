@@ -1,5 +1,16 @@
 # 릴리즈 노트 (RELEASE_NOTES.md)
 
+## [v1.6.0.Build.28] - 2026-08-15 23:03:00 (KST)
+
+### 🛠️ [서식-프린터 DB 동기화 완전 수정] 온라인 DB 저장/조회 누락 해결 & 서식 선택 시 프린터 100% 즉시 전환
+
+1. **온라인 DB (`label_templates`) 저장 및 로드 시 `targetPrinterId`/`targetPrinterName` 누락 버그 해결**
+   - `saveBackendLabelTemplate`, `syncTemplatesWithBackend`, `fetchBackendLabelTemplate` 전 과정에 프린터 메타데이터 완벽 보존
+2. **실시간 출력 화면 (`DirectPrintTab`) 서식 선택 시 프린터 모델 즉시 자동 전환**
+   - `id`, `name`, `rawName` 3중 정밀 매칭을 통해 서식 변경 즉시 연결된 전용 프린터로 완벽 전환 & 에이전트 동기화
+
+---
+
 ## [v1.6.0.Build.27] - 2026-08-15 22:37:00 (KST)
 
 ### 🔒 [서식-프린터 1:1 바인딩] 디자인 단계 프린터 지정 & 실시간 출력 프린터 오설정 완전 방지
