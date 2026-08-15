@@ -408,19 +408,18 @@ export default function PCDashboard({
                 <th style={{ padding: '6px 8px', textAlign: 'left', whiteSpace: 'nowrap' }}>IMEI</th>
                 <th style={{ padding: '6px 8px', textAlign: 'left', whiteSpace: 'nowrap' }}>구성요소(사양)</th>
                 <th style={{ padding: '6px 8px', textAlign: 'left', whiteSpace: 'nowrap' }}>비고</th>
-                <th style={{ padding: '6px 8px', textAlign: 'left', whiteSpace: 'nowrap' }}>등록일시</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={16} style={{ padding: '32px', textAlign: 'center', color: '#64748b' }}>
+                  <td colSpan={15} style={{ padding: '32px', textAlign: 'center', color: '#64748b' }}>
                     자산 데이터를 불러오는 중입니다...
                   </td>
                 </tr>
               ) : filteredItems.length === 0 ? (
                 <tr>
-                  <td colSpan={16} style={{ padding: '32px', textAlign: 'center', color: '#64748b' }}>
+                  <td colSpan={15} style={{ padding: '32px', textAlign: 'center', color: '#64748b' }}>
                     등록된 자산 데이터가 없습니다. [엑셀 업로드]를 통해 데이터를 등록하세요.
                   </td>
                 </tr>
@@ -441,7 +440,6 @@ export default function PCDashboard({
                   const imei = row.imei || '-';
                   const components = row.components || '-';
                   const remark = row.remark || '-';
-                  const createdAt = row.created_at ? new Date(row.created_at).toLocaleString('ko-KR', { hour12: false }) : '-';
 
                   return (
                     <tr
@@ -501,9 +499,6 @@ export default function PCDashboard({
                       </td>
                       <td style={{ padding: '6px 8px', color: '#64748b', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {remark}
-                      </td>
-                      <td style={{ padding: '6px 8px', color: '#64748b', fontSize: '0.68rem', whiteSpace: 'nowrap' }}>
-                        {createdAt}
                       </td>
                     </tr>
                   );
