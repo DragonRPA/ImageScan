@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Smartphone, Monitor, Database, CheckCircle } from 'lucide-react';
+import { Smartphone, Monitor, Database, CheckCircle, Bot } from 'lucide-react';
 import MobileScannerView from './views/MobileScannerView';
 import PCDashboardView from './views/PCDashboardView';
 import FileExportModal from './components/FileExportModal';
@@ -7,9 +7,11 @@ import LabelPrintModal from './components/LabelPrintModal';
 import DataImportModal from './components/DataImportModal';
 import SupabaseConfigModal from './components/SupabaseConfigModal';
 import PrinterGuideModal from './components/PrinterGuideModal';
+import AgentUpdateModal from './components/AgentUpdateModal';
 import ErrorModal from './components/ErrorModal';
 import { getStoredConfig } from './utils/supabaseClient';
 import { initHardwareScannerListener } from './utils/hardwareScanner';
+import { checkAgentLiveStatus } from './utils/agentUpdateManager';
 
 export default function App() {
   const [deviceMode, setDeviceMode] = useState(() => {
@@ -27,10 +29,23 @@ export default function App() {
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isPrinterGuideOpen, setIsPrinterGuideOpen] = useState(false);
+  const [isAgentUpdateOpen, setIsAgentUpdateOpen] = useState(false);
+  const [agentStatus, setAgentStatus] = useState(null);
   const [exportModalState, setExportModalState] = useState({ isOpen: false, items: [] });
   const [printModalState, setPrintModalState] = useState({ isOpen: false, items: [], config: null });
 
   const [refreshKey, setRefreshKey] = useState(0);
+
+  // ⭐️ 에이전트 실시간 상태 및 버전 주기적 감지 (10초 주기)
+  useEffect(() => {
+    const pollAgent = async () => {
+      const status = await checkAgentLiveStatus();
+      setAgentStatus(status);
+    };
+    pollAgent();
+    const interval = setInterval(pollAgent, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   // ★ 블루투스 & 하드웨어 바코드 스캐너 전역 자동 감지 가동
   useEffect(() => {
@@ -101,13 +116,36 @@ export default function App() {
                 라벨 출력 관리
               </h1>
               <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>
-                v1.6.0.Build.3 | 2026-08-15
+                v1.6.0.Build.4 | 2026-08-15
               </span>
             </div>
           </div>
 
-          {/* Mode Switcher & DB Config Status */}
+          {/* Mode Switcher & DB Config & Agent Status */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            {/* Agent Live Status & Smart Update Button */}
+            <button
+              className="btn btn-outline"
+              style={{
+                padding: '4px 8px',
+                fontSize: '0.72rem',
+                borderColor: agentStatus?.isOutdated ? '#f59e0b' : (agentStatus?.online ? '#4ade80' : '#475569'),
+                color: agentStatus?.isOutdated ? '#fbbf24' : (agentStatus?.online ? '#86efac' : '#94a3b8'),
+                backgroundColor: agentStatus?.isOutdated ? 'rgba(245, 158, 11, 0.15)' : 'transparent',
+                fontWeight: agentStatus?.isOutdated ? 700 : 500,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+              onClick={() => setIsAgentUpdateOpen(true)}
+              title="에이전트 실시간 상태 및 스마트 자가 업데이트"
+            >
+              <Bot size={13} />
+              {agentStatus?.isOutdated
+                ? `에이전트 업데이트 (${agentStatus.version} ➔ ${agentStatus.requiredVersion})`
+                : (agentStatus?.online ? `에이전트 ${agentStatus.version}` : '에이전트 미실행')}
+            </button>
+
             <button
               className="btn btn-outline"
               style={{
@@ -231,6 +269,19 @@ export default function App() {
         onClose={() => setPrintModalState({ isOpen: false, items: [], config: null })}
         items={printModalState.items}
         offsetConfig={printModalState.config}
+      />
+
+      {/* 에이전트 스마트 자가 업데이트 모달 */}
+      <AgentUpdateModal
+        isOpen={isAgentUpdateOpen}
+        onClose={() => setIsAgentUpdateOpen(false)}
+        agentStatus={agentStatus}
+        onUpdateSuccess={async () => {
+          setToastMessage('에이전트가 최신 버전으로 업데이트 및 재시작되었습니다.');
+          const status = await checkAgentLiveStatus();
+          setAgentStatus(status);
+          setTimeout(() => setToastMessage(null), 4000);
+        }}
       />
     </div>
   );

@@ -1,5 +1,20 @@
 # 릴리즈 노트 (RELEASE_NOTES.md)
 
+## [v1.6.0.Build.4] - 2026-08-15 19:42:00 (KST)
+
+### 🤖 [스마트 자가 업데이트] 프론트엔드 실시간 감지 & 에이전트 원클릭 Self-Update 워치독 탑재
+
+1. **에이전트 자가 교체 워치독 엔진 구현 (`print-agent/zebra-agent.cjs`)**
+   - `POST /api/self-update`: GitHub Releases에서 최신 `UBUS_DragonRPA_Agent.exe`를 다운로드하여 `updater.bat` 워치독을 통해 기존 실행 중인 프로세스를 1초 만에 안전하게 자동 교체 및 재시작
+   - 기존 `agent.env` 및 `agent-config.json`의 프린터 IP/포트 설정 100% 무손실 유지
+2. **프론트엔드 실시간 에이전트 상태/버전 감지 매니저 (`agentUpdateManager.js`)**
+   - 로컬 에이전트 실행 여부 및 버전(`v1.4`)을 10초 주기로 실시간 모니터링
+   - 구버전 실행 감지 시 상단 헤더에 `[⚠️ 에이전트 업데이트 (v1.3 ➔ v1.4)]` 배지 노출
+3. **원클릭 스마트 자가 업데이트 모달 (`AgentUpdateModal.jsx`)**
+   - 작업자가 버튼 클릭 한 번으로 새 에이전트 다운로드 ➔ 프로세스 교체 ➔ 자동 재접속을 3초 만에 원스톱 처리
+
+---
+
 ## [v1.6.0.Build.3] - 2026-08-15 19:35:00 (KST)
 
 ### 🔒 [DB 연결] Supabase 핵심 연결 정보 2종 소스 내장 영구 기억 및 자동 치유 완비

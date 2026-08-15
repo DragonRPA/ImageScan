@@ -17,8 +17,9 @@ const os        = require('os');
 const fs        = require('fs');
 const path      = require('path');
 const readline  = require('readline');
-const { exec }  = require('child_process');
+const { exec, spawn }  = require('child_process');
 const http      = require('http');
+const https     = require('https');
 
 // ── 전역 크래시 핸들러 (exe 더블클릭 시 창 닫힘 방지) ─────────────────────
 const CRASH_LOG = path.join(process.cwd(), 'agent-crash.log');
@@ -69,7 +70,7 @@ const POLL_MS          = parseInt(process.env.POLL_MS || EXT.POLL_MS || '10000',
 const UI_PORT          = parseInt(process.env.AGENT_PORT || EXT.AGENT_PORT || '9988', 10);
 const DEFAULT_PORT     = 9100;
 const AGENT_ID         = os.hostname() + '_agent';
-const VERSION          = 'v1.3';
+const VERSION          = 'v1.4';
 
 // ── 전역 상태 ─────────────────────────────────────────────────────────────
 let logBuffer  = [];          // 최근 300개 로그
@@ -296,6 +297,36 @@ function buildZpl(item) {
 }
 function buildTestZpl() {
   return buildZpl({ asset_no: 'TEST-LABEL', imei: '351379300000001', serial_no: 'TEST-SN', mac_address: 'AA:BB:CC:DD:EE:FF' });
+}
+
+// ── HTTP/HTTPS 바이너리 파일 다운로더 (리다이렉트 자동 추적) ─────────────
+function downloadBinary(urlStr, destPath) {
+  return new Promise((resolve, reject) => {
+    const file = fs.createWriteStream(destPath);
+    const getUrl = (target) => {
+      const isHttps = target.startsWith('https://');
+      const client = isHttps ? https : http;
+      client.get(target, { headers: { 'User-Agent': 'UBUS_DragonRPA_Agent' } }, (res) => {
+        if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+          return getUrl(res.headers.location);
+        }
+        if (res.statusCode !== 200) {
+          file.close();
+          fs.unlink(destPath, () => {});
+          return reject(new Error(`다운로드 실패 HTTP ${res.statusCode}`));
+        }
+        res.pipe(file);
+        file.on('finish', () => {
+          file.close(resolve);
+        });
+      }).on('error', (err) => {
+        file.close();
+        fs.unlink(destPath, () => {});
+        reject(err);
+      });
+    };
+    getUrl(urlStr);
+  });
 }
 
 // ── [모드1] TCP 전송 ──────────────────────────────────────────────────────
@@ -1169,6 +1200,67 @@ function startUiServer() {
         child.unref();
         process.exit(0);
       }, 600);
+      return;
+    }
+
+    // ── 에이전트 자가 스마트 업데이트 (GitHub ➔ 다운로드 ➔ updater.bat ➔ 교체 재실행) ──
+    if (url === '/api/self-update' && req.method === 'POST') {
+      let body = '';
+      req.on('data', c => body += c);
+      await new Promise(r => req.on('end', r));
+      let updateUrl = 'https://raw.githubusercontent.com/DragonRPA/ImageScan/main/print-agent/dist/UBUS_DragonRPA_Agent.exe';
+      try {
+        if (body) {
+          const parsed = JSON.parse(body);
+          if (parsed.updateUrl) updateUrl = parsed.updateUrl;
+        }
+      } catch {}
+
+      log('INFO', `에이전트 자가 업데이트 요청 접수됨: ${updateUrl}`);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: true, message: '에이전트 스마트 업데이트를 시작합니다. 3초 후 재접속됩니다.' }));
+
+      // 비동기 다운로드 및 워치독 배치 실행
+      setTimeout(async () => {
+        try {
+          const tempDir = path.join(process.cwd(), 'temp');
+          if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
+          const tempExe = path.join(tempDir, 'agent-update.exe');
+
+          log('INFO', `최신 에이전트 다운로드 중... (${tempExe})`);
+          await downloadBinary(updateUrl, tempExe);
+          log('INFO', '다운로드 완료! updater.bat 워치독을 기동하고 에이전트를 자동 교체합니다.');
+
+          // updater.bat 생성
+          const updaterBat = path.join(process.cwd(), 'updater.bat');
+          const batContent = `@echo off
+chcp 65001 > nul
+timeout /t 1 /nobreak > nul
+if exist "temp\\agent-update.exe" (
+  copy /y "temp\\agent-update.exe" "UBUS_DragonRPA_Agent.exe" > nul
+  copy /y "temp\\agent-update.exe" "zebra-agent.exe" > nul
+  del /f /q "temp\\agent-update.exe" > nul
+)
+if exist "UBUS_DragonRPA_Agent.exe" (
+  start "" "UBUS_DragonRPA_Agent.exe"
+) else if exist "zebra-agent.exe" (
+  start "" "zebra-agent.exe"
+)
+del "%~f0"
+`;
+          fs.writeFileSync(updaterBat, batContent, 'utf8');
+
+          const child = spawn('cmd.exe', ['/c', updaterBat], {
+            detached: true,
+            stdio: 'ignore',
+            cwd: process.cwd()
+          });
+          child.unref();
+          process.exit(0);
+        } catch (err) {
+          log('ERR', `자가 업데이트 실패: ${err.message}`);
+        }
+      }, 500);
       return;
     }
 
