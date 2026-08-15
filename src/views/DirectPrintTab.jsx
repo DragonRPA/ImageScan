@@ -14,7 +14,10 @@ import {
   Layers,
   Sparkles,
   Volume2,
-  RefreshCw
+  RefreshCw,
+  Bluetooth,
+  Radio,
+  Zap
 } from 'lucide-react';
 import { getSupabaseClient, insertPrintQueue } from '../utils/supabaseClient';
 import {
@@ -33,6 +36,12 @@ import {
   sendZplToPrinter,
   fetchActualConnectedPrinters
 } from '../utils/printerManager';
+import {
+  connectBluetoothScanner,
+  disconnectBluetoothScanner,
+  getActiveBluetoothScanner,
+  isWebBluetoothSupported
+} from '../utils/bluetoothScannerManager';
 import { RealBarcodeSvg } from '../utils/barcode39';
 import { triggerSuccessFeedback } from '../utils/soundFeedback';
 
@@ -60,6 +69,10 @@ export default function DirectPrintTab({ onError, onOpenPrintModal }) {
   const [newPrinterTarget, setNewPrinterTarget] = useState('COM Port / USB');
   const [newPrinterBaud, setNewPrinterBaud] = useState('9600');
 
+  // ── 블루투스 바코드 스캐너 상태 ─────────────────────────────
+  const [bleStatus, setBleStatus] = useState(getActiveBluetoothScanner);
+  const [isConnectingBle, setIsConnectingBle] = useState(false);
+
   const inputRef = useRef(null);
   const canvasRef = useRef(null);
 
@@ -67,6 +80,31 @@ export default function DirectPrintTab({ onError, onOpenPrintModal }) {
   const activePrinter = printers.find(p => p.id === activePrinterIdState) || printers[0];
 
   const [isScanningPrinters, setIsScanningPrinters] = useState(false);
+
+  // ⭐️ 블루투스 바코드 스캐너 원클릭 빠른 연결 / 연결 해제
+  const handleToggleBluetoothScanner = async () => {
+    if (bleStatus.connected) {
+      disconnectBluetoothScanner();
+      setBleStatus({ connected: false, deviceName: null });
+      setStatusMessage({ type: 'info', text: '블루투스 스캐너 연결이 해제되었습니다.' });
+      return;
+    }
+
+    setIsConnectingBle(true);
+    try {
+      const res = await connectBluetoothScanner((code) => {
+        setScanInput(code);
+        handleExecuteScanAndPrint(code);
+      });
+      setBleStatus({ connected: true, deviceName: res.deviceName, batteryLevel: res.batteryLevel });
+      setStatusMessage({ type: 'success', text: `[${res.deviceName}] 블루투스 바코드 스캐너가 연결되었습니다!` });
+    } catch (err) {
+      setStatusMessage({ type: 'error', text: err.message });
+    } finally {
+      setIsConnectingBle(false);
+      inputRef.current?.focus();
+    }
+  };
 
   // ⭐️ 마운트 시 실제 연결된 프린터 및 온라인 DB 전체 서식 목록 동기화
   useEffect(() => {
@@ -552,13 +590,38 @@ export default function DirectPrintTab({ onError, onOpenPrintModal }) {
         }}>
           {/* 대형 스캔 입력창 */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
               <label style={{ fontSize: '0.82rem', fontWeight: 700, color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <Barcode size={16} /> 바코드 스캔 / 식별자 입력창
               </label>
-              <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>
-                스캔 또는 Enter 시 즉시 DB 조회 & 자동 출력
-              </span>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                {/* 📡 블루투스 스캐너 원클릭 빠른 연결 버튼 */}
+                <button
+                  onClick={handleToggleBluetoothScanner}
+                  disabled={isConnectingBle}
+                  className="btn btn-outline"
+                  style={{
+                    fontSize: '0.7rem',
+                    padding: '2px 8px',
+                    borderColor: bleStatus.connected ? '#4ade80' : '#38bdf8',
+                    color: bleStatus.connected ? '#86efac' : '#38bdf8',
+                    backgroundColor: bleStatus.connected ? 'rgba(74, 222, 128, 0.15)' : 'transparent',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    fontWeight: 600
+                  }}
+                  title="블루투스 바코드 스캐너 원클릭 빠른 연결"
+                >
+                  <Bluetooth size={12} />
+                  {isConnectingBle ? '블루투스 페어링중...' : (bleStatus.connected ? `🟢 ${bleStatus.deviceName}` : '📡 블루투스 스캐너 빠른 연결')}
+                </button>
+
+                <span style={{ fontSize: '0.68rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                  <Zap size={11} color="#facc15" /> Zero-Focus 무인 감지 활성
+                </span>
+              </div>
             </div>
 
             <div style={{ display: 'flex', gap: '6px' }}>
