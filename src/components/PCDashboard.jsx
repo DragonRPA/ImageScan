@@ -363,21 +363,42 @@ export default function PCDashboard({
             <label style={{ fontSize: '0.68rem', color: '#94a3b8', fontWeight: 600, whiteSpace: 'nowrap' }}>
               모델명 검색
             </label>
-            <input
-              type="text"
-              value={filterModel}
-              onChange={(e) => setFilterModel(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              placeholder="예: SM-S921N"
-              style={{
-                backgroundColor: '#0f172a',
-                border: '1px solid #475569',
-                borderRadius: '4px',
-                padding: '5px 8px',
-                color: '#f8fafc',
-                fontSize: '0.75rem'
-              }}
-            />
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <input
+                type="text"
+                value={filterModel}
+                onChange={(e) => setFilterModel(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                placeholder="예: SM-S921N"
+                style={{
+                  backgroundColor: '#0f172a',
+                  border: '1px solid #475569',
+                  borderRadius: '4px',
+                  padding: '5px 22px 5px 8px',
+                  color: '#f8fafc',
+                  fontSize: '0.75rem',
+                  width: '100%'
+                }}
+              />
+              {filterModel && (
+                <button
+                  onClick={() => setFilterModel('')}
+                  style={{
+                    position: 'absolute',
+                    right: '6px',
+                    background: 'none',
+                    border: 'none',
+                    color: '#94a3b8',
+                    cursor: 'pointer',
+                    fontSize: '0.8rem',
+                    padding: 0
+                  }}
+                  title="모델명 검색어 지우기"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
           </div>
 
           {/* 제조번호(시리얼) 필터 */}
@@ -385,21 +406,42 @@ export default function PCDashboard({
             <label style={{ fontSize: '0.68rem', color: '#94a3b8', fontWeight: 600, whiteSpace: 'nowrap' }}>
               제조번호(시리얼) 검색
             </label>
-            <input
-              type="text"
-              value={filterSerial}
-              onChange={(e) => setFilterSerial(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              placeholder="예: R5KL60F0CZW"
-              style={{
-                backgroundColor: '#0f172a',
-                border: '1px solid #475569',
-                borderRadius: '4px',
-                padding: '5px 8px',
-                color: '#f8fafc',
-                fontSize: '0.75rem'
-              }}
-            />
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <input
+                type="text"
+                value={filterSerial}
+                onChange={(e) => setFilterSerial(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                placeholder="예: R5KL60F0CZW"
+                style={{
+                  backgroundColor: '#0f172a',
+                  border: '1px solid #475569',
+                  borderRadius: '4px',
+                  padding: '5px 22px 5px 8px',
+                  color: '#f8fafc',
+                  fontSize: '0.75rem',
+                  width: '100%'
+                }}
+              />
+              {filterSerial && (
+                <button
+                  onClick={() => setFilterSerial('')}
+                  style={{
+                    position: 'absolute',
+                    right: '6px',
+                    background: 'none',
+                    border: 'none',
+                    color: '#94a3b8',
+                    cursor: 'pointer',
+                    fontSize: '0.8rem',
+                    padding: 0
+                  }}
+                  title="제조번호 검색어 지우기"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
           </div>
 
           {/* 자산상태 필터 */}
