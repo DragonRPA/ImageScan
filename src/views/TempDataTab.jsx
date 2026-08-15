@@ -33,12 +33,28 @@ export default function TempDataTab({ onError, onOpenPrintModal }) {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [statusMessage, setStatusMessage] = useState(null);
 
+  // ⭐️ 엑셀 스타일 셀 범위 선택(Cell Range Selection) 상태 머신
+  const [cellSelection, setCellSelection] = useState(null); // { startRow, startCol, endRow, endCol }
+  const [isSelectingCells, setIsSelectingCells] = useState(false);
+  const [copyToast, setCopyToast] = useState('');
+
   // 모달 상태 (단건 등록 / 수정)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [isNewRecord, setIsNewRecord] = useState(false);
 
   const fileInputRef = useRef(null);
+
+  // 전역 마우스 업 감지 (드래그 선택 종료)
+  useEffect(() => {
+    const handleGlobalMouseUp = () => {
+      setIsSelectingCells(false);
+    };
+    window.addEventListener('mouseup', handleGlobalMouseUp);
+    return () => {
+      window.removeEventListener('mouseup', handleGlobalMouseUp);
+    };
+  }, []);
 
   // 1. ⭐️ 비동기 실시간 스키마 로드 (Supabase schema_definitions 1:1 동기화)
   const loadSchema = async () => {
@@ -56,6 +72,7 @@ export default function TempDataTab({ onError, onOpenPrintModal }) {
   const loadData = async () => {
     setIsLoading(true);
     setStatusMessage(null);
+    setCellSelection(null);
     try {
       const client = getSupabaseClient();
       if (client) {
@@ -102,6 +119,34 @@ export default function TempDataTab({ onError, onOpenPrintModal }) {
 
   const fields = useMemo(() => schema.fields || [], [schema]);
   const keyField = schema.key_field || 'asset_no';
+
+  // ⭐️ 셀 마우스 다운 (영역 선택 시작)
+  const handleCellMouseDown = (rowIdx, colIdx, e) => {
+    if (e.button !== 0) return;
+    setCellSelection({
+      startRow: rowIdx,
+      startCol: colIdx,
+      endRow: rowIdx,
+      endCol: colIdx
+    });
+    setIsSelectingCells(true);
+  };
+
+  // ⭐️ 셀 마우스 엔터 (영역 드래그 확장)
+  const handleCellMouseEnter = (rowIdx, colIdx) => {
+    if (!isSelectingCells) return;
+    setCellSelection(prev => (prev ? { ...prev, endRow: rowIdx, endCol: colIdx } : null));
+  };
+
+  // ⭐️ 셀이 선택 범위 내에 있는지 판별
+  const isCellInSelection = (rowIdx, colIdx) => {
+    if (!cellSelection) return false;
+    const minRow = Math.min(cellSelection.startRow, cellSelection.endRow);
+    const maxRow = Math.max(cellSelection.startRow, cellSelection.endRow);
+    const minCol = Math.min(cellSelection.startCol, cellSelection.endCol);
+    const maxCol = Math.max(cellSelection.startCol, cellSelection.endCol);
+    return rowIdx >= minRow && rowIdx <= maxRow && colIdx >= minCol && colIdx <= maxCol;
+  };
 
   // 3. 필터링된 데이터
   const filteredItems = useMemo(() => {
@@ -515,41 +560,40 @@ export default function TempDataTab({ onError, onOpenPrintModal }) {
                 </td>
               </tr>
             ) : (
-              filteredItems.map(row => {
+              filteredItems.map((row, rowIdx) => {
                 const isSelected = selectedIds.has(row.id || row[keyField]);
                 return (
                   <tr
-                    key={row.id || row[keyField]}
-                    onClick={() => {
-                      setEditingItem({ ...row });
-                      setIsNewRecord(false);
-                      setIsEditModalOpen(true);
-                    }}
+                    key={row.id || row[keyField] || `row_${rowIdx}`}
                     style={{
                       borderBottom: '1px solid #1e293b',
-                      backgroundColor: isSelected ? 'rgba(56, 189, 248, 0.1)' : 'transparent',
-                      cursor: 'pointer',
+                      backgroundColor: isSelected ? 'rgba(56, 189, 248, 0.08)' : 'transparent',
                       transition: 'background-color 0.15s'
                     }}
                   >
+                    {/* 1. 체크박스 (명시적 선택) */}
                     <td style={{ padding: '6px 8px', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
                       <button
                         onClick={(e) => handleToggleSelectRow(row.id || row[keyField], e)}
                         style={{ background: 'none', border: 'none', color: isSelected ? '#38bdf8' : '#64748b', cursor: 'pointer' }}
+                        title="선택"
                       >
                         {isSelected ? <CheckSquare size={13} /> : <Square size={13} />}
                       </button>
                     </td>
+
+                    {/* 2. 관리 (명시적 편집/삭제 버튼) */}
                     <td style={{ padding: '6px 8px', textAlign: 'center', whiteSpace: 'nowrap' }} onClick={e => e.stopPropagation()}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
                         <button
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             setEditingItem({ ...row });
                             setIsNewRecord(false);
                             setIsEditModalOpen(true);
                           }}
                           className="btn btn-outline"
-                          style={{ padding: '2px 5px', fontSize: '0.65rem' }}
+                          style={{ padding: '2px 5px', fontSize: '0.65rem', borderColor: '#38bdf8', color: '#38bdf8' }}
                           title="수정"
                         >
                           <Edit2 size={10} />
@@ -564,25 +608,62 @@ export default function TempDataTab({ onError, onOpenPrintModal }) {
                         </button>
                       </div>
                     </td>
-                    {fields.map(f => (
-                      <td
-                        key={f.id}
-                        style={{
-                          padding: '6px 8px',
-                          color: f.isKey ? '#facc15' : '#f8fafc',
-                          fontWeight: f.isKey ? 700 : 400,
-                          whiteSpace: 'nowrap'
-                        }}
-                      >
-                        {row[f.id] || '-'}
-                      </td>
-                    ))}
+
+                    {/* 3. 동적 데이터 셀 (엑셀 드래그 영역 선택 & Ctrl+C 복사) */}
+                    {fields.map((f, colIdx) => {
+                      const cellVal = row[f.id] ?? row[f.name] ?? '';
+                      const inSelection = isCellInSelection(rowIdx, colIdx);
+                      return (
+                        <td
+                          key={f.id}
+                          onMouseDown={(e) => handleCellMouseDown(rowIdx, colIdx, e)}
+                          onMouseEnter={() => handleCellMouseEnter(rowIdx, colIdx)}
+                          style={{
+                            padding: '6px 8px',
+                            color: f.isKey ? '#facc15' : '#cbd5e1',
+                            fontWeight: f.isKey ? 700 : 400,
+                            fontFamily: f.isKey ? 'monospace' : 'inherit',
+                            whiteSpace: 'nowrap',
+                            cursor: 'cell',
+                            userSelect: 'text',
+                            backgroundColor: inSelection ? 'rgba(2, 132, 199, 0.35)' : 'transparent',
+                            outline: inSelection ? '1px solid #38bdf8' : 'none'
+                          }}
+                        >
+                          {cellVal || '-'}
+                        </td>
+                      );
+                    })}
                   </tr>
                 );
               })
             )}
           </tbody>
         </table>
+
+        {/* ⭐️ 복사 완료 플로팅 토스트 */}
+        {copyToast && (
+          <div style={{
+            position: 'fixed',
+            bottom: '24px',
+            right: '24px',
+            backgroundColor: '#0284c7',
+            color: '#ffffff',
+            padding: '8px 16px',
+            borderRadius: '6px',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)',
+            fontSize: '0.78rem',
+            fontWeight: 700,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            zIndex: 9999,
+            animation: 'fadeIn 0.2s ease-in-out'
+          }}>
+            <CheckCircle size={14} />
+            {copyToast}
+          </div>
+        )}
       </div>
 
       {/* [모달] 데이터 단건 추가 / 수정 모달 */}
