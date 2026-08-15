@@ -13,6 +13,8 @@ import {
   DEFAULT_LABEL_TEMPLATE,
   getStoredLabelTemplate,
   saveStoredLabelTemplate,
+  fetchBackendLabelTemplate,
+  saveBackendLabelTemplate,
   generateDynamicZpl,
   mmToDots
 } from '../utils/labelTemplate';
@@ -40,11 +42,18 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
 
   const canvasRef = useRef(null);
 
-  const PX_PER_MM = 7.5;
+  // 캔버스 화면 픽셀 배율 (1mm당 8.5px로 시원하게 확대)
+  const PX_PER_MM = 8.5;
   const canvasWidthPx = (template.paper.widthMm || 72) * PX_PER_MM;
   const canvasHeightPx = (template.paper.heightMm || 40) * PX_PER_MM;
 
   const selectedElem = (template.elements || []).find(e => e.id === selectedElemId) || null;
+
+  useEffect(() => {
+    fetchBackendLabelTemplate().then(tpl => {
+      if (tpl) setTemplate(tpl);
+    });
+  }, []);
 
   const handlePaperChange = (field, val) => {
     const num = Number(val) || 0;
@@ -143,8 +152,8 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
     };
   }, [draggingId, dragStartPos, elemStartPos, template.paper.widthMm, template.paper.heightMm]);
 
-  const handleSave = () => {
-    saveStoredLabelTemplate(template);
+  const handleSave = async () => {
+    await saveBackendLabelTemplate(template);
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 2000);
   };
@@ -152,7 +161,7 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
   const handleReset = () => {
     if (window.confirm('서식을 기본값으로 초기화하시겠습니까?')) {
       setTemplate(DEFAULT_LABEL_TEMPLATE);
-      saveStoredLabelTemplate(DEFAULT_LABEL_TEMPLATE);
+      saveBackendLabelTemplate(DEFAULT_LABEL_TEMPLATE);
       setSelectedElemId('elem_asset_no');
     }
   };
@@ -165,7 +174,7 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
         imei: SAMPLE_ITEM.imei,
         mac_address: SAMPLE_ITEM.mac_address,
         serial_no: SAMPLE_ITEM.serial_no
-      });
+      }, template);
       alert('테스트 인쇄 요청이 등록되었습니다.');
     } catch (err) {
       if (onOpenPrintModal) {
@@ -188,7 +197,7 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
       color: '#f8fafc',
       width: '100%'
     }}>
-      {/* Action Bar */}
+      {/* Top Action Bar */}
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
@@ -200,7 +209,8 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
         flexWrap: 'wrap',
         gap: '6px'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        {/* Left: Title & Active Printer Status */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           <Sliders size={16} style={{ color: '#38bdf8' }} />
           <span style={{ fontSize: '0.85rem', fontWeight: 700 }}>라벨 서식 디자인</span>
           <span style={{
@@ -213,8 +223,40 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
           }}>
             {template.paper.widthMm}×{template.paper.heightMm}mm
           </span>
+
+          {/* 활성 라벨 프린터 정보 표시 & 프린터 지정 버튼 */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            marginLeft: '8px',
+            padding: '2px 8px',
+            backgroundColor: '#0f172a',
+            borderRadius: '6px',
+            border: '1px solid #334155'
+          }}>
+            <Printer size={13} style={{ color: '#4ade80' }} />
+            <span style={{ fontSize: '0.72rem', color: '#f8fafc', fontWeight: 600 }}>
+              Zebra GK420d (USB)
+            </span>
+            <button
+              onClick={() => window.open('http://127.0.0.1:9988', '_blank')}
+              className="btn btn-outline"
+              style={{
+                fontSize: '0.68rem',
+                padding: '2px 6px',
+                borderColor: '#38bdf8',
+                color: '#7dd3fc',
+                marginLeft: '4px'
+              }}
+              title="에이전트 프린터 설정 열기"
+            >
+              프린터 지정
+            </button>
+          </div>
         </div>
 
+        {/* Right: Actions */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <button
             onClick={handleReset}
@@ -247,34 +289,39 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
         </div>
       </div>
 
-      {/* 3-Column Workspace (Compact & Full Width) */}
+      {/* 3-Column Workspace (Optimized Proportions: 290px | 1fr | 340px) */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: '260px 1fr 300px',
+        gridTemplateColumns: '290px minmax(500px, 1fr) 340px',
         gap: '8px',
-        alignItems: 'start',
-        width: '100%'
+        alignItems: 'stretch',
+        width: '100%',
+        minHeight: '560px'
       }}>
-        {/* [1/3] Left Panel */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        {/* ── [1/3] Left Panel (290px) ────────────────────────────── */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', minWidth: 0 }}>
           {/* 용지 규격 */}
           <div style={{
             backgroundColor: '#1e293b',
             border: '1px solid #334155',
             borderRadius: '8px',
-            padding: '10px'
+            padding: '10px',
+            boxSizing: 'border-box',
+            width: '100%'
           }}>
             <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#94a3b8', marginBottom: '6px' }}>
               용지 규격
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                <label style={{ fontSize: '0.68rem', color: '#cbd5e1' }}>폭 (mm)</label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', width: '100%' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0 }}>
+                <label style={{ fontSize: '0.68rem', color: '#cbd5e1', whiteSpace: 'nowrap' }}>폭 (mm)</label>
                 <input
                   type="number"
                   value={template.paper.widthMm}
                   onChange={e => handlePaperChange('widthMm', e.target.value)}
                   style={{
+                    width: '100%',
+                    boxSizing: 'border-box',
                     backgroundColor: '#0f172a',
                     border: '1px solid #475569',
                     borderRadius: '4px',
@@ -284,13 +331,15 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                   }}
                 />
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                <label style={{ fontSize: '0.68rem', color: '#cbd5e1' }}>높이 (mm)</label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0 }}>
+                <label style={{ fontSize: '0.68rem', color: '#cbd5e1', whiteSpace: 'nowrap' }}>높이 (mm)</label>
                 <input
                   type="number"
                   value={template.paper.heightMm}
                   onChange={e => handlePaperChange('heightMm', e.target.value)}
                   style={{
+                    width: '100%',
+                    boxSizing: 'border-box',
                     backgroundColor: '#0f172a',
                     border: '1px solid #475569',
                     borderRadius: '4px',
@@ -381,15 +430,17 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                 </span>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                  <label style={{ fontSize: '0.68rem', color: '#cbd5e1' }}>X (mm)</label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', width: '100%' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0 }}>
+                  <label style={{ fontSize: '0.68rem', color: '#cbd5e1', whiteSpace: 'nowrap' }}>X (mm)</label>
                   <input
                     type="number"
                     step="0.5"
                     value={selectedElem.xMm}
                     onChange={e => handleElemPropChange('xMm', e.target.value)}
                     style={{
+                      width: '100%',
+                      boxSizing: 'border-box',
                       backgroundColor: '#0f172a',
                       border: '1px solid #475569',
                       borderRadius: '4px',
@@ -399,14 +450,16 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                     }}
                   />
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                  <label style={{ fontSize: '0.68rem', color: '#cbd5e1' }}>Y (mm)</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0 }}>
+                  <label style={{ fontSize: '0.68rem', color: '#cbd5e1', whiteSpace: 'nowrap' }}>Y (mm)</label>
                   <input
                     type="number"
                     step="0.5"
                     value={selectedElem.yMm}
                     onChange={e => handleElemPropChange('yMm', e.target.value)}
                     style={{
+                      width: '100%',
+                      boxSizing: 'border-box',
                       backgroundColor: '#0f172a',
                       border: '1px solid #475569',
                       borderRadius: '4px',
@@ -514,7 +567,6 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                         />
                       </div>
 
-                      {/* 하단 텍스트 표시 여부 체크박스 */}
                       <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', marginTop: '2px' }}>
                         <input
                           type="checkbox"
@@ -548,7 +600,7 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
           )}
         </div>
 
-        {/* [2/3] Center Canvas */}
+        {/* ── [2/3] Center Canvas (Expansive Area) ─────────────────── */}
         <div style={{
           backgroundColor: '#1e293b',
           border: '1px solid #334155',
@@ -558,7 +610,9 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
           flexDirection: 'column',
           alignItems: 'center',
           gap: '8px',
-          minHeight: '460px'
+          width: '100%',
+          minWidth: 0,
+          boxSizing: 'border-box'
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
             <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#f8fafc' }}>
@@ -571,14 +625,16 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
 
           <div style={{
             width: '100%',
+            flex: 1,
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
             backgroundColor: '#0f172a',
-            padding: '14px',
+            padding: '20px',
             borderRadius: '6px',
             border: '1px solid #334155',
-            overflow: 'auto'
+            overflow: 'auto',
+            boxSizing: 'border-box'
           }}>
             <div
               ref={canvasRef}
@@ -587,9 +643,9 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                 height: `${canvasHeightPx}px`,
                 backgroundColor: '#ffffff',
                 color: '#000000',
-                borderRadius: '2px',
+                borderRadius: '3px',
                 position: 'relative',
-                boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
+                boxShadow: '0 6px 20px rgba(0,0,0,0.6)',
                 border: '1px solid #cbd5e1',
                 userSelect: 'none',
                 overflow: 'hidden'
@@ -669,13 +725,13 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                     >
                       {elem.barcodeType === 'QR' ? (
                         <div style={{
-                          width: `${(elem.qrScale || 4) * 10}px`,
-                          height: `${(elem.qrScale || 4) * 10}px`,
+                          width: `${(elem.qrScale || 4) * 12}px`,
+                          height: `${(elem.qrScale || 4) * 12}px`,
                           border: '2px solid #000',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          fontSize: '8px',
+                          fontSize: '10px',
                           fontWeight: 700
                         }}>
                           QR
@@ -697,7 +753,7 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                         </div>
                       )}
                       {elem.showText && elem.barcodeType !== 'QR' && (
-                        <span style={{ fontSize: '8px', fontWeight: 700, fontFamily: 'monospace', marginTop: '1px' }}>
+                        <span style={{ fontSize: '9px', fontWeight: 700, fontFamily: 'monospace', marginTop: '1px' }}>
                           *{bcVal}*
                         </span>
                       )}
@@ -705,7 +761,7 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                   );
                 }
 
-                const fontSizePx = (elem.fontSizePt || 20) * 0.55;
+                const fontSizePx = (elem.fontSizePt || 20) * 0.6;
                 return (
                   <div
                     key={elem.id}
@@ -715,7 +771,7 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                       left: `${leftPx}px`,
                       top: `${topPx}px`,
                       cursor: 'move',
-                      padding: '1px 2px',
+                      padding: '1px 3px',
                       fontSize: `${fontSizePx}px`,
                       fontWeight: 700,
                       fontFamily: 'monospace',
@@ -734,7 +790,7 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
           </div>
         </div>
 
-        {/* [3/3] Right Panel */}
+        {/* ── [3/3] Right Panel (340px, Full-Height) ────────────────── */}
         <div style={{
           backgroundColor: '#1e293b',
           border: '1px solid #334155',
@@ -742,7 +798,9 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
           padding: '10px',
           display: 'flex',
           flexDirection: 'column',
-          gap: '8px'
+          gap: '8px',
+          width: '100%',
+          boxSizing: 'border-box'
         }}>
           <div style={{
             display: 'flex',
@@ -755,8 +813,8 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
               onClick={() => setActiveRightTab('preview')}
               style={{
                 flex: 1,
-                padding: '4px',
-                fontSize: '0.72rem',
+                padding: '5px',
+                fontSize: '0.75rem',
                 fontWeight: 600,
                 border: 'none',
                 borderRadius: '3px',
@@ -771,8 +829,8 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
               onClick={() => setActiveRightTab('zpl')}
               style={{
                 flex: 1,
-                padding: '4px',
-                fontSize: '0.72rem',
+                padding: '5px',
+                fontSize: '0.75rem',
                 fontWeight: 600,
                 border: 'none',
                 borderRadius: '3px',
@@ -786,37 +844,37 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
           </div>
 
           {activeRightTab === 'preview' ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
               <div style={{
                 backgroundColor: '#ffffff',
                 color: '#000000',
-                borderRadius: '3px',
-                padding: '8px 10px',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
+                borderRadius: '4px',
+                padding: '12px 16px',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '2px',
-                fontSize: '10px',
+                gap: '3px',
+                fontSize: '11px',
                 fontFamily: 'monospace'
               }}>
                 {template.elements.map(el => {
                   if (!el.visible) return null;
                   if (el.type === 'line') {
-                    return <div key={el.id} style={{ borderBottom: '1px solid #000', margin: '2px 0' }} />;
+                    return <div key={el.id} style={{ borderBottom: '1.5px solid #000', margin: '3px 0' }} />;
                   }
                   if (el.type === 'barcode') {
                     let bcVal = SAMPLE_ITEM.asset_no;
                     if (el.targetField === 'imei') bcVal = SAMPLE_ITEM.imei;
                     else if (el.targetField === 'serial_no') bcVal = SAMPLE_ITEM.serial_no;
-                    const url = generateCode39DataUrl(bcVal, { height: 24 });
+                    const url = generateCode39DataUrl(bcVal, { height: 28 });
                     return (
-                      <div key={el.id} style={{ textAlign: 'center', margin: '2px 0 0 0' }}>
+                      <div key={el.id} style={{ textAlign: 'center', margin: '4px 0 0 0' }}>
                         {el.barcodeType === 'QR' ? (
-                          <div style={{ width: '32px', height: '32px', border: '1px solid #000', margin: '0 auto', fontSize: '8px', lineHeight: '30px' }}>QR</div>
+                          <div style={{ width: '40px', height: '40px', border: '2px solid #000', margin: '0 auto', fontSize: '9px', lineHeight: '38px', fontWeight: 700 }}>QR</div>
                         ) : url && (
-                          <img src={url} alt="bc" style={{ height: '22px', maxWidth: '90%' }} />
+                          <img src={url} alt="bc" style={{ height: '26px', maxWidth: '90%' }} />
                         )}
-                        {el.showText && el.barcodeType !== 'QR' && <div style={{ fontSize: '8px', fontWeight: 700 }}>*{bcVal}*</div>}
+                        {el.showText && el.barcodeType !== 'QR' && <div style={{ fontSize: '9px', fontWeight: 700 }}>*{bcVal}*</div>}
                       </div>
                     );
                   }
@@ -828,7 +886,7 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                   else if (el.field === 'scanned_at') text += SAMPLE_ITEM.scanned_at;
                   else if (el.field === 'custom') text += el.customValue || '';
                   return (
-                    <div key={el.id} style={{ fontWeight: 700, fontSize: `${(el.fontSizePt || 20) * 0.55}px` }}>
+                    <div key={el.id} style={{ fontWeight: 700, fontSize: `${(el.fontSizePt || 20) * 0.6}px` }}>
                       {text}
                     </div>
                   );
@@ -839,18 +897,19 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
             <textarea
               readOnly
               value={currentZpl}
-              rows={12}
               style={{
                 width: '100%',
+                flex: 1,
+                minHeight: '440px',
                 backgroundColor: '#0f172a',
                 border: '1px solid #334155',
                 borderRadius: '4px',
                 color: '#38bdf8',
                 fontFamily: 'Consolas, monospace',
-                fontSize: '0.7rem',
-                padding: '6px',
+                fontSize: '0.72rem',
+                padding: '8px',
                 boxSizing: 'border-box',
-                resize: 'vertical'
+                resize: 'none'
               }}
             />
           )}
