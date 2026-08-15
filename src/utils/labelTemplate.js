@@ -424,13 +424,61 @@ export function createEmptyTemplate(name = '새 라벨 서식', targetTable = 'a
         visible: false
       },
       {
+        id: 'elem_mac_lan',
+        name: 'MAC (lan)',
+        type: 'text',
+        field: 'mac_lan',
+        prefix: 'MAC(L): ',
+        xMm: 2.0,
+        yMm: 35.0,
+        fontSizePt: 13,
+        fontFamily: 'A0N',
+        visible: false
+      },
+      {
+        id: 'elem_asset_status',
+        name: '자산상태',
+        type: 'text',
+        field: 'asset_status',
+        prefix: '상태: ',
+        xMm: 45.0,
+        yMm: 6.0,
+        fontSizePt: 14,
+        fontFamily: 'A0N',
+        visible: false
+      },
+      {
+        id: 'elem_spec',
+        name: '구성요소(사양)',
+        type: 'text',
+        field: 'spec',
+        prefix: '사양: ',
+        xMm: 2.0,
+        yMm: 39.0,
+        fontSizePt: 12,
+        fontFamily: 'A0N',
+        visible: false
+      },
+      {
+        id: 'elem_repair_date',
+        name: '교진일자',
+        type: 'text',
+        field: 'repair_date',
+        prefix: '교진일: ',
+        xMm: 45.0,
+        yMm: 10.0,
+        fontSizePt: 13,
+        fontFamily: 'A0N',
+        visible: false
+      },
+      {
         id: 'elem_remark',
         name: '비고',
         type: 'text',
         field: 'remark',
         prefix: '',
         xMm: 2.0,
-        yMm: 35.0,
+        yMm: 43.0,
         fontSizePt: 12,
         fontFamily: 'A0N',
         visible: false
