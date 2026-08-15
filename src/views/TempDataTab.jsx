@@ -65,42 +65,21 @@ export default function TempDataTab({ onError, onOpenPrintModal }) {
           return;
         }
       }
-      // 로컬 스토리지 캐시 로드
+      // 로컬 스토리지 캐시 로드 (사용자가 직접 주입/등록한 데이터만 유지)
       const localData = localStorage.getItem(LOCAL_KEY_TEMP_ASSETS);
       if (localData) {
-        setItems(JSON.parse(localData));
+        try {
+          const parsed = JSON.parse(localData);
+          setItems(Array.isArray(parsed) ? parsed : []);
+        } catch (e) {
+          setItems([]);
+        }
       } else {
-        const sampleData = [
-          {
-            id: 'temp_001',
-            asset_no: 'TEMP-2026-001',
-            category_major: '행사용',
-            product_name: '무선 마이크 세트',
-            model_name: 'WM-900',
-            serial_no: 'MIC260801',
-            asset_status: '대기',
-            shelf_no: 'T-01',
-            remark: '8월 전사 워크숍'
-          },
-          {
-            id: 'temp_002',
-            asset_no: 'TEMP-2026-002',
-            category_major: '협력사',
-            product_name: '빔프로젝터 5000안시',
-            model_name: 'EB-L510U',
-            serial_no: 'PRJ260802',
-            asset_status: '사용중',
-            shelf_no: 'T-02',
-            remark: '외부 렌탈 장비'
-          }
-        ];
-        setItems(sampleData);
-        localStorage.setItem(LOCAL_KEY_TEMP_ASSETS, JSON.stringify(sampleData));
+        setItems([]);
       }
     } catch (err) {
       console.warn('temp_asset 데이터 로드 예외:', err);
-      const localData = localStorage.getItem(LOCAL_KEY_TEMP_ASSETS);
-      if (localData) setItems(JSON.parse(localData));
+      setItems([]);
     } finally {
       setIsLoading(false);
     }
@@ -207,14 +186,9 @@ export default function TempDataTab({ onError, onOpenPrintModal }) {
     setTimeout(() => setStatusMessage(null), 3000);
   };
 
-  // 7. 엑셀 양식 다운로드 (.xlsx)
+  // 7. 엑셀 양식 다운로드 (.xlsx) - 스키마 정의 필드명 헤더만 갖춘 순수 템플릿
   const handleDownloadExcelTemplate = () => {
-    const sampleRow = {};
-    fields.forEach(f => {
-      sampleRow[f.name] = f.isKey ? 'TEMP-2026-001' : (f.id === 'product_name' ? '예시 품목' : '');
-    });
-
-    const worksheet = XLSX.utils.json_to_sheet([sampleRow], { header: fields.map(f => f.name) });
+    const worksheet = XLSX.utils.json_to_sheet([], { header: fields.map(f => f.name) });
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, '임시데이터_양식');
     worksheet['!cols'] = fields.map(() => ({ wch: 18 }));
