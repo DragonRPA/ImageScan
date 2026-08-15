@@ -2044,8 +2044,9 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
           >
             {template.elements.filter(e => e.visible).map(elem => {
               const isElemSelected = elem.id === selectedElemId;
-              const leftPx = Math.max(0, ((Number(elem.xMm) || 0) + (Number(elem.offsetX) || 0))) * PX_PER_MM;
-              const topPx = Math.max(0, ((Number(elem.yMm) || 0) + (Number(elem.offsetY) || 0))) * PX_PER_MM;
+              // ⭐️ 캔버스 화면은 라벨 기준 순수 디자인 레이아웃(xMm, yMm)만으로 렌더링 (보정값은 실제 인쇄 ZPL에만 반영)
+              const leftPx = (Number(elem.xMm) || 0) * PX_PER_MM;
+              const topPx = (Number(elem.yMm) || 0) * PX_PER_MM;
 
               // 1. 텍스트 요소
               if (elem.type === 'text') {
