@@ -427,11 +427,11 @@ export default function TempDataTab({ onError, onOpenPrintModal }) {
           return item;
         });
 
-        // ⭐️ Supabase 실제 DB 100% 동기 벌크 주입 (100건 청크 분할 & 무누락 검증)
+        // ⭐️ Supabase 실제 DB 100% 동기 벌크 주입 (전사 표준 1,000건 초고속 원샷 배치)
         const client = getSupabaseClient();
         if (client) {
           const dbRows = parsedRows.map(row => normalizeRowForDb(row, keyField));
-          const chunkSize = 100;
+          const chunkSize = 1000;
           for (let i = 0; i < dbRows.length; i += chunkSize) {
             const chunk = dbRows.slice(i, i + chunkSize);
             const { error: chunkErr } = await client.from('temp_asset').insert(chunk);
