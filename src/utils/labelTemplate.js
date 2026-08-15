@@ -513,10 +513,6 @@ export function generateDynamicZpl(item = {}, template = DEFAULT_LABEL_TEMPLATE)
   const dotsW = paper.dotsWidth || mmToDots(paper.widthMm, dpi);
   const dotsH = paper.dotsHeight || mmToDots(paper.heightMm, dpi);
 
-  const zplCommands = [
-    '^XA^MD21^BY2,2.0^FS^SEE:UHANGUL.DAT^FS^CW1,E:KFONT3.FNT^CI26^FS'
-  ];
-
   const getValue = (elem) => {
     if (!elem) return '';
     if (elem.field === 'custom' || elem.field?.startsWith('custom_text_')) return elem.customValue || '';
@@ -530,6 +526,20 @@ export function generateDynamicZpl(item = {}, template = DEFAULT_LABEL_TEMPLATE)
   };
 
   const hasKorean = (str) => /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/.test(str);
+
+  // 출력 대상 텍스트에 한글이 하나라도 포함되어 있는지 검사
+  const containsKorean = (t.elements || []).some(elem => {
+    if (!elem.visible || elem.type !== 'text') return false;
+    const text = `${elem.prefix || ''}${getValue(elem)}`;
+    return hasKorean(text);
+  });
+
+  // ⭐️ 한글 포함 시: UBUS 대형 한글 헤더, 한글 미포함(소형 QR 등): ^XA^MD21
+  const zplCommands = [
+    containsKorean
+      ? '^XA^MD21^BY2,2.0^FS^SEE:UHANGUL.DAT^FS^CW1,E:KFONT3.FNT^CI26^FS'
+      : '^XA^MD21'
+  ];
 
   (t.elements || []).forEach(elem => {
     if (!elem.visible) return;
