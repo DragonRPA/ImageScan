@@ -2,9 +2,60 @@
  * Universal Dynamic Schema & Record Engine (SSOT)
  * System: Universal Dynamic Schema, Scan Queue & Label Pipeline
  */
-import { getSupabaseClient } from './supabaseClient';
+import { getSupabaseClient } from './supabaseClient.js';
 
 export const LOCAL_KEY_SCHEMA_DEF = 'IMAGE_SCAN_UNIVERSAL_SCHEMA_DEF_V1';
+
+/**
+ * ⭐️ 콤마(,)로 연결된 표시명 중 첫 번째 주된 표시명(Main Label) 추출
+ * 예: '자산번호, 자산_번호, AssetNo' -> '자산번호'
+ */
+export function getMainFieldName(fieldOrName) {
+  if (!fieldOrName) return '';
+  const rawName = typeof fieldOrName === 'string' ? fieldOrName : (fieldOrName.name || fieldOrName.id || '');
+  if (!rawName) return '';
+  const firstPart = rawName.split(',')[0];
+  return firstPart ? firstPart.trim() : rawName.trim();
+}
+
+/**
+ * ⭐️ 필드의 모든 식별 가능한 별칭(Aliases) 목록 추출
+ * 콤마로 연결된 모든 텍스트 + 영문 필드 ID를 정규화하여 반환
+ */
+export function getFieldAliases(field) {
+  if (!field) return [];
+  const aliases = new Set();
+  if (field.id) aliases.add(String(field.id).trim().toLowerCase());
+
+  if (field.name) {
+    String(field.name).split(',').forEach(part => {
+      const trimmed = part.trim();
+      if (trimmed) {
+        aliases.add(trimmed.toLowerCase());
+        aliases.add(trimmed.toLowerCase().replace(/[\s_\-]/g, '')); // 공백 및 언더바 제거 버전도 매핑
+      }
+    });
+  }
+  return Array.from(aliases);
+}
+
+/**
+ * ⭐️ 엑셀 헤더명 또는 입력 텍스트를 스키마의 정확한 field.id로 매핑
+ */
+export function resolveFieldId(headerName, fields = []) {
+  if (!headerName || !Array.isArray(fields) || fields.length === 0) return headerName;
+  const normalized = String(headerName).trim().toLowerCase();
+  const normalizedNoSpaces = normalized.replace(/[\s_\-]/g, '');
+
+  for (const field of fields) {
+    if (field.id && field.id.toLowerCase() === normalized) return field.id;
+    const aliases = getFieldAliases(field);
+    if (aliases.includes(normalized) || aliases.includes(normalizedNoSpaces)) {
+      return field.id;
+    }
+  }
+  return headerName;
+}
 
 // ── 자산(asset) 정규 스키마 정의 (SSOT) ──────────────────────────────────
 export const DEFAULT_SCHEMA_DEF = {

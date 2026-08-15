@@ -3,6 +3,7 @@
  * Core Fields: 자산번호(asset_no), 제품명(product_name), 모델명(model_name), 제조번호(serial_no)
  */
 import { getSupabaseClient } from './supabaseClient';
+import { getMainFieldName } from './dynamicSchema';
 
 export const LOCAL_KEY_ACTIVE_TEMPLATE_ID = 'IMAGE_SCAN_ACTIVE_TEMPLATE_ID_V3';
 export const LOCAL_KEY_TEMPLATE_PRESETS = 'IMAGE_SCAN_TEMPLATE_PRESETS_V3';
@@ -45,19 +46,22 @@ export function createEmptyTemplate(name = '새 라벨 서식', targetTable = 'a
     }
   }
 
-  // 1. 스키마 기반 텍스트 요소 생성
-  const dynamicElements = fields.map((f, idx) => ({
-    id: `elem_${f.id}`,
-    name: f.name,
-    type: 'text',
-    field: f.id,
-    prefix: f.isKey ? '' : `${f.name}: `,
-    xMm: 2.0,
-    yMm: Math.min(heightMm - 6, 2.0 + (idx * 4.5)),
-    fontSizePt: f.isKey ? 20 : 15,
-    fontFamily: 'A0N',
-    visible: idx === 0 || f.isKey // 기본 키나 첫 항목은 표시
-  }));
+  // 1. 스키마 기반 텍스트 요소 생성 (콤마 구분 중 첫 번째 주된 표시명 및 접두사 사용)
+  const dynamicElements = fields.map((f, idx) => {
+    const mainName = getMainFieldName(f.name);
+    return {
+      id: `elem_${f.id}`,
+      name: mainName,
+      type: 'text',
+      field: f.id,
+      prefix: f.isKey ? '' : `${mainName}: `,
+      xMm: 2.0,
+      yMm: Math.min(heightMm - 6, 2.0 + (idx * 4.5)),
+      fontSizePt: f.isKey ? 20 : 15,
+      fontFamily: 'A0N',
+      visible: idx === 0 || f.isKey // 기본 키나 첫 항목은 표시
+    };
+  });
 
   // 바코드 대상 필드 (PK 또는 첫 번째 바코드 대상 필드)
   const barcodeTargetField = fields.find(f => f.isBarcodeTarget || f.isKey)?.id || (fields[0]?.id || 'asset_no');

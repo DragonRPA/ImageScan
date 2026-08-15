@@ -19,7 +19,13 @@ import {
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { getSupabaseClient } from '../utils/supabaseClient';
-import { fetchTableSchema, getTableSchema, TEMP_ASSET_SCHEMA_DEF } from '../utils/dynamicSchema';
+import {
+  fetchTableSchema,
+  getTableSchema,
+  TEMP_ASSET_SCHEMA_DEF,
+  getMainFieldName,
+  resolveFieldId
+} from '../utils/dynamicSchema';
 import { getAllPresets, generateDynamicZpl } from '../utils/labelTemplate';
 import { getRegisteredPrinters, getActivePrinterId, sendZplToPrinter } from '../utils/printerManager';
 
@@ -389,9 +395,10 @@ export default function TempDataTab({ onError, onOpenPrintModal }) {
     setTimeout(() => setStatusMessage(null), 3000);
   };
 
-  // 7. 엑셀 양식 다운로드 (.xlsx) - 스키마 정의 필드명 헤더만 갖춘 순수 템플릿
+  // 7. 엑셀 양식 다운로드 (.xlsx) - 스키마 정의 필드명 중 첫 번째 주된 헤더로 순수 템플릿 생성
   const handleDownloadExcelTemplate = () => {
-    const worksheet = XLSX.utils.json_to_sheet([], { header: fields.map(f => f.name) });
+    const mainHeaders = fields.map(f => getMainFieldName(f.name));
+    const worksheet = XLSX.utils.json_to_sheet([], { header: mainHeaders });
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, '임시데이터_양식');
     worksheet['!cols'] = fields.map(() => ({ wch: 18 }));
@@ -417,12 +424,6 @@ export default function TempDataTab({ onError, onOpenPrintModal }) {
           return;
         }
 
-        const nameToIdMap = new Map();
-        fields.forEach(f => {
-          nameToIdMap.set(f.name, f.id);
-          nameToIdMap.set(f.id, f.id);
-        });
-
         const parsedRows = rawJson.map((row, idx) => {
           const item = {
             created_at: new Date().toISOString(),
@@ -431,7 +432,7 @@ export default function TempDataTab({ onError, onOpenPrintModal }) {
 
           Object.entries(row).forEach(([colName, val]) => {
             const trimmedCol = String(colName).trim();
-            const matchedFieldId = nameToIdMap.get(trimmedCol) || trimmedCol;
+            const matchedFieldId = resolveFieldId(trimmedCol, fields);
             item[matchedFieldId] = String(val).trim();
           });
 
@@ -708,8 +709,8 @@ export default function TempDataTab({ onError, onOpenPrintModal }) {
               </th>
               <th style={{ padding: '6px 8px', textAlign: 'center', width: '60px', whiteSpace: 'nowrap' }}>관리</th>
               {fields.map(f => (
-                <th key={f.id} style={{ padding: '6px 8px', textAlign: 'left', whiteSpace: 'nowrap' }}>
-                  {f.name}
+                <th key={f.id} style={{ padding: '6px 8px', textAlign: 'left', whiteSpace: 'nowrap' }} title={f.name}>
+                  {getMainFieldName(f.name)}
                   {f.isKey && <span style={{ color: '#facc15', marginLeft: '3px' }}>*</span>}
                 </th>
               ))}

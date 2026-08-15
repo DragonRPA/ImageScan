@@ -14,7 +14,8 @@ import {
   DEFAULT_SCHEMA_DEF,
   fetchTableSchema,
   saveTableSchema,
-  applySchemaPatch
+  applySchemaPatch,
+  getMainFieldName
 } from '../utils/dynamicSchema';
 
 export default function SchemaBuilderTab({ onError, onSchemaUpdated }) {
@@ -226,14 +227,14 @@ CREATE POLICY "Allow all print_queue" ON public.print_queue FOR ALL USING (true)
           <Database size={16} style={{ color: '#38bdf8' }} />
           <span style={{ fontSize: '0.85rem', fontWeight: 700 }}>스키마 빌더</span>
           <span style={{
-            fontSize: '0.68rem',
+            fontSize: '0.72rem',
             backgroundColor: '#0f172a',
             color: '#38bdf8',
             padding: '2px 6px',
             borderRadius: '4px',
             border: '1px solid #334155'
           }}>
-            키: {schemaDef.key_field_name} ({schemaDef.key_field})
+            키: {getMainFieldName(schemaDef.key_field_name)} ({schemaDef.key_field})
           </span>
         </div>
 
@@ -298,20 +299,19 @@ CREATE POLICY "Allow all print_queue" ON public.print_queue FOR ALL USING (true)
         </div>
       )}
 
-      {/* Schema Header Grid Table */}
+      {/* Schema Editor Grid Table */}
       <div style={{
         backgroundColor: '#1e293b',
         border: '1px solid #334155',
         borderRadius: '8px',
-        padding: '8px',
-        overflowX: 'auto'
+        overflow: 'hidden'
       }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.75rem' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.72rem' }}>
           <thead>
             <tr style={{ borderBottom: '1px solid #334155', color: '#94a3b8' }}>
               <th style={{ padding: '6px 8px', textAlign: 'center', width: '60px', whiteSpace: 'nowrap' }}>키 인덱스</th>
               <th style={{ padding: '6px 8px', textAlign: 'left', width: '140px', whiteSpace: 'nowrap' }}>헤더 ID (영문)</th>
-              <th style={{ padding: '6px 8px', textAlign: 'left', width: '140px', whiteSpace: 'nowrap' }}>표시명 (라벨)</th>
+              <th style={{ padding: '6px 8px', textAlign: 'left', width: '220px', whiteSpace: 'nowrap' }}>표시명 (라벨)</th>
               <th style={{ padding: '6px 8px', textAlign: 'left', width: '110px', whiteSpace: 'nowrap' }}>데이터타입</th>
               <th style={{ padding: '6px 8px', textAlign: 'center', width: '80px', whiteSpace: 'nowrap' }}>바코드 대상</th>
               <th style={{ padding: '6px 8px', textAlign: 'center', width: '70px', whiteSpace: 'nowrap' }}>필수 여부</th>
@@ -360,6 +360,7 @@ CREATE POLICY "Allow all print_queue" ON public.print_queue FOR ALL USING (true)
                     <input
                       type="text"
                       value={field.name}
+                      placeholder="주된명칭, 별칭1, 별칭2..."
                       onChange={e => {
                         handleFieldChange(idx, 'name', e.target.value);
                         if (isKey) {

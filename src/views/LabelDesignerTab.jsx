@@ -40,7 +40,8 @@ import {
   getTableSchema,
   fetchTableSchema,
   fetchActiveSchema,
-  getLocalSchemaDef
+  getLocalSchemaDef,
+  getMainFieldName
 } from '../utils/dynamicSchema';
 
 // ⭐️ 순수 스키마 필드 기반 동적 샘플 데이터 매핑 (임의 일시/상태 헤더 생성 금지)
@@ -132,25 +133,26 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
       return false;
     });
 
-    // 2. 현재 스키마의 실제 필드들로만 텍스트 요소 구성
+    // 2. 현재 스키마의 실제 필드들로만 텍스트 요소 구성 (콤마 구분 첫 번째 주된 명칭 및 접두사 사용)
     const schemaElements = currentTableSchema.fields.map((f, idx) => {
+      const mainName = getMainFieldName(f.name);
       // 기존에 동일 필드로 설정된 좌표/크기/폰트/가시성이 있다면 승계
       const existing = template.elements.find(e => e.field === f.id || e.id === `elem_${f.id}`);
       if (existing) {
         return {
           ...existing,
           id: `elem_${f.id}`,
-          name: f.name,
+          name: mainName,
           field: f.id,
-          prefix: existing.prefix !== undefined ? existing.prefix : (f.isKey ? '' : `${f.name}: `)
+          prefix: existing.prefix !== undefined ? existing.prefix : (f.isKey ? '' : `${mainName}: `)
         };
       }
       return {
         id: `elem_${f.id}`,
-        name: f.name,
+        name: mainName,
         type: 'text',
         field: f.id,
-        prefix: f.isKey ? '' : `${f.name}: `,
+        prefix: f.isKey ? '' : `${mainName}: `,
         xMm: 2.0,
         yMm: Math.min(35, 2.0 + (idx * 4.0)),
         fontSizePt: f.isKey ? 20 : 15,
@@ -230,7 +232,7 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
       else if (f.id === 'mac_address' || f.id === 'mac_wlan') item[f.id] = '4C:EB:B0:B5:7A:51';
       else if (f.id === 'product_name') item[f.id] = '갤럭시 탭 S9';
       else if (f.id === 'model_name') item[f.id] = 'SM-X910';
-      else item[f.id] = f.name; // 사용자 정의 필드는 해당 필드명을 예시값으로 표출
+      else item[f.id] = getMainFieldName(f.name); // 사용자 정의 필드는 해당 주된 필드명을 예시값으로 표출
     });
     return item;
   }, [tableFields]);
@@ -240,14 +242,17 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
     if (!elem) return '';
     if (elem.type === 'text' && elem.field) {
       const matched = tableFields.find(f => f.id === elem.field);
-      if (matched) return matched.name;
+      if (matched) return getMainFieldName(matched.name);
     }
-    return elem.name;
+    return getMainFieldName(elem.name);
   };
 
   // 바코드 대상 가능 필드 목록
   const barcodeFields = useMemo(() => {
-    return tableFields.filter(f => f.isBarcodeTarget !== false);
+    return tableFields.filter(f => f.isBarcodeTarget !== false).map(f => ({
+      ...f,
+      name: getMainFieldName(f.name)
+    }));
   }, [tableFields]);
 
   const handlePaperChange = (field, val) => {
