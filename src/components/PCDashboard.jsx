@@ -29,7 +29,7 @@ export default function PCDashboard({
   const [loading, setLoading] = useState(false);
 
   // 조회 필터 상태
-  const [filterCategory, setFilterCategory] = useState('ALL');
+  const [filterCategory, setFilterCategory] = useState('IT');
   const [filterModel, setFilterModel] = useState('');
   const [filterSerial, setFilterSerial] = useState('');
   const [filterStatus, setFilterStatus] = useState('ALL');
@@ -73,7 +73,7 @@ export default function PCDashboard({
 
   // 필터 초기화
   const handleResetFilters = () => {
-    setFilterCategory('ALL');
+    setFilterCategory('IT');
     setFilterModel('');
     setFilterSerial('');
     setFilterStatus('ALL');
