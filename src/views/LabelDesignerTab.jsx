@@ -277,6 +277,32 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
 
   const currentZpl = generateDynamicZpl(SAMPLE_ITEM, template);
 
+  const [presets, setPresets] = useState(getAllPresets);
+
+  const handleSelectPreset = (presetId) => {
+    const found = presets.find(p => p.templateId === presetId);
+    if (found) {
+      setTemplate(found);
+      saveStoredLabelTemplate(found);
+      setSelectedElemId(found.elements[0]?.id || 'elem_asset_no');
+    }
+  };
+
+  const handleAddNewPreset = () => {
+    const name = window.prompt('새 서식 프리셋 이름을 입력하세요:', '사용자 정의 라벨');
+    if (!name) return;
+    const newId = `tpl_custom_${Date.now()}`;
+    const newPreset = {
+      ...template,
+      templateId: newId,
+      name,
+      isDefault: false
+    };
+    saveStoredLabelTemplate(newPreset);
+    setPresets(getAllPresets());
+    setTemplate(newPreset);
+  };
+
   return (
     <div style={{
       display: 'flex',
@@ -297,27 +323,48 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
         flexWrap: 'wrap',
         gap: '6px'
       }}>
-        {/* Left: Title & Active Printer Status */}
+        {/* Left: Title & Presets & Active Printer Status */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           <Sliders size={16} style={{ color: '#38bdf8' }} />
           <span style={{ fontSize: '0.85rem', fontWeight: 700 }}>라벨 서식 디자인</span>
-          <span style={{
-            fontSize: '0.65rem',
-            backgroundColor: '#0f172a',
-            color: '#38bdf8',
-            padding: '2px 6px',
-            borderRadius: '4px',
-            border: '1px solid #334155'
-          }}>
-            {template.paper.widthMm}×{template.paper.heightMm}mm
-          </span>
+
+          {/* ★ 다중 서식 프리셋 선택 드롭다운 */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <select
+              value={template.templateId}
+              onChange={e => handleSelectPreset(e.target.value)}
+              style={{
+                backgroundColor: '#0f172a',
+                border: '1px solid #38bdf8',
+                borderRadius: '4px',
+                padding: '3px 8px',
+                color: '#38bdf8',
+                fontSize: '0.75rem',
+                fontWeight: 600
+              }}
+            >
+              {presets.map(p => (
+                <option key={p.templateId} value={p.templateId}>
+                  {p.name} ({p.paper.widthMm}×{p.paper.heightMm}mm)
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={handleAddNewPreset}
+              className="btn btn-outline"
+              style={{ fontSize: '0.68rem', padding: '3px 8px' }}
+              title="새 서식 프리셋 추가"
+            >
+              + 새 서식
+            </button>
+          </div>
 
           {/* 활성 라벨 프린터 정보 표시 & 프린터 지정 버튼 */}
           <div style={{
             display: 'flex',
             alignItems: 'center',
             gap: '6px',
-            marginLeft: '8px',
+            marginLeft: '6px',
             padding: '2px 8px',
             backgroundColor: '#0f172a',
             borderRadius: '6px',

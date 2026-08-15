@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Smartphone, Monitor, Database } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Smartphone, Monitor, Database, CheckCircle } from 'lucide-react';
 import MobileScannerView from './views/MobileScannerView';
 import PCDashboardView from './views/PCDashboardView';
 import FileExportModal from './components/FileExportModal';
@@ -9,6 +9,7 @@ import SupabaseConfigModal from './components/SupabaseConfigModal';
 import PrinterGuideModal from './components/PrinterGuideModal';
 import ErrorModal from './components/ErrorModal';
 import { getStoredConfig } from './utils/supabaseClient';
+import { initHardwareScannerListener } from './utils/hardwareScanner';
 
 export default function App() {
   const [deviceMode, setDeviceMode] = useState(() => {
@@ -22,6 +23,7 @@ export default function App() {
 
   // Modals state
   const [errorMessage, setErrorMessage] = useState(null);
+  const [toastMessage, setToastMessage] = useState(null);
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isPrinterGuideOpen, setIsPrinterGuideOpen] = useState(false);
@@ -29,6 +31,22 @@ export default function App() {
   const [printModalState, setPrintModalState] = useState({ isOpen: false, items: [], config: null });
 
   const [refreshKey, setRefreshKey] = useState(0);
+
+  // ★ 블루투스 & 하드웨어 바코드 스캐너 전역 자동 감지 가동
+  useEffect(() => {
+    initHardwareScannerListener({
+      onScanResult: (item) => {
+        setToastMessage(`바코드 스캔 감지: ${item.asset_no || item.serial_no} (출력 요청 완료)`);
+        setTimeout(() => setToastMessage(null), 3000);
+      },
+      onAutoPrintSuccess: () => {
+        setRefreshKey(prev => prev + 1);
+      },
+      onError: (err) => {
+        setErrorMessage(err);
+      }
+    });
+  }, []);
 
   const supabaseConfig = getStoredConfig();
   const isConfigured = Boolean(supabaseConfig.url && supabaseConfig.anonKey && !supabaseConfig.url.includes('your-supabase-project'));
@@ -83,7 +101,7 @@ export default function App() {
                 라벨 출력 관리
               </h1>
               <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>
-                v1.2.0.Build.4 | 2026-08-15
+                v1.3.0.Build.4 | 2026-08-15
               </span>
             </div>
           </div>
@@ -131,6 +149,30 @@ export default function App() {
             </div>
           </div>
         </header>
+      )}
+
+      {/* Scan Toast Notice */}
+      {toastMessage && (
+        <div style={{
+          position: 'fixed',
+          top: '12px',
+          right: '12px',
+          backgroundColor: '#052e16',
+          border: '1px solid #10b981',
+          color: '#4ade80',
+          padding: '6px 14px',
+          borderRadius: '6px',
+          fontSize: '0.75rem',
+          fontWeight: 600,
+          zIndex: 9999,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px'
+        }}>
+          <CheckCircle size={14} />
+          {toastMessage}
+        </div>
       )}
 
       {/* Main View Area */}

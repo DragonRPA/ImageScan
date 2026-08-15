@@ -610,8 +610,11 @@ button:disabled{opacity:.4;cursor:not-allowed;}
 
 <header>
   <div class="pulse" id="pulse"></div>
-  <h1>Zebra Print Agent<span class="ver">${VERSION}</span></h1>
-  <div class="hdr-right">
+  <h1>UBUS DragonRPA Agent<span class="ver">${VERSION}</span></h1>
+  <div class="hdr-right" style="display:flex;align-items:center;gap:6px;">
+    <button onclick="openDocModal('spec')" style="padding:3px 8px;font-size:.72rem;background:var(--surface-2);border:1px solid var(--border);border-radius:4px;color:var(--text);cursor:pointer;">📄 기능 명세서</button>
+    <button onclick="openDocModal('manual')" style="padding:3px 8px;font-size:.72rem;background:var(--surface-2);border:1px solid var(--border);border-radius:4px;color:var(--text);cursor:pointer;">📖 기능 매뉴얼</button>
+    <button onclick="restartAgent()" style="padding:3px 8px;font-size:.72rem;background:rgba(239,68,68,.15);border:1px solid var(--err);border-radius:4px;color:#fca5a5;cursor:pointer;font-weight:600;" title="에이전트 프로세스 재기동">🔄 에이전트 재시작</button>
     <span class="hdr-id" id="agent-id"></span>
   </div>
 </header>
@@ -733,10 +736,58 @@ button:disabled{opacity:.4;cursor:not-allowed;}
   </div>
 </div>
 
+<!-- ── 문서 열람 모달 (명세서 & 매뉴얼) ────────────────────────────── -->
+<div id="doc-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:110;align-items:center;justify-content:center;">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;width:720px;max-width:95vw;height:80vh;display:flex;flex-direction:column;overflow:hidden;">
+    <div style="padding:12px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--surface-2);">
+      <span style="font-weight:700;font-size:.9rem;" id="doc-modal-title">문서 열람</span>
+      <button onclick="closeDocModal()" style="padding:2px 8px;font-size:.8rem;">✕</button>
+    </div>
+    <div id="doc-modal-content" style="padding:16px;flex:1;overflow-y:auto;font-family:monospace;font-size:.78rem;line-height:1.6;white-space:pre-wrap;color:var(--text);background:#090d16;">
+      로딩 중...
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
 let logCount = 0, autoScroll = true;
+
+async function openDocModal(type) {
+  const m = document.getElementById('doc-modal');
+  const t = document.getElementById('doc-modal-title');
+  const c = document.getElementById('doc-modal-content');
+  m.style.display = 'flex';
+  t.textContent = type === 'spec' ? '📄 UBUS DragonRPA 기능 명세서 (SPECIFICATION.md)' : '📖 UBUS DragonRPA 기능 매뉴얼 (MANUAL.md)';
+  c.textContent = '문서 로딩 중...';
+  try {
+    const res = await fetch('/api/' + type);
+    const text = await res.text();
+    c.textContent = text;
+  } catch (e) {
+    c.textContent = '문서 로드 실패: ' + e.message;
+  }
+}
+
+function closeDocModal() {
+  document.getElementById('doc-modal').style.display = 'none';
+}
+
+async function restartAgent() {
+  if (!confirm('에이전트 프로세스를 재시작하시겠습니까?')) return;
+  showToast('🔄 에이전트 재시작 중...');
+  try {
+    await fetch('/api/restart', { method: 'POST' });
+    setTimeout(() => {
+      showToast('에이전트가 재시작되었습니다. 3초 후 페이지를 새로고침합니다.');
+      setTimeout(() => location.reload(), 3000);
+    }, 1500);
+  } catch (e) {
+    showToast('에이전트 재시작 신호 전송 완료. 새로고침 중...');
+    setTimeout(() => location.reload(), 3000);
+  }
+}
 
 /* SSE */
 const es = new EventSource('/events');
@@ -1066,6 +1117,61 @@ function startUiServer() {
       res.writeHead(200); return res.end('{"ok":true}');
     }
 
+    // ── 기능 명세서 문서 조회 ─────────────────────────────────────────────
+    if (url === '/api/spec') {
+      const candidates = [
+        path.join(process.cwd(), 'SPECIFICATION.md'),
+        path.join(__dirname, 'SPECIFICATION.md'),
+        path.join(__dirname, '..', 'SPECIFICATION.md')
+      ];
+      let docText = '명세서 파일을 찾을 수 없습니다.';
+      for (const p of candidates) {
+        if (fs.existsSync(p)) {
+          docText = fs.readFileSync(p, 'utf8');
+          break;
+        }
+      }
+      res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
+      return res.end(docText);
+    }
+
+    // ── 기능 매뉴얼 문서 조회 ─────────────────────────────────────────────
+    if (url === '/api/manual') {
+      const candidates = [
+        path.join(process.cwd(), 'MANUAL.md'),
+        path.join(__dirname, 'MANUAL.md'),
+        path.join(__dirname, '..', 'MANUAL.md')
+      ];
+      let docText = '매뉴얼 파일을 찾을 수 없습니다.';
+      for (const p of candidates) {
+        if (fs.existsSync(p)) {
+          docText = fs.readFileSync(p, 'utf8');
+          break;
+        }
+      }
+      res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
+      return res.end(docText);
+    }
+
+    // ── 에이전트 원클릭 프로세스 재시작 (Kill + Restart) ──────────────────
+    if (url === '/api/restart' && req.method === 'POST') {
+      log('INFO', '원격 명령: 에이전트 프로세스 재기동 요청 접수됨');
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: true, message: '에이전트를 재시작합니다.' }));
+
+      setTimeout(() => {
+        const { spawn } = require('child_process');
+        const child = spawn(process.argv[0], process.argv.slice(1), {
+          detached: true,
+          stdio: 'ignore',
+          cwd: process.cwd()
+        });
+        child.unref();
+        process.exit(0);
+      }, 600);
+      return;
+    }
+
     // ── 프린터 목록 조회 ─────────────────────────────────────────────────
     if (url === '/api/printers') {
       try {
@@ -1127,6 +1233,88 @@ function startUiServer() {
   });
 }
 
+// ── [1] ZPL 파일 드롭 실시간 감시 엔진 (Folder Watcher) ───────────────────
+const DROP_DIR = path.join(BASE_DIR, 'zpl_drop');
+const ARCHIVE_DIR = path.join(BASE_DIR, 'backup', 'zpl_history');
+
+function startFolderWatcher(config) {
+  try {
+    if (!fs.existsSync(DROP_DIR)) fs.mkdirSync(DROP_DIR, { recursive: true });
+    if (!fs.existsSync(ARCHIVE_DIR)) fs.mkdirSync(ARCHIVE_DIR, { recursive: true });
+
+    log('INFO', `폴더 감시 : ${DROP_DIR} (ZPL .txt 파일 드롭 시 자동 인쇄)`);
+
+    setInterval(async () => {
+      try {
+        if (!fs.existsSync(DROP_DIR)) return;
+        const files = fs.readdirSync(DROP_DIR).filter(f => f.endsWith('.txt') || f.endsWith('.zpl'));
+        for (const file of files) {
+          const filePath = path.join(DROP_DIR, file);
+          try {
+            const zplContent = fs.readFileSync(filePath, 'utf8');
+            if (zplContent && zplContent.trim()) {
+              if (agentCfg.connectionType === 'USB_RAW') {
+                await sendZplViaWindowsPort(zplContent, agentCfg.printerName);
+              } else {
+                await sendZplViaTcp(zplContent, agentCfg.printerHost, agentCfg.printerPort);
+              }
+              log('PRINT', `[파일드롭] ZPL 파일 자동 출력 완료: ${file}`);
+              agentStatus.todayCount++;
+            }
+            // 출력 후 백업 폴더로 안전하게 이동
+            const destPath = path.join(ARCHIVE_DIR, `${Date.now()}_${file}`);
+            fs.renameSync(filePath, destPath);
+          } catch (err) {
+            log('ERR', `[파일드롭] 처리 실패 (${file}):`, err.message);
+          }
+        }
+      } catch (e) {}
+    }, 1000); // 1초 주기 감시
+  } catch (e) {
+    log('WARN', '폴더 감시 초기화 실패', e.message);
+  }
+}
+
+// ── [2] 2개월 전 인쇄 이력 로컬 백업 & DB 경량화 엔진 ─────────────────────
+async function runMonthlyPurgeAndLocalBackup(supabase) {
+  if (!supabase) return;
+  try {
+    const cutoff = new Date();
+    cutoff.setMonth(cutoff.getMonth() - 2); // 2개월 전 (60일)
+    const cutoffIso = cutoff.toISOString();
+
+    // 2개월 전 데이터 조회
+    const { data, error } = await supabase
+      .from('print_queue')
+      .select('*')
+      .lt('created_at', cutoffIso);
+
+    if (error || !data || data.length === 0) return;
+
+    // 로컬 백업 저장
+    const backupDir = path.join(BASE_DIR, 'backup');
+    if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir, { recursive: true });
+
+    const ym = cutoffIso.slice(0, 7);
+    const backupFilePath = path.join(backupDir, `print_queue_archive_${ym}.json`);
+
+    fs.writeFileSync(backupFilePath, JSON.stringify(data, null, 2), 'utf8');
+    log('PURGE', `2개월 전 이력 ${data.length}건 로컬 백업 완료: ${backupFilePath}`);
+
+    // Supabase DB 경량화 삭제
+    const delRes = await supabase
+      .from('print_queue')
+      .delete()
+      .lt('created_at', cutoffIso);
+
+    if (!delRes.error) {
+      log('PURGE', `DB 경량화 완료: 2개월 경과 ${data.length}건 데이터 안전 삭제됨`);
+    }
+  } catch (err) {
+    log('WARN', 'DB 경량화 백업 중 오류 발생:', err.message);
+  }
+}
+
 // ── 메인 ──────────────────────────────────────────────────────────────────
 // ── TTY 감지: 더블클릭 실행 시 readline 없이 즉시 시작 ────────────────────
 const IS_INTERACTIVE = Boolean(process.stdin.isTTY);
@@ -1146,7 +1334,7 @@ function getDefaultConfig() {
 async function main() {
   console.log('');
   console.log('+=====================================================+');
-  console.log(`|  Zebra Print Agent  ${VERSION}  (UI Edition)           |`);
+  console.log(`|  UBUS DragonRPA Agent  ${VERSION}  (UI Edition)     |`);
   console.log('|  브라우저 UI: http://127.0.0.1:' + UI_PORT + '              |');
   console.log('+=====================================================+');
   console.log(`  설정 폴더: ${BASE_DIR}`);
@@ -1159,23 +1347,18 @@ async function main() {
   let config = loadConfig();
 
   if (IS_INTERACTIVE && forceSetup) {
-    // 터미널 + --setup → 대화형 재설정
     config = await interactiveSetup();
   } else if (IS_INTERACTIVE && !config) {
-    // 터미널 + 설정 없음 → 대화형 최초 설정
     config = await interactiveSetup();
   } else if (IS_INTERACTIVE && config) {
-    // 터미널 + 설정 있음 → 5초 확인 후 시작
     config = await showConfigAndConfirm(config);
   } else if (!IS_INTERACTIVE && !config) {
-    // 더블클릭 + 설정 없음 → 기본값(USB001) 자동 적용
     config = getDefaultConfig();
     saveConfig(config);
     console.log('  [SETUP] 설정 파일 없음 → 기본값(USB_RAW/USB001) 자동 적용');
     console.log('  [SETUP] 브라우저 UI에서 프린터를 선택하여 설정을 변경하세요.');
     console.log('');
   } else {
-    // 더블클릭 + 설정 있음 → 즉시 시작 (readline 없음)
     console.log(`  [OK] 저장된 설정 로드: ${config.printerName} (${config.connectionType})`);
     console.log('');
   }
@@ -1202,10 +1385,17 @@ async function main() {
   setupRealtimeSubscription(supabaseCli);
   startPollingLoop(supabaseCli);
 
+  // ★ 1. ZPL 텍스트 파일 드롭 실시간 감시 시작
+  startFolderWatcher(config);
+
+  // ★ 2. 월간 2개월 전 DB 이력 로컬 백업 & DB 경량화 1회 실행 및 일간 스케줄러 등록
+  runMonthlyPurgeAndLocalBackup(supabaseCli);
+  setInterval(() => runMonthlyPurgeAndLocalBackup(supabaseCli), 24 * 60 * 60 * 1000); // 매 24시간 검사
+
   log('INFO', '[PR] 상시 대기 중 -- 모바일 IMEI 확정 시 자동 라벨 출력');
   log('UI',   `브라우저 http://127.0.0.1:${UI_PORT} 에서 프린터 설정 가능`);
   console.log('');
-  console.log('  재설정: zebra-agent.exe --setup  (터미널에서 실행)');
+  console.log('  재설정: UBUS_DragonRPA_Agent.exe --setup  (터미널에서 실행)');
   console.log('  종료  : 이 창을 닫거나 Ctrl+C');
   console.log('');
 }

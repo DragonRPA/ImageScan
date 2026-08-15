@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Upload, FileSpreadsheet, AlertTriangle, CheckCircle, RefreshCw, X, Download, Loader2, CheckCircle2 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { saveScansToSupabaseBatch, getSupabaseClient } from '../utils/supabaseClient';
+import { parseAndValidateExcel } from '../utils/excelParserEngine';
 
 export default function DataImportModal({ isOpen, onClose, onImportSuccess, onError }) {
   const [importMode, setImportMode] = useState('replace'); // 'replace' vs 'append'
@@ -40,27 +41,33 @@ export default function DataImportModal({ isOpen, onClose, onImportSuccess, onEr
     reader.onload = (evt) => {
       try {
         const bstr = evt.target.result;
-        const workbook = XLSX.read(bstr, { type: 'binary' });
-        const wsname = workbook.SheetNames[0];
-        const ws = workbook.Sheets[wsname];
+        // ★ 컬럼 위치 무관 엑셀 파서 & 선행 헤더 검증 엔진 실행
+        const result = parseAndValidateExcel(bstr, ['asset_no']);
 
-        const data = XLSX.utils.sheet_to_json(ws, { defval: '' });
-
-        const normalized = data.map((row, idx) => ({
-          id: `import_${idx}_${Date.now()}`,
-          asset_no: String(row['자산번호'] || row['asset_no'] || row['관리번호'] || `TEST${String(idx + 1).padStart(4, '0')}`),
-          imei: String(row['IMEI'] || row['imei'] || ''),
-          mac_address: String(row['MAC Address'] || row['mac_address'] || row['MAC'] || ''),
-          serial_no: String(row['시리얼'] || row['serial_no'] || row['시리얼번호'] || ''),
-          status: 'COMPLETED',
-          created_at: new Date().toISOString()
-        })).filter(r => r.imei || r.asset_no);
-
-        if (normalized.length === 0) {
-          onError('파일에서 유효한 데이터(자산번호, IMEI)를 찾을 수 없습니다.');
+        if (!result.isValid) {
+          onError(result.error || '엑셀 파일 검증 실패');
           setParsedRows([]);
           return;
         }
+
+        const normalized = result.rows.map((row, idx) => ({
+          id: `import_${idx}_${Date.now()}`,
+          key_value: row.asset_no,
+          asset_no: row.asset_no,
+          product_name: row.product_name || '',
+          model_name: row.model_name || '',
+          serial_no: row.serial_no || '',
+          shelf_no: row.shelf_no || '',
+          asset_status: row.asset_status || '',
+          asset_option: row.asset_option || '',
+          calibration_date: row.calibration_date || '',
+          remark: row.remark || '',
+          mac_wlan: row.mac_wlan || '',
+          mac_lan: row.mac_lan || '',
+          components: row.components || '',
+          status: 'COMPLETED',
+          created_at: new Date().toISOString()
+        }));
 
         setParsedRows(normalized);
       } catch (err) {
@@ -72,17 +79,43 @@ export default function DataImportModal({ isOpen, onClose, onImportSuccess, onEr
     reader.readAsBinaryString(file);
   };
 
-  // Download Sample Template (.xlsx)
+  // Download Sample Template (.xlsx) - 표준 자산/RPA 양식
   const downloadSampleTemplate = () => {
     const templateData = [
-      { '자산번호': 'TEST0001', 'IMEI': '351379300225052', 'MAC Address': '4CEBB0B57A51', '시리얼': 'R5KL60F0CZW' },
-      { '자산번호': 'TEST0002', 'IMEI': '351379300224790', 'MAC Address': '4CEBB0B57A1D', '시리얼': 'R5KL60F0C6F' }
+      {
+        '자산번호': 'TEST0001',
+        '제품명': '갤럭시 S24',
+        '모델명': 'SM-S921N',
+        '제조번호(시리얼)': 'R5KL60F0CZW',
+        '선반번호': 'A-01',
+        '자산상태': '정상',
+        '옵션': '기본',
+        '교정일자': '2026-08-01',
+        'MAC wlan': '4C:EB:B0:B5:7A:51',
+        'MAC lan': '00:1A:2B:3C:4D:5E',
+        '구성요소': 'SSD 512GB, RAM 16GB',
+        '비고': 'RPA 입고'
+      },
+      {
+        '자산번호': 'TEST0002',
+        '제품명': '갤럭시 S24',
+        '모델명': 'SM-S921N',
+        '제조번호(시리얼)': 'R5KL60F0C6F',
+        '선반번호': 'A-02',
+        '자산상태': '정상',
+        '옵션': '기본',
+        '교정일자': '2026-08-01',
+        'MAC wlan': '4C:EB:B0:B5:7A:1D',
+        'MAC lan': '00:1A:2B:3C:4D:5F',
+        '구성요소': 'SSD 256GB, RAM 8GB',
+        '비고': 'RPA 입고'
+      }
     ];
 
     const worksheet = XLSX.utils.json_to_sheet(templateData);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, '양식템플릿');
-    XLSX.writeFile(workbook, 'ImageScan_Import_Template.xlsx');
+    XLSX.utils.book_append_sheet(workbook, worksheet, '자산목록');
+    XLSX.writeFile(workbook, '자산목록_RPA양식.xlsx');
   };
 
   // Execute Batch Import with Progress Bar

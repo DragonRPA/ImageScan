@@ -6,17 +6,17 @@ import { getSupabaseClient } from './supabaseClient';
 
 export const LOCAL_KEY_SCHEMA_DEF = 'IMAGE_SCAN_UNIVERSAL_SCHEMA_DEF_V1';
 
-// ── 기본 초기 스키마 정의 (SSOT) ──────────────────────────────────────────
+// ── 자산 및 RPA 통합 스키마 정의 (SSOT) ──────────────────────────────────
 export const DEFAULT_SCHEMA_DEF = {
   id: 'main_schema',
-  schema_name: '기본 자산 스키마',
+  schema_name: '자산 및 RPA 통합 스키마',
   key_field: 'asset_no',
-  key_field_name: '관리번호',
+  key_field_name: '자산번호',
   table_version: 1,
   fields: [
     {
       id: 'asset_no',
-      name: '관리번호',
+      name: '자산번호',
       type: 'VARCHAR',
       length: 50,
       isKey: true,
@@ -25,34 +25,114 @@ export const DEFAULT_SCHEMA_DEF = {
       order: 1
     },
     {
-      id: 'imei',
-      name: 'IMEI',
+      id: 'product_name',
+      name: '제품명',
       type: 'VARCHAR',
-      length: 20,
+      length: 100,
       isKey: false,
       isRequired: false,
-      isBarcodeTarget: true,
+      isBarcodeTarget: false,
       order: 2
     },
     {
+      id: 'model_name',
+      name: '모델명',
+      type: 'VARCHAR',
+      length: 100,
+      isKey: false,
+      isRequired: false,
+      isBarcodeTarget: false,
+      order: 3
+    },
+    {
       id: 'serial_no',
-      name: '시리얼번호',
+      name: '제조번호(시리얼)',
       type: 'VARCHAR',
       length: 50,
       isKey: false,
       isRequired: false,
       isBarcodeTarget: true,
-      order: 3
+      order: 4
     },
     {
-      id: 'mac_address',
-      name: 'MAC 주소',
+      id: 'shelf_no',
+      name: '선반번호',
+      type: 'VARCHAR',
+      length: 50,
+      isKey: false,
+      isRequired: false,
+      isBarcodeTarget: false,
+      order: 5
+    },
+    {
+      id: 'asset_status',
+      name: '자산상태',
+      type: 'VARCHAR',
+      length: 50,
+      isKey: false,
+      isRequired: false,
+      isBarcodeTarget: false,
+      order: 6
+    },
+    {
+      id: 'asset_option',
+      name: '옵션',
+      type: 'VARCHAR',
+      length: 100,
+      isKey: false,
+      isRequired: false,
+      isBarcodeTarget: false,
+      order: 7
+    },
+    {
+      id: 'calibration_date',
+      name: '교정일자',
+      type: 'VARCHAR',
+      length: 50,
+      isKey: false,
+      isRequired: false,
+      isBarcodeTarget: false,
+      order: 8
+    },
+    {
+      id: 'remark',
+      name: '비고',
+      type: 'VARCHAR',
+      length: 255,
+      isKey: false,
+      isRequired: false,
+      isBarcodeTarget: false,
+      order: 9
+    },
+    {
+      id: 'mac_wlan',
+      name: 'MAC wlan',
       type: 'VARCHAR',
       length: 30,
       isKey: false,
       isRequired: false,
       isBarcodeTarget: false,
-      order: 4
+      order: 10
+    },
+    {
+      id: 'mac_lan',
+      name: 'MAC lan',
+      type: 'VARCHAR',
+      length: 30,
+      isKey: false,
+      isRequired: false,
+      isBarcodeTarget: false,
+      order: 11
+    },
+    {
+      id: 'components',
+      name: '구성요소',
+      type: 'VARCHAR',
+      length: 255,
+      isKey: false,
+      isRequired: false,
+      isBarcodeTarget: false,
+      order: 12
     },
     {
       id: 'scanned_at',
@@ -61,7 +141,7 @@ export const DEFAULT_SCHEMA_DEF = {
       isKey: false,
       isRequired: false,
       isBarcodeTarget: false,
-      order: 5
+      order: 13
     }
   ]
 };

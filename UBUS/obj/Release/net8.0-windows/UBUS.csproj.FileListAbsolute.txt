@@ -1,0 +1,153 @@
+D:\OneDrive\RPA 개발\C#\고객사별\UBUS\UBUS\UBUS\bin\Release\net8.0-windows\selenium-manager\linux\selenium-manager
+D:\OneDrive\RPA 개발\C#\고객사별\UBUS\UBUS\UBUS\bin\Release\net8.0-windows\selenium-manager\macos\selenium-manager
+D:\OneDrive\RPA 개발\C#\고객사별\UBUS\UBUS\UBUS\bin\Release\net8.0-windows\selenium-manager\windows\selenium-manager.exe
+D:\OneDrive\RPA 개발\C#\고객사별\UBUS\UBUS\UBUS\bin\Release\net8.0-windows\UBUS.exe
+D:\OneDrive\RPA 개발\C#\고객사별\UBUS\UBUS\UBUS\bin\Release\net8.0-windows\UBUS.deps.json
+D:\OneDrive\RPA 개발\C#\고객사별\UBUS\UBUS\UBUS\bin\Release\net8.0-windows\UBUS.runtimeconfig.json
+D:\OneDrive\RPA 개발\C#\고객사별\UBUS\UBUS\UBUS\bin\Release\net8.0-windows\UBUS.dll
+D:\OneDrive\RPA 개발\C#\고객사별\UBUS\UBUS\UBUS\bin\Release\net8.0-windows\UBUS.pdb
+D:\OneDrive\RPA 개발\C#\고객사별\UBUS\UBUS\UBUS\bin\Release\net8.0-windows\WindowsInput.dll
+D:\OneDrive\RPA 개발\C#\고객사별\UBUS\UBUS\UBUS\bin\Release\net8.0-windows\WebDriver.Support.dll
+D:\OneDrive\RPA 개발\C#\고객사별\UBUS\UBUS\UBUS\bin\Release\net8.0-windows\WebDriver.dll
+D:\OneDrive\RPA 개발\C#\고객사별\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.csproj.AssemblyReference.cache
+D:\OneDrive\RPA 개발\C#\고객사별\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\Interop.Microsoft.Office.Interop.Excel.dll
+D:\OneDrive\RPA 개발\C#\고객사별\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.csproj.ResolveComReference.cache
+D:\OneDrive\RPA 개발\C#\고객사별\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.Form1.resources
+D:\OneDrive\RPA 개발\C#\고객사별\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.Properties.Resources.resources
+D:\OneDrive\RPA 개발\C#\고객사별\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.csproj.GenerateResource.cache
+D:\OneDrive\RPA 개발\C#\고객사별\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.GeneratedMSBuildEditorConfig.editorconfig
+D:\OneDrive\RPA 개발\C#\고객사별\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.AssemblyInfoInputs.cache
+D:\OneDrive\RPA 개발\C#\고객사별\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.AssemblyInfo.cs
+D:\OneDrive\RPA 개발\C#\고객사별\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.csproj.CoreCompileInputs.cache
+D:\OneDrive\RPA 개발\C#\고객사별\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.csproj.Up2Date
+D:\OneDrive\RPA 개발\C#\고객사별\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.dll
+D:\OneDrive\RPA 개발\C#\고객사별\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\refint\UBUS.dll
+D:\OneDrive\RPA 개발\C#\고객사별\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.pdb
+D:\OneDrive\RPA 개발\C#\고객사별\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.genruntimeconfig.cache
+D:\OneDrive\RPA 개발\C#\고객사별\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\ref\UBUS.dll
+D:\OneDrive\RPA 개발\C#\고객사별\UBUS\UBUS\UBUS\bin\Release\net8.0-windows\InTheHand.Net.Bluetooth.dll
+D:\OneDrive\RPA 개발\01.C#\고객사별\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.csproj.AssemblyReference.cache
+D:\OneDrive\RPA 개발\01.C#\고객사별\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\Interop.Microsoft.Office.Interop.Excel.dll
+D:\OneDrive\RPA 개발\01.C#\고객사별\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.csproj.ResolveComReference.cache
+D:\OneDrive\RPA 개발\01.C#\고객사별\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.Form1.resources
+D:\OneDrive\RPA 개발\01.C#\고객사별\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.Properties.Resources.resources
+D:\OneDrive\RPA 개발\01.C#\고객사별\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.csproj.GenerateResource.cache
+D:\OneDrive\RPA 개발\01.C#\고객사별\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.GeneratedMSBuildEditorConfig.editorconfig
+D:\OneDrive\RPA 개발\01.C#\고객사별\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.AssemblyInfoInputs.cache
+D:\OneDrive\RPA 개발\01.C#\고객사별\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.AssemblyInfo.cs
+D:\OneDrive\RPA 개발\01.C#\고객사별\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.csproj.CoreCompileInputs.cache
+D:\OneDrive\RPA 개발\01.C#\고객사별\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.dll
+D:\OneDrive\RPA 개발\01.C#\고객사별\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\refint\UBUS.dll
+D:\OneDrive\RPA 개발\01.C#\고객사별\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.pdb
+D:\OneDrive\RPA 개발\01.C#\고객사별\UBUS\UBUS\UBUS\bin\Release\net8.0-windows\selenium-manager\linux\selenium-manager
+D:\OneDrive\RPA 개발\01.C#\고객사별\UBUS\UBUS\UBUS\bin\Release\net8.0-windows\selenium-manager\macos\selenium-manager
+D:\OneDrive\RPA 개발\01.C#\고객사별\UBUS\UBUS\UBUS\bin\Release\net8.0-windows\selenium-manager\windows\selenium-manager.exe
+D:\OneDrive\RPA 개발\01.C#\고객사별\UBUS\UBUS\UBUS\bin\Release\net8.0-windows\UBUS.exe
+D:\OneDrive\RPA 개발\01.C#\고객사별\UBUS\UBUS\UBUS\bin\Release\net8.0-windows\UBUS.deps.json
+D:\OneDrive\RPA 개발\01.C#\고객사별\UBUS\UBUS\UBUS\bin\Release\net8.0-windows\UBUS.runtimeconfig.json
+D:\OneDrive\RPA 개발\01.C#\고객사별\UBUS\UBUS\UBUS\bin\Release\net8.0-windows\UBUS.dll
+D:\OneDrive\RPA 개발\01.C#\고객사별\UBUS\UBUS\UBUS\bin\Release\net8.0-windows\UBUS.pdb
+D:\OneDrive\RPA 개발\01.C#\고객사별\UBUS\UBUS\UBUS\bin\Release\net8.0-windows\WindowsInput.dll
+D:\OneDrive\RPA 개발\01.C#\고객사별\UBUS\UBUS\UBUS\bin\Release\net8.0-windows\InTheHand.Net.Bluetooth.dll
+D:\OneDrive\RPA 개발\01.C#\고객사별\UBUS\UBUS\UBUS\bin\Release\net8.0-windows\WebDriver.Support.dll
+D:\OneDrive\RPA 개발\01.C#\고객사별\UBUS\UBUS\UBUS\bin\Release\net8.0-windows\WebDriver.dll
+D:\OneDrive\RPA 개발\01.C#\고객사별\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.csproj.Up2Date
+D:\OneDrive\RPA 개발\01.C#\고객사별\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.genruntimeconfig.cache
+D:\OneDrive\RPA 개발\01.C#\고객사별\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\ref\UBUS.dll
+G:\다른 컴퓨터\Lenovo\GoogleDrive\RPA 개발\01.C#\고객사별\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.csproj.AssemblyReference.cache
+G:\다른 컴퓨터\Lenovo\GoogleDrive\RPA 개발\01.C#\고객사별\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\Interop.Microsoft.Office.Interop.Excel.dll
+G:\다른 컴퓨터\Lenovo\GoogleDrive\RPA 개발\01.C#\고객사별\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.csproj.ResolveComReference.cache
+G:\다른 컴퓨터\Lenovo\GoogleDrive\RPA 개발\01.C#\고객사별\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.Form1.resources
+G:\다른 컴퓨터\Lenovo\GoogleDrive\RPA 개발\01.C#\고객사별\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.Properties.Resources.resources
+G:\다른 컴퓨터\Lenovo\GoogleDrive\RPA 개발\01.C#\고객사별\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.csproj.GenerateResource.cache
+G:\다른 컴퓨터\Lenovo\GoogleDrive\RPA 개발\01.C#\고객사별\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.GeneratedMSBuildEditorConfig.editorconfig
+G:\다른 컴퓨터\Lenovo\GoogleDrive\RPA 개발\01.C#\고객사별\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.AssemblyInfoInputs.cache
+G:\다른 컴퓨터\Lenovo\GoogleDrive\RPA 개발\01.C#\고객사별\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.AssemblyInfo.cs
+G:\다른 컴퓨터\Lenovo\GoogleDrive\RPA 개발\01.C#\고객사별\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.csproj.CoreCompileInputs.cache
+G:\다른 컴퓨터\Lenovo\GoogleDrive\RPA 개발\01.C#\고객사별\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.dll
+G:\다른 컴퓨터\Lenovo\GoogleDrive\RPA 개발\01.C#\고객사별\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\refint\UBUS.dll
+G:\다른 컴퓨터\Lenovo\GoogleDrive\RPA 개발\01.C#\고객사별\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.pdb
+D:\개발\UBUS\UBUS\bin\Release\net8.0-windows\selenium-manager\linux\selenium-manager
+D:\개발\UBUS\UBUS\bin\Release\net8.0-windows\selenium-manager\macos\selenium-manager
+D:\개발\UBUS\UBUS\bin\Release\net8.0-windows\selenium-manager\windows\selenium-manager.exe
+D:\개발\UBUS\UBUS\bin\Release\net8.0-windows\UBUS.exe
+D:\개발\UBUS\UBUS\bin\Release\net8.0-windows\UBUS.deps.json
+D:\개발\UBUS\UBUS\bin\Release\net8.0-windows\UBUS.runtimeconfig.json
+D:\개발\UBUS\UBUS\bin\Release\net8.0-windows\UBUS.dll
+D:\개발\UBUS\UBUS\bin\Release\net8.0-windows\UBUS.pdb
+D:\개발\UBUS\UBUS\bin\Release\net8.0-windows\WindowsInput.dll
+D:\개발\UBUS\UBUS\bin\Release\net8.0-windows\InTheHand.Net.Bluetooth.dll
+D:\개발\UBUS\UBUS\bin\Release\net8.0-windows\WebDriver.Support.dll
+D:\개발\UBUS\UBUS\bin\Release\net8.0-windows\WebDriver.dll
+D:\개발\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.csproj.AssemblyReference.cache
+D:\개발\UBUS\UBUS\obj\Release\net8.0-windows\Interop.Microsoft.Office.Interop.Excel.dll
+D:\개발\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.csproj.ResolveComReference.cache
+D:\개발\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.Form1.resources
+D:\개발\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.Properties.Resources.resources
+D:\개발\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.csproj.GenerateResource.cache
+D:\개발\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.GeneratedMSBuildEditorConfig.editorconfig
+D:\개발\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.AssemblyInfoInputs.cache
+D:\개발\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.AssemblyInfo.cs
+D:\개발\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.csproj.CoreCompileInputs.cache
+D:\개발\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.csproj.Up2Date
+D:\개발\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.dll
+D:\개발\UBUS\UBUS\obj\Release\net8.0-windows\refint\UBUS.dll
+D:\개발\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.pdb
+D:\개발\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.genruntimeconfig.cache
+D:\개발\UBUS\UBUS\obj\Release\net8.0-windows\ref\UBUS.dll
+C:\RPA\UBUS\UBUS\UBUS\bin\Release\net8.0-windows\UBUS.exe
+C:\RPA\UBUS\UBUS\UBUS\bin\Release\net8.0-windows\UBUS.deps.json
+C:\RPA\UBUS\UBUS\UBUS\bin\Release\net8.0-windows\UBUS.runtimeconfig.json
+C:\RPA\UBUS\UBUS\UBUS\bin\Release\net8.0-windows\UBUS.dll
+C:\RPA\UBUS\UBUS\UBUS\bin\Release\net8.0-windows\UBUS.pdb
+C:\RPA\UBUS\UBUS\UBUS\bin\Release\net8.0-windows\WindowsInput.dll
+C:\RPA\UBUS\UBUS\UBUS\bin\Release\net8.0-windows\InTheHand.Net.Bluetooth.dll
+C:\RPA\UBUS\UBUS\UBUS\bin\Release\net8.0-windows\WebDriver.Support.dll
+C:\RPA\UBUS\UBUS\UBUS\bin\Release\net8.0-windows\WebDriver.dll
+C:\RPA\UBUS\UBUS\UBUS\bin\Release\net8.0-windows\runtimes\linux\native\selenium-manager
+C:\RPA\UBUS\UBUS\UBUS\bin\Release\net8.0-windows\runtimes\osx\native\selenium-manager
+C:\RPA\UBUS\UBUS\UBUS\bin\Release\net8.0-windows\runtimes\win\native\selenium-manager.exe
+C:\RPA\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.csproj.AssemblyReference.cache
+C:\RPA\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\Interop.Microsoft.Office.Interop.Excel.dll
+C:\RPA\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.csproj.ResolveComReference.cache
+C:\RPA\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.Form1.resources
+C:\RPA\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.Properties.Resources.resources
+C:\RPA\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.csproj.GenerateResource.cache
+C:\RPA\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.GeneratedMSBuildEditorConfig.editorconfig
+C:\RPA\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.AssemblyInfoInputs.cache
+C:\RPA\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.AssemblyInfo.cs
+C:\RPA\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.csproj.CoreCompileInputs.cache
+C:\RPA\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.csproj.Up2Date
+C:\RPA\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.dll
+C:\RPA\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\refint\UBUS.dll
+C:\RPA\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.pdb
+C:\RPA\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.genruntimeconfig.cache
+C:\RPA\UBUS\UBUS\UBUS\obj\Release\net8.0-windows\ref\UBUS.dll
+C:\RPA\UBUS\UBUS\bin\Release\net8.0-windows\UBUS.exe
+C:\RPA\UBUS\UBUS\bin\Release\net8.0-windows\UBUS.deps.json
+C:\RPA\UBUS\UBUS\bin\Release\net8.0-windows\UBUS.runtimeconfig.json
+C:\RPA\UBUS\UBUS\bin\Release\net8.0-windows\UBUS.dll
+C:\RPA\UBUS\UBUS\bin\Release\net8.0-windows\UBUS.pdb
+C:\RPA\UBUS\UBUS\bin\Release\net8.0-windows\WindowsInput.dll
+C:\RPA\UBUS\UBUS\bin\Release\net8.0-windows\InTheHand.Net.Bluetooth.dll
+C:\RPA\UBUS\UBUS\bin\Release\net8.0-windows\WebDriver.Support.dll
+C:\RPA\UBUS\UBUS\bin\Release\net8.0-windows\WebDriver.dll
+C:\RPA\UBUS\UBUS\bin\Release\net8.0-windows\runtimes\linux\native\selenium-manager
+C:\RPA\UBUS\UBUS\bin\Release\net8.0-windows\runtimes\osx\native\selenium-manager
+C:\RPA\UBUS\UBUS\bin\Release\net8.0-windows\runtimes\win\native\selenium-manager.exe
+C:\RPA\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.csproj.AssemblyReference.cache
+C:\RPA\UBUS\UBUS\obj\Release\net8.0-windows\Interop.Microsoft.Office.Interop.Excel.dll
+C:\RPA\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.csproj.ResolveComReference.cache
+C:\RPA\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.Form1.resources
+C:\RPA\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.Properties.Resources.resources
+C:\RPA\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.csproj.GenerateResource.cache
+C:\RPA\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.GeneratedMSBuildEditorConfig.editorconfig
+C:\RPA\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.AssemblyInfoInputs.cache
+C:\RPA\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.AssemblyInfo.cs
+C:\RPA\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.csproj.CoreCompileInputs.cache
+C:\RPA\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.csproj.Up2Date
+C:\RPA\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.dll
+C:\RPA\UBUS\UBUS\obj\Release\net8.0-windows\refint\UBUS.dll
+C:\RPA\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.pdb
+C:\RPA\UBUS\UBUS\obj\Release\net8.0-windows\UBUS.genruntimeconfig.cache
+C:\RPA\UBUS\UBUS\obj\Release\net8.0-windows\ref\UBUS.dll

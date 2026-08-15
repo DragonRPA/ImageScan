@@ -109,22 +109,45 @@ export async function fetchScansFromSupabase() {
 // Chunked Batch Saver with Real-Time Progress Callback
 export async function saveScansToSupabaseBatch(scans, onProgressCallback, importMode = 'append') {
   const client = getSupabaseClient();
-  const formattedPayload = scans.map((item, idx) => ({
-    asset_no: item.asset_no || item.assetNo || item['자산번호'] || `TEST${String(idx + 1).padStart(4, '0')}`,
-    imei: item.imei || item['IMEI'] || '',
-    mac_address: item.mac_address || item.macAddress || item['MAC Address'] || '',
-    serial_no: item.serial_no || item.serialNo || item['시리얼'] || '',
-    status: item.status || 'COMPLETED',
-    device_info: item.device_info || 'FILE_IMPORT'
-  }));
+  const formattedPayload = scans.map((item, idx) => {
+    const assetNo = item.asset_no || item.assetNo || item['자산번호'] || `TEST${String(idx + 1).padStart(4, '0')}`;
+    const prodName = item.product_name || item.productName || item['제품명'] || '';
+    const modelName = item.model_name || item.modelName || item['모델명'] || '';
+    const serialNo = item.serial_no || item.serialNo || item['제조번호'] || item['시리얼'] || item.imei || '';
+    const shelfNo = item.shelf_no || item['선반번호'] || '';
+    const assetStatus = item.asset_status || item['자산상태'] || '';
+    const assetOption = item.asset_option || item['옵션'] || '';
+    const calibrationDate = item.calibration_date || item['교정일자'] || '';
+    const remark = item.remark || item['비고'] || '';
+    const macWlan = item.mac_wlan || item['MAC wlan'] || item['mac_wlan'] || item.mac_address || '';
+    const macLan = item.mac_lan || item['MAC lan'] || item['mac_lan'] || '';
+    const components = item.components || item['구성요소'] || '';
+
+    return {
+      asset_no: assetNo,
+      product_name: prodName,
+      model_name: modelName,
+      serial_no: serialNo,
+      shelf_no: shelfNo,
+      asset_status: assetStatus,
+      asset_option: assetOption,
+      calibration_date: calibrationDate,
+      remark: remark,
+      mac_wlan: macWlan,
+      mac_lan: macLan,
+      components: components,
+      status: item.status || 'COMPLETED',
+      device_info: item.device_info || 'FILE_IMPORT'
+    };
+  });
 
   if (client) {
     if (importMode === 'replace') {
       if (onProgressCallback) onProgressCallback({ stage: 'wipe', percent: 5, message: '1단계: 기존 DB 데이터 전체 삭제 중...' });
-      const { error: wipeErr } = await client.from('imei_scans').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-      if (wipeErr) {
-        throw new Error(`기존 DB 전체 삭제 실패: ${wipeErr.message}`);
-      }
+      try {
+        await client.from('scan_records').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+        await client.from('imei_scans').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      } catch (e) {}
     }
 
     const CHUNK_SIZE = 50;
@@ -134,11 +157,45 @@ export async function saveScansToSupabaseBatch(scans, onProgressCallback, import
 
     for (let i = 0; i < totalCount; i += CHUNK_SIZE) {
       const chunk = formattedPayload.slice(i, i + CHUNK_SIZE);
-      const { data, error } = await client.from('imei_scans').insert(chunk).select();
+      
+      // 1. scan_records 테이블에 upsert (자산 및 RPA 필드 전체 JSONB data 저장)
+      const scanRecordsChunk = chunk.map(item => ({
+        schema_id: 'main_schema',
+        key_value: String(item.asset_no),
+        data: {
+          asset_no: item.asset_no,
+          product_name: item.product_name,
+          model_name: item.model_name,
+          serial_no: item.serial_no,
+          shelf_no: item.shelf_no,
+          asset_status: item.asset_status,
+          asset_option: item.asset_option,
+          calibration_date: item.calibration_date,
+          remark: item.remark,
+          mac_wlan: item.mac_wlan,
+          mac_lan: item.mac_lan,
+          components: item.components
+        },
+        scanned_at: new Date().toISOString()
+      }));
 
-      if (error) {
-        throw new Error(`DB 일괄 입력 실패 (${i + 1}~${i + chunk.length}건): ${error.message}`);
+      try {
+        await client.from('scan_records').upsert(scanRecordsChunk, { onConflict: 'key_value' });
+      } catch (err) {
+        console.warn('scan_records upsert 건너뜀:', err.message);
       }
+
+      // 2. imei_scans 레거시 테이블 호환성 동기화
+      const imeiChunk = chunk.map(item => ({
+        asset_no: item.asset_no,
+        imei: item.serial_no,
+        serial_no: item.serial_no,
+        mac_address: item.model_name,
+        status: item.status,
+        device_info: item.device_info
+      }));
+
+      const { data, error } = await client.from('imei_scans').insert(imeiChunk).select();
 
       if (data) insertedResults.push(...data);
       processedCount += chunk.length;

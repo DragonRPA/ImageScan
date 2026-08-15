@@ -1,0 +1,30 @@
+{
+  "version": 2,
+  "dgSpecHash": "AlfZjFIpX8s=",
+  "success": true,
+  "projectFilePath": "C:\\RPA\\UBUS\\UBUS\\UBUS.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\이정용\\.nuget\\packages\\inputsimulator\\1.0.4\\inputsimulator.1.0.4.nupkg.sha512",
+    "C:\\Users\\이정용\\.nuget\\packages\\inthehand.net.bluetooth\\4.2.2\\inthehand.net.bluetooth.4.2.2.nupkg.sha512",
+    "C:\\Users\\이정용\\.nuget\\packages\\microsoft.net.illink.tasks\\8.0.18\\microsoft.net.illink.tasks.8.0.18.nupkg.sha512",
+    "C:\\Users\\이정용\\.nuget\\packages\\selenium.support\\4.35.0\\selenium.support.4.35.0.nupkg.sha512",
+    "C:\\Users\\이정용\\.nuget\\packages\\selenium.webdriver\\4.35.0\\selenium.webdriver.4.35.0.nupkg.sha512",
+    "C:\\Users\\이정용\\.nuget\\packages\\microsoft.aspnetcore.app.runtime.win-x64\\8.0.18\\microsoft.aspnetcore.app.runtime.win-x64.8.0.18.nupkg.sha512",
+    "C:\\Users\\이정용\\.nuget\\packages\\microsoft.windowsdesktop.app.runtime.win-x64\\8.0.18\\microsoft.windowsdesktop.app.runtime.win-x64.8.0.18.nupkg.sha512",
+    "C:\\Users\\이정용\\.nuget\\packages\\microsoft.netcore.app.runtime.win-x64\\8.0.18\\microsoft.netcore.app.runtime.win-x64.8.0.18.nupkg.sha512"
+  ],
+  "logs": [
+    {
+      "code": "NU1701",
+      "level": "Warning",
+      "message": "프로젝트 대상 프레임워크 'net8.0-windows7.0' 대신 '.NETFramework,Version=v4.6.1, .NETFramework,Version=v4.6.2, .NETFramework,Version=v4.7, .NETFramework,Version=v4.7.1, .NETFramework,Version=v4.7.2, .NETFramework,Version=v4.8, .NETFramework,Version=v4.8.1'을(를) 사용하여 패키지 'InputSimulator 1.0.4'을(를) 복원했습니다. 이 패키지는 프로젝트와 완벽하게 호환되지 않을 수 있습니다.",
+      "projectPath": "C:\\RPA\\UBUS\\UBUS\\UBUS.csproj",
+      "warningLevel": 1,
+      "filePath": "C:\\RPA\\UBUS\\UBUS\\UBUS.csproj",
+      "libraryId": "InputSimulator",
+      "targetGraphs": [
+        "net8.0-windows7.0"
+      ]
+    }
+  ]
+}
