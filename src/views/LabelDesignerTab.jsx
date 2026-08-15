@@ -871,8 +871,51 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                           {f.name} ({f.id})
                         </option>
                       ))}
+                      <option value="custom_text_1">추가 텍스트 1 (임의 문구)</option>
+                      <option value="custom_text_2">추가 텍스트 2 (임의 문구)</option>
+                      <option value="custom_text_3">추가 텍스트 3 (임의 문구)</option>
+                      <option value="custom_text_4">추가 텍스트 4 (임의 문구)</option>
                       <option value="custom">고정 텍스트 (직접 입력)</option>
                     </select>
+                  </div>
+
+                  {(selectedElem.field === 'custom' || selectedElem.field?.startsWith('custom_text_')) && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <label style={{ fontSize: '0.68rem', color: '#cbd5e1' }}>문구 내용 (임의 텍스트)</label>
+                      <input
+                        type="text"
+                        value={selectedElem.customValue || ''}
+                        onChange={e => handleElemPropChange('customValue', e.target.value)}
+                        placeholder="출력할 임의 문구를 입력하세요"
+                        style={{
+                          backgroundColor: '#0f172a',
+                          border: '1px solid #38bdf8',
+                          borderRadius: '4px',
+                          padding: '4px 6px',
+                          color: '#f8fafc',
+                          fontSize: '0.72rem'
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {/* ⭐️ 접두사 텍스트 입력창 (모든 텍스트 아이템 지원) */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <label style={{ fontSize: '0.68rem', color: '#cbd5e1' }}>접두사 텍스트 (접두어)</label>
+                    <input
+                      type="text"
+                      value={selectedElem.prefix || ''}
+                      onChange={e => handleElemPropChange('prefix', e.target.value)}
+                      placeholder="예: 제품명: , M/N: , S/N: "
+                      style={{
+                        backgroundColor: '#0f172a',
+                        border: '1px solid #475569',
+                        borderRadius: '4px',
+                        padding: '4px 6px',
+                        color: '#f8fafc',
+                        fontSize: '0.72rem'
+                      }}
+                    />
                   </div>
 
                   {/* ⭐️ 폰트 크기: 1 pt 단위 정밀 조작 (+ 직접 입력 & 증감 버튼) */}
@@ -988,6 +1031,25 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                         </option>
                       ))}
                     </select>
+                  </div>
+
+                  {/* ⭐️ 바코드 접두사 텍스트 입력창 */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <label style={{ fontSize: '0.68rem', color: '#cbd5e1' }}>접두사 텍스트 (접두어)</label>
+                    <input
+                      type="text"
+                      value={selectedElem.prefix || ''}
+                      onChange={e => handleElemPropChange('prefix', e.target.value)}
+                      placeholder="예: S/N: , IMEI: "
+                      style={{
+                        backgroundColor: '#0f172a',
+                        border: '1px solid #475569',
+                        borderRadius: '4px',
+                        padding: '4px 6px',
+                        color: '#f8fafc',
+                        fontSize: '0.72rem'
+                      }}
+                    />
                   </div>
 
                   {selectedElem.barcodeType !== 'QR' ? (
@@ -1346,6 +1408,7 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                         heightPx={heightPx}
                         showText={elem.showText !== false}
                         scale={PX_PER_MM / 9.0}
+                        prefix={elem.prefix || ''}
                       />
                     )}
                   </div>

@@ -85,7 +85,8 @@ export function RealBarcodeSvg({
   type = 'CODE128',
   heightPx = 40,
   showText = true,
-  scale = 1.0
+  scale = 1.0,
+  prefix = ''
 }) {
   const cleanVal = String(value || 'TEST0001').trim() || 'TEST0001';
   const isCode39 = type === 'CODE39';
@@ -138,7 +139,7 @@ export function RealBarcodeSvg({
         letterSpacing: '0.5px',
         lineHeight: 1
       }
-    }, isCode39 ? `*${cleanVal}*` : cleanVal);
+    }, `${prefix}${isCode39 ? `*${cleanVal}*` : cleanVal}`);
     children.push(textElement);
   }
 
