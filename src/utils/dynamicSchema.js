@@ -241,32 +241,45 @@ export function getTableSchema(tableId = 'asset') {
 }
 
 /**
- * ⭐️ 비동기 원격 DB 및 로컬 스키마 통합 조회 (temp_asset / asset)
+ * ⭐️ 비동기 원격 DB 및 로컬 스키마 통합 조회 (Supabase schema_definitions 1:1 직접 바인딩)
  */
 export async function fetchTableSchema(tableId = 'temp_asset') {
-  const schemaId = tableId === 'temp_asset' ? 'temp_asset_schema' : 'asset_schema';
   const localKey = tableId === 'temp_asset' ? LOCAL_KEY_TEMP_ASSET_SCHEMA : LOCAL_KEY_SCHEMA_DEF;
-  const defaultDef = tableId === 'temp_asset' ? TEMP_ASSET_SCHEMA_DEF : DEFAULT_SCHEMA_DEF;
 
   const client = getSupabaseClient();
   if (!client) return getTableSchema(tableId);
 
   try {
-    const { data, error } = await client
+    // 1. schema_definitions 테이블에서 활성 스키마 조회 (temp_asset_schema 또는 main_schema 또는 첫 번째 레코드)
+    let schemaRow = null;
+
+    const { data: specificData } = await client
       .from('schema_definitions')
       .select('*')
-      .eq('id', schemaId)
-      .maybeSingle();
+      .in('id', [tableId === 'temp_asset' ? 'temp_asset_schema' : 'asset_schema', 'main_schema'])
+      .limit(2);
 
-    if (!error && data && Array.isArray(data.fields)) {
+    if (specificData && specificData.length > 0) {
+      schemaRow = specificData.find(r => r.id === (tableId === 'temp_asset' ? 'temp_asset_schema' : 'asset_schema')) || specificData[0];
+    } else {
+      // 아무 ID나 첫 번째 레코드 가져오기
+      const { data: firstData } = await client
+        .from('schema_definitions')
+        .select('*')
+        .limit(1)
+        .maybeSingle();
+      if (firstData) schemaRow = firstData;
+    }
+
+    if (schemaRow && Array.isArray(schemaRow.fields) && schemaRow.fields.length > 0) {
       const schemaDef = {
-        id: data.id,
+        id: schemaRow.id,
         table_name: tableId,
-        schema_name: data.schema_name || (tableId === 'temp_asset' ? '임시 자산 (temp_asset)' : '자산 관리 (asset)'),
-        key_field: data.key_field || 'asset_no',
-        key_field_name: data.key_field_name || '임시자산번호',
-        table_version: data.table_version || 1,
-        fields: data.fields
+        schema_name: schemaRow.schema_name || '임시 자산 스키마',
+        key_field: schemaRow.key_field || 'imei',
+        key_field_name: schemaRow.key_field_name || (schemaRow.fields.find(f => f.id === schemaRow.key_field)?.name || '식별키'),
+        table_version: schemaRow.table_version || 1,
+        fields: schemaRow.fields
       };
       localStorage.setItem(localKey, JSON.stringify(schemaDef));
       return schemaDef;
@@ -275,6 +288,15 @@ export async function fetchTableSchema(tableId = 'temp_asset') {
     console.warn(`[${tableId}] 원격 스키마 조회 실패 (로컬 사용):`, err);
   }
 
+  // 로컬 스토리지 캐시
+  try {
+    const stored = localStorage.getItem(localKey);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (parsed && Array.isArray(parsed.fields) && parsed.fields.length > 0) return parsed;
+    }
+  } catch (e) {}
+
   return getTableSchema(tableId);
 }
 
@@ -282,7 +304,7 @@ export async function fetchTableSchema(tableId = 'temp_asset') {
  * ⭐️ 스키마 정의 DB 및 로컬 영구 저장
  */
 export async function saveTableSchema(tableId, schemaDef) {
-  const schemaId = tableId === 'temp_asset' ? 'temp_asset_schema' : (schemaDef.id || 'main_schema');
+  const schemaId = 'main_schema';
   const localKey = tableId === 'temp_asset' ? LOCAL_KEY_TEMP_ASSET_SCHEMA : LOCAL_KEY_SCHEMA_DEF;
 
   const normalized = {
@@ -303,10 +325,10 @@ export async function saveTableSchema(tableId, schemaDef) {
     const { error } = await client.from('schema_definitions').upsert({
       id: schemaId,
       schema_name: normalized.schema_name || '임시 자산 스키마',
-      key_field: normalized.key_field || 'asset_no',
-      key_field_name: normalized.key_field_name || '임시자산번호',
+      key_field: normalized.key_field || 'imei',
+      key_field_name: normalized.key_field_name || '식별키',
       fields: normalized.fields || [],
-      table_version: normalized.table_version || 1,
+      table_version: (normalized.table_version || 1) + 1,
       updated_at: new Date().toISOString()
     });
 

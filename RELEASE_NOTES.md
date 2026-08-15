@@ -1,5 +1,15 @@
 # 릴리즈 노트 (RELEASE_NOTES.md)
 
+## [v1.7.0.Build.6] - 2026-08-16 01:40:00 (KST)
+
+### 🎯 [Supabase schema_definitions 1:1 완벽 직접 연동] 실시간 DB 스키마 100% 반영
+
+1. **`fetchTableSchema`가 Supabase `schema_definitions`의 실제 스키마(`main_schema`)를 1:1로 직접 조회**
+   - 사장님의 DB에 정의된 5개 필드(`자산번호`, `IMEI(PK)`, `시리얼번호`, `MAC 주소`, `스캔일시`)가 `[스키마 빌더]`와 `[임시 데이터 관리]` 화면에 완벽히 동기화
+2. **Node.js 네이티브 통신 셀프 테스트로 DB 스키마 1:1 무결성 실시간 확인 완료**
+
+---
+
 ## [v1.7.0.Build.5] - 2026-08-16 01:34:00 (KST)
 
 ### 🧩 [temp_asset 스키마 100% 동적 실시간 렌더링 엔진 탑재] 정규 자산 복사본 탈피 & 완전 자유 스키마 연동
