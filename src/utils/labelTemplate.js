@@ -614,7 +614,7 @@ export function generateDynamicZpl(item = {}, template = DEFAULT_LABEL_TEMPLATE)
 
       if (barcodeType === 'QR') {
         const qrMag = Math.max(1, Math.min(10, elem.qrScale || 3));
-        zplCommands.push(`^FO${posX},${posY}^BQN,2,${qrMag}^FDQA,${targetVal}^FS`);
+        zplCommands.push(`^FO${posX},${posY}^BQN,2,${qrMag}^FDLA,${targetVal}^FS`);
       } else {
         const barHeightDots = mmToDots(elem.heightMm || 10, dpi);
         zplCommands.push(`^FO${posX},${posY}^BCN,${barHeightDots},${showTextParam}^FD${targetVal}^FS`);
