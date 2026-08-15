@@ -13,7 +13,8 @@ import {
   Trash2,
   Database,
   X,
-  Minus
+  Minus,
+  Copy
 } from 'lucide-react';
 import {
   DEFAULT_LABEL_TEMPLATE,
@@ -101,6 +102,10 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
 
   // ⭐️ [디자인 불러오기] 관리 모달 상태
   const [isLoadModalOpen, setIsLoadModalOpen] = useState(false);
+
+  // ⭐️ [ZPL 직접 편집 및 즉시 테스트 인쇄] 상태
+  const [customZpl, setCustomZpl] = useState('');
+  const [isZplCustomized, setIsZplCustomized] = useState(false);
 
   const [draggingId, setDraggingId] = useState(null);
   const [dragStartPos, setDragStartPos] = useState({ x: 0, y: 0 });
@@ -437,7 +442,37 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
     }
   };
 
-  const currentZpl = generateDynamicZpl(SAMPLE_ITEM, template);
+  const currentZpl = useMemo(() => generateDynamicZpl(SAMPLE_ITEM, template), [template]);
+
+  useEffect(() => {
+    if (!isZplCustomized) {
+      setCustomZpl(currentZpl);
+    }
+  }, [currentZpl, isZplCustomized]);
+
+  // ⭐️ [수정된 ZPL로 직접 즉시 테스트 인쇄]
+  const handleManualCustomZplPrint = async () => {
+    setIsPrinting(true);
+    try {
+      const zplToSend = customZpl || currentZpl;
+      const registered = getRegisteredPrinters();
+      const targetId = template.targetPrinterId || getActivePrinterId();
+      const targetPrinter = registered.find(p => p.id === targetId) || registered[0] || { type: 'agent_auto', name: '기본 라벨 프린터' };
+
+      const res = await sendZplToPrinter(zplToSend, targetPrinter);
+      alert(`[수정된 ZPL 인쇄 완료 - ${targetPrinter.name}] ${res?.message || '라벨이 출력되었습니다.'}`);
+    } catch (err) {
+      alert(`ZPL 직접 인쇄 오류: ${err.message}`);
+    } finally {
+      setIsPrinting(false);
+    }
+  };
+
+  // ⭐️ [ZPL 자동생성 코드로 복원]
+  const handleResetZplToDefault = () => {
+    setCustomZpl(currentZpl);
+    setIsZplCustomized(false);
+  };
 
   // ⭐️ [디자인 추가] 모달 열기
   const handleOpenCreateModal = () => {
@@ -2203,29 +2238,101 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
             })}
           </div>
 
-          {/* 하단 ZPL 코드 뷰어 (아코디언 토글) */}
+          {/* ⭐️ 하단 ZPL 코드 편집기 (직접 수정 및 즉시 테스트 인쇄 가능) */}
           {showZplCode && (
-            <div style={{ width: '100%', marginTop: '8px' }}>
-              <div style={{ fontSize: '0.68rem', color: '#94a3b8', marginBottom: '4px', fontWeight: 600 }}>
-                ZPL 코드
+            <div style={{
+              width: '100%',
+              marginTop: '10px',
+              backgroundColor: '#0a0f1d',
+              border: isZplCustomized ? '1px solid #eab308' : '1px solid #38bdf8',
+              borderRadius: '6px',
+              padding: '10px',
+              boxSizing: 'border-box'
+            }}>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '6px',
+                flexWrap: 'wrap',
+                gap: '6px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: isZplCustomized ? '#facc15' : '#38bdf8' }}>
+                    ZPL 코드 직접 편집기
+                  </span>
+                  {isZplCustomized && (
+                    <span style={{ fontSize: '0.62rem', backgroundColor: '#eab308', color: '#000', padding: '1px 5px', borderRadius: '3px', fontWeight: 700 }}>
+                      수정됨 (직접 입력 모드)
+                    </span>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  {isZplCustomized && (
+                    <button
+                      onClick={handleResetZplToDefault}
+                      className="btn btn-outline"
+                      style={{ fontSize: '0.68rem', padding: '3px 8px', borderColor: '#475569', color: '#cbd5e1' }}
+                    >
+                      <RotateCcw size={11} /> 자동생성 코드로 복원
+                    </button>
+                  )}
+
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(customZpl || currentZpl);
+                      alert('ZPL 코드가 클립보드에 복사되었습니다.');
+                    }}
+                    className="btn btn-outline"
+                    style={{ fontSize: '0.68rem', padding: '3px 8px', borderColor: '#475569', color: '#cbd5e1' }}
+                  >
+                    <Copy size={11} /> 복사
+                  </button>
+
+                  <button
+                    onClick={handleManualCustomZplPrint}
+                    disabled={isPrinting}
+                    className="btn btn-primary"
+                    style={{
+                      fontSize: '0.72rem',
+                      padding: '4px 12px',
+                      backgroundColor: isZplCustomized ? '#f59e0b' : '#0284c7',
+                      color: '#ffffff',
+                      fontWeight: 700,
+                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.4)'
+                    }}
+                  >
+                    <Printer size={12} /> {isPrinting ? '인쇄 중...' : (isZplCustomized ? '수정된 ZPL로 즉시 테스트 인쇄' : '현재 ZPL로 테스트 인쇄')}
+                  </button>
+                </div>
               </div>
+
               <textarea
-                readOnly
-                value={currentZpl}
+                value={customZpl || currentZpl}
+                onChange={e => {
+                  setCustomZpl(e.target.value);
+                  setIsZplCustomized(true);
+                }}
+                placeholder="^XA로 시작하는 ZPL 코드를 직접 입력하세요..."
                 style={{
                   width: '100%',
-                  height: '140px',
-                  backgroundColor: '#0a0f1d',
-                  border: '1px solid #334155',
+                  height: '160px',
+                  backgroundColor: '#030712',
+                  border: '1px solid #1e293b',
                   borderRadius: '4px',
-                  color: '#38bdf8',
-                  fontFamily: 'Consolas, monospace',
-                  fontSize: '0.72rem',
-                  padding: '8px',
+                  color: isZplCustomized ? '#fef08a' : '#38bdf8',
+                  fontFamily: 'Consolas, "Courier New", monospace',
+                  fontSize: '0.78rem',
+                  lineHeight: '1.4',
+                  padding: '8px 10px',
                   boxSizing: 'border-box',
-                  resize: 'none'
+                  resize: 'vertical'
                 }}
               />
+              <div style={{ fontSize: '0.62rem', color: '#94a3b8', marginTop: '4px', textAlign: 'right' }}>
+                💡 에디터에서 ^FO 좌표, ^BQ 배율 등을 직접 수정하고 [즉시 테스트 인쇄]를 누르면 실물 프린터로 바로 출력됩니다.
+              </div>
             </div>
           )}
         </div>
