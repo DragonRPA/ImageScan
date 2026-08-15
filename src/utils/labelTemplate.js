@@ -514,11 +514,7 @@ export function generateDynamicZpl(item = {}, template = DEFAULT_LABEL_TEMPLATE)
   const dotsH = paper.dotsHeight || mmToDots(paper.heightMm, dpi);
 
   const zplCommands = [
-    '^XA',
-    '^MD21^LH0,0',
-    '^SEE:UHANGUL.DAT^FS',
-    '^CW1,E:KFONT3.FNT^FS',
-    '^CI26^FS'
+    '^XA^MD21^BY2,2.0^FS^SEE:UHANGUL.DAT^FS^CW1,E:KFONT3.FNT^CI26^FS'
   ];
 
   const getValue = (elem) => {
@@ -567,12 +563,11 @@ export function generateDynamicZpl(item = {}, template = DEFAULT_LABEL_TEMPLATE)
       const barH = mmToDots(elem.heightMm || 10, dpi);
 
       if (barcodeType === 'QR') {
-        const qrMag = Math.max(1, Math.min(10, elem.qrScale || 4));
+        const qrMag = Math.max(1, Math.min(10, elem.qrScale || 3));
         zplCommands.push(`^FO${posX},${posY}^BQN,2,${qrMag}^FDQA,${targetVal}^FS`);
-        zplCommands.push(`^FO${posX},${posY}^BY2,3,${barH}^BCN,${barH},${showTextParam},N,N^FD${targetVal}^FS`);
       } else {
         const barHeightDots = mmToDots(elem.heightMm || 10, dpi);
-        zplCommands.push(`^FO${posX},${posY}^BCN,${barHeightDots},${showTextParam},N,N^FD${targetVal}^FS`);
+        zplCommands.push(`^FO${posX},${posY}^BCN,${barHeightDots},${showTextParam}^FD${targetVal}^FS`);
       }
     }
   });
