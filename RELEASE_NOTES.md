@@ -1,5 +1,15 @@
 # 릴리즈 노트 (RELEASE_NOTES.md)
 
+## [v1.6.0.Build.2] - 2026-08-15 19:26:00 (KST)
+
+### 🐛 [라벨 즉시 출력] DB 실시간 단건 조회 대상 테이블 정합성 수정 (`asset` / `temp_asset` 직통 쿼리)
+
+1. **DB 조회 대상 테이블 불일치 버그 긴급 조치 (`DirectPrintTab.jsx`)**
+   - 원인: `데이터 목록` 탭은 Supabase `asset` 정규 마스터 테이블을 조회하는데, `라벨 즉시 출력` 탭이 `scan_records` 레거시 테이블을 조회하여 시리얼(`TVK73P6QKN`) 등의 정상 자산을 미조회 처리하던 문제.
+   - 수정: `targetTable === 'asset'`일 때 Supabase `asset` 테이블에서 `asset_no`, `serial_no`, `imei`를 직통 정밀/부분일치 조회하도록 수정. `temp_asset` 역시 `temp_asset`/`temp_assets` 마스터 테이블을 최우선 조회하도록 100% 동기화.
+
+---
+
 ## [v1.6.0.Build.1] - 2026-08-15 19:10:00 (KST)
 
 ### 🚀 [라벨 즉시 출력] 메인 랜딩 탭 신설 및 초고속 스캔-즉시 인쇄 워크스테이션 구축

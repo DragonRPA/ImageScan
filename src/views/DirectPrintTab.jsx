@@ -146,63 +146,98 @@ export default function DirectPrintTab({ onError, onOpenPrintModal }) {
 
       if (client) {
         if (targetTable === 'temp_asset') {
-          // 임시자산 조회 (temp_assets 또는 scan_records)
+          // 1. temp_asset / temp_assets 테이블 최우선 조회
           try {
             const { data, error } = await client
-              .from('temp_assets')
+              .from('temp_asset')
               .select('*')
-              .or(`asset_no.eq.${query},id.eq.${query}`)
+              .or(`asset_no.eq.${query},serial_no.eq.${query},imei.eq.${query},asset_no.ilike.%${query}%,serial_no.ilike.%${query}%`)
               .limit(1)
               .maybeSingle();
 
             if (!error && data) matchedItem = data;
           } catch (e) {
-            console.warn('temp_assets fetch fallback to scan_records');
+            console.warn('temp_asset direct query fallback');
           }
 
           if (!matchedItem) {
+            try {
+              const { data, error } = await client
+                .from('temp_assets')
+                .select('*')
+                .or(`asset_no.eq.${query},serial_no.eq.${query},imei.eq.${query},id.eq.${query}`)
+                .limit(1)
+                .maybeSingle();
+
+              if (!error && data) matchedItem = data;
+            } catch (e) {}
+          }
+        } else {
+          // 2. asset 정규 마스터 테이블 최우선 조회 (데이터 목록 탭과 100% 동일)
+          try {
             const { data, error } = await client
-              .from('scan_records')
+              .from('asset')
               .select('*')
-              .or(`key_value.eq.${query},data->>asset_no.eq.${query},data->>serial_no.eq.${query}`)
+              .or(`asset_no.eq.${query},serial_no.eq.${query},imei.eq.${query},asset_no.ilike.%${query}%,serial_no.ilike.%${query}%,imei.ilike.%${query}%`)
               .limit(1)
               .maybeSingle();
 
             if (!error && data) {
               matchedItem = {
-                asset_no: data.key_value,
+                ...data,
+                id: data.asset_no || data.id,
+                asset_no: data.asset_no,
+                serial_no: data.serial_no,
+                product_name: data.product_name,
+                model_name: data.model_name,
+                category_major: data.category_major || '',
+                shelf_no: data.shelf_no,
+                asset_status: data.asset_status || '정상',
+                asset_option: data.asset_option,
+                calibration_date: data.calibration_date,
+                mac_wlan: data.mac_wlan,
+                mac_lan: data.mac_lan,
+                imei: data.imei,
+                components: data.components,
+                spec: data.spec || data.components || '',
+                remark: data.remark
+              };
+            }
+          } catch (e) {
+            console.warn('asset master query fallback:', e.message);
+          }
+        }
+
+        // 3. 레거시 scan_records 2차 폴백
+        if (!matchedItem) {
+          try {
+            const { data, error } = await client
+              .from('scan_records')
+              .select('*')
+              .or(`key_value.eq.${query},data->>asset_no.eq.${query},data->>serial_no.eq.${query},data->>imei.eq.${query}`)
+              .limit(1)
+              .maybeSingle();
+
+            if (!error && data) {
+              matchedItem = {
+                id: data.id,
+                asset_no: data.data?.asset_no || data.key_value,
+                serial_no: data.data?.serial_no || query,
+                product_name: data.data?.product_name || '',
+                model_name: data.data?.model_name || '',
+                category_major: data.data?.category_major || '',
+                shelf_no: data.data?.shelf_no || '',
+                asset_status: data.data?.asset_status || '정상',
+                asset_option: data.data?.asset_option || '',
+                imei: data.data?.imei || '',
+                mac_wlan: data.data?.mac_wlan || '',
+                mac_lan: data.data?.mac_lan || '',
+                spec: data.data?.spec || '',
+                remark: data.data?.remark || '',
                 ...data.data
               };
             }
-          }
-        } else {
-          // 정식 자산 관리 조회 (scan_records 또는 assets)
-          const { data, error } = await client
-            .from('scan_records')
-            .select('*')
-            .or(`key_value.eq.${query},data->>asset_no.eq.${query},data->>serial_no.eq.${query}`)
-            .limit(1)
-            .maybeSingle();
-
-          if (!error && data) {
-            matchedItem = {
-              id: data.id,
-              asset_no: data.data?.asset_no || data.key_value,
-              serial_no: data.data?.serial_no || '',
-              product_name: data.data?.product_name || '',
-              model_name: data.data?.model_name || '',
-              category_major: data.data?.category_major || '',
-              shelf_no: data.data?.shelf_no || '',
-              asset_status: data.data?.asset_status || '정상',
-              asset_option: data.data?.asset_option || '',
-              imei: data.data?.imei || '',
-              mac_wlan: data.data?.mac_wlan || '',
-              mac_lan: data.data?.mac_lan || '',
-              spec: data.data?.spec || '',
-              remark: data.data?.remark || '',
-              ...data.data
-            };
-          }
+          } catch (e) {}
         }
       }
 
