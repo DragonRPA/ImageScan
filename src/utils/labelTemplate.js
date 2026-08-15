@@ -684,20 +684,19 @@ export async function syncTemplatesWithBackend() {
         elements: Array.isArray(row.elements) ? row.elements : []
       }));
 
-      // 로컬에만 있는 커스텀 템플릿도 유실되지 않도록 병합 (templateId 기준)
+      // ⭐️ 서버 DB 서식을 절대적인 단일 진실의 원천(SSOT)으로 확립
       const mergedMap = new Map();
+      // 1) 빌트인 기본 서식 등록
       BUILTIN_PRESETS.forEach(p => mergedMap.set(p.templateId, p));
+      // 2) 서버 DB 서식 등록 (서버 데이터가 로컬보다 절대 우선)
       backendPresets.forEach(p => mergedMap.set(p.templateId, p));
-      localPresets.forEach(p => {
-        if (!mergedMap.has(p.templateId)) mergedMap.set(p.templateId, p);
-      });
 
       const mergedList = Array.from(mergedMap.values());
       localStorage.setItem(LOCAL_KEY_TEMPLATE_PRESETS, JSON.stringify(mergedList));
       return mergedList;
     }
   } catch (err) {
-    console.warn('백엔드 라벨 서식 동기화 실패 (로컬 유지):', err);
+    console.warn('서버 라벨 서식 조회 실패 (오프라인 캐시 폴백):', err);
   }
 
   return localPresets;
