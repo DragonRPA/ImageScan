@@ -104,6 +104,7 @@ export default function PCDashboard({
       const q = searchGeneral.trim().toLowerCase();
       const matchGeneral =
         (item.asset_no && String(item.asset_no).toLowerCase().includes(q)) ||
+        (item.category_major && String(item.category_major).toLowerCase().includes(q)) ||
         (item.product_name && String(item.product_name).toLowerCase().includes(q)) ||
         (item.shelf_no && String(item.shelf_no).toLowerCase().includes(q)) ||
         (item.mac_wlan && String(item.mac_wlan).toLowerCase().includes(q)) ||
@@ -395,6 +396,7 @@ export default function PCDashboard({
                   />
                 </th>
                 <th style={{ padding: '6px 8px', textAlign: 'left', whiteSpace: 'nowrap' }}>자산번호</th>
+                <th style={{ padding: '6px 8px', textAlign: 'left', whiteSpace: 'nowrap' }}>대분류</th>
                 <th style={{ padding: '6px 8px', textAlign: 'left', whiteSpace: 'nowrap' }}>제품명</th>
                 <th style={{ padding: '6px 8px', textAlign: 'left', whiteSpace: 'nowrap' }}>모델명</th>
                 <th style={{ padding: '6px 8px', textAlign: 'left', whiteSpace: 'nowrap' }}>제조번호(시리얼)</th>
@@ -413,13 +415,13 @@ export default function PCDashboard({
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={15} style={{ padding: '32px', textAlign: 'center', color: '#64748b' }}>
+                  <td colSpan={16} style={{ padding: '32px', textAlign: 'center', color: '#64748b' }}>
                     자산 데이터를 불러오는 중입니다...
                   </td>
                 </tr>
               ) : filteredItems.length === 0 ? (
                 <tr>
-                  <td colSpan={15} style={{ padding: '32px', textAlign: 'center', color: '#64748b' }}>
+                  <td colSpan={16} style={{ padding: '32px', textAlign: 'center', color: '#64748b' }}>
                     등록된 자산 데이터가 없습니다. [엑셀 업로드]를 통해 데이터를 등록하세요.
                   </td>
                 </tr>
@@ -427,6 +429,7 @@ export default function PCDashboard({
                 filteredItems.map((row, idx) => {
                   const isSelected = selectedIds.includes(row.id || row.asset_no);
                   const assetNo = row.asset_no || row.key_value || '-';
+                  const categoryMajor = row.category_major || '-';
                   const productName = row.product_name || '-';
                   const modelName = row.model_name || '-';
                   const serialNo = row.serial_no || '-';
@@ -460,6 +463,9 @@ export default function PCDashboard({
                       </td>
                       <td style={{ padding: '6px 8px', color: '#38bdf8', fontWeight: 700, whiteSpace: 'nowrap' }}>
                         {assetNo}
+                      </td>
+                      <td style={{ padding: '6px 8px', color: '#93c5fd', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                        {categoryMajor}
                       </td>
                       <td style={{ padding: '6px 8px', color: '#f8fafc', fontWeight: 600, whiteSpace: 'nowrap' }}>
                         {productName}

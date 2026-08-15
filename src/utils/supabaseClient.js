@@ -98,14 +98,14 @@ export async function fetchScansFromSupabase() {
   try {
     const { data, error } = await client
       .from('asset')
-      .select('*')
-      .order('created_at', { ascending: false });
+      .select('*');
 
     if (!error && data && data.length > 0) {
       return data.map(r => ({
         ...r,
         id: r.asset_no || r.id,
         asset_no: r.asset_no,
+        category_major: r.category_major || '',
         product_name: r.product_name,
         model_name: r.model_name,
         serial_no: r.serial_no,
@@ -118,9 +118,7 @@ export async function fetchScansFromSupabase() {
         mac_lan: r.mac_lan,
         imei: r.imei,
         components: r.components,
-        remark: r.remark,
-        created_at: r.created_at,
-        updated_at: r.updated_at
+        remark: r.remark
       }));
     }
   } catch (err) {
@@ -140,6 +138,7 @@ export async function fetchScansFromSupabase() {
         ...r.data,
         id: r.id,
         asset_no: r.asset_no || r.key_value || r.data?.asset_no,
+        category_major: r.category_major || r.data?.category_major || '',
         product_name: r.product_name || r.data?.product_name,
         model_name: r.model_name || r.data?.model_name,
         serial_no: r.serial_no || r.data?.serial_no,
@@ -152,8 +151,7 @@ export async function fetchScansFromSupabase() {
         mac_lan: r.mac_lan || r.data?.mac_lan,
         imei: r.imei || r.data?.imei,
         components: r.components || r.data?.components,
-        remark: r.remark || r.data?.remark,
-        created_at: r.created_at || r.scanned_at
+        remark: r.remark || r.data?.remark
       }));
     }
   } catch (err) {
@@ -178,6 +176,7 @@ export async function saveScansToSupabaseBatch(scans, onProgressCallback, import
   const client = getSupabaseClient();
   const formattedPayload = scans.map((item, idx) => {
     const assetNo = item.asset_no || item.assetNo || item['자산번호'] || `TEST${String(idx + 1).padStart(4, '0')}`;
+    const categoryMajor = item.category_major || item['대분류'] || item['카테고리'] || '';
     const prodName = item.product_name || item.productName || item['제품명'] || '';
     const modelName = item.model_name || item.modelName || item['모델명'] || '';
     const serialNo = item.serial_no || item.serialNo || item['제조번호'] || item['시리얼'] || '';
@@ -194,6 +193,7 @@ export async function saveScansToSupabaseBatch(scans, onProgressCallback, import
 
     return {
       asset_no: assetNo,
+      category_major: categoryMajor,
       product_name: prodName,
       model_name: modelName,
       serial_no: serialNo,
@@ -233,6 +233,7 @@ export async function saveScansToSupabaseBatch(scans, onProgressCallback, import
       // 1. asset 테이블에 직접 정규 컬럼 upsert
       const assetChunk = chunk.map(item => ({
         asset_no: String(item.asset_no),
+        category_major: item.category_major,
         product_name: item.product_name,
         model_name: item.model_name,
         serial_no: item.serial_no,
@@ -245,8 +246,7 @@ export async function saveScansToSupabaseBatch(scans, onProgressCallback, import
         mac_lan: item.mac_lan,
         imei: item.imei,
         components: item.components,
-        remark: item.remark,
-        updated_at: new Date().toISOString()
+        remark: item.remark
       }));
 
       try {

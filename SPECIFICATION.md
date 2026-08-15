@@ -18,24 +18,25 @@
 
 ---
 
-## 🗄️ 2. asset 테이블 14대 정규 자산 스키마 명세
+## 🗄️ 2. asset 테이블 15대 정규 자산 스키마 명세
 
 | 번호 | 한글 헤더명 | 영문 컬럼명 | 데이터 타입 | 제약 조건 | 설명 및 용도 |
 | :---: | :--- | :--- | :--- | :---: | :--- |
 | **1** | **자산번호** | `asset_no` | VARCHAR(50) | **PRIMARY KEY** | 회사의 고유 자산 관리번호 (바코드 인쇄 주 대상, 중복 불가 식별자) |
-| **2** | **제품명** | `product_name` | VARCHAR(100) | NULLABLE | 제품 명칭 (예: 갤럭시 S24, ThinkPad X1 Carbon 등) |
-| **3** | **모델명** | `model_name` | VARCHAR(100) | NULLABLE | 제조사 모델 코드 (예: SM-S921N, 21CD001LKR 등) |
-| **4** | **제조번호(시리얼)** | `serial_no` | VARCHAR(50) | INDEX | 제조사 기기 일련번호 (S/N) |
-| **5** | **자산상태** | `asset_status` | VARCHAR(50) | NULLABLE | 자산 상태 (임대가능, 임대중, 출고완료, 수리대기, 수리중, 사내사용중, 입고검수중, 팩토리상품, 출고검수중, 교정중) |
-| **6** | **회수율** | `earning_ratio` | INTEGER | NULLABLE | 취득가 대비 매출 (회수율 %) |
-| **7** | **선반번호** | `shelf_no` | VARCHAR(50) | NULLABLE | 물류/창고 보관 로케이션 위치 (예: A-01-02) |
-| **8** | **옵션** | `asset_option` | VARCHAR(100) | NULLABLE | 단말 옵션 및 추가 사양 (예: 512GB, LTE/5G) |
-| **9** | **교정일자** | `calibration_date`| VARCHAR(50) | NULLABLE | 장비/계측기 정기 교정일자 |
-| **10**| **MAC wlan** | `mac_wlan` | VARCHAR(30) | NULLABLE | 무선 Wi-Fi MAC 주소 |
-| **11**| **MAC lan** | `mac_lan` | VARCHAR(30) | NULLABLE | 유선 이더넷 LAN MAC 주소 |
-| **12**| **IMEI** | `imei` | VARCHAR(50) | INDEX | 이동통신 단말기 고유식별번호 (15자리) |
-| **13**| **구성요소(사양)** | `components` | VARCHAR(255) | NULLABLE | CPU, RAM, SSD, 어댑터 등 상세 하드웨어 구성요소 |
-| **14**| **비고** | `remark` | VARCHAR(255) | NULLABLE | 자산 특이사항 메모 |
+| **2** | **대분류** | `category_major` | VARCHAR(20) | NULLABLE | 자산 대분류 카테고리 (예: 노트북, 스마트폰, 계측기 등 20자 이하) |
+| **3** | **제품명** | `product_name` | VARCHAR(100) | NULLABLE | 제품 명칭 (예: 갤럭시 S24, ThinkPad X1 Carbon 등) |
+| **4** | **모델명** | `model_name` | VARCHAR(100) | NULLABLE | 제조사 모델 코드 (예: SM-S921N, 21CD001LKR 등) |
+| **5** | **제조번호(시리얼)** | `serial_no` | VARCHAR(50) | INDEX | 제조사 기기 일련번호 (S/N) |
+| **6** | **자산상태** | `asset_status` | VARCHAR(50) | NULLABLE | 자산 상태 (임대가능, 임대중, 출고완료, 수리대기, 수리중, 사내사용중, 입고검수중, 팩토리상품, 출고검수중, 교정중) |
+| **7** | **회수율** | `earning_ratio` | INTEGER | NULLABLE | 취득가 대비 매출 (회수율 %) |
+| **8** | **선반번호** | `shelf_no` | VARCHAR(50) | NULLABLE | 물류/창고 보관 로케이션 위치 (예: A-01-02) |
+| **9** | **옵션** | `asset_option` | VARCHAR(100) | NULLABLE | 단말 옵션 및 추가 사양 (예: 512GB, LTE/5G) |
+| **10**| **교정일자** | `calibration_date`| VARCHAR(50) | NULLABLE | 장비/계측기 정기 교정일자 |
+| **11**| **MAC wlan** | `mac_wlan` | VARCHAR(30) | NULLABLE | 무선 Wi-Fi MAC 주소 |
+| **12**| **MAC lan** | `mac_lan` | VARCHAR(30) | NULLABLE | 유선 이더넷 LAN MAC 주소 |
+| **13**| **IMEI** | `imei` | VARCHAR(50) | INDEX | 이동통신 단말기 고유식별번호 (15자리) |
+| **14**| **구성요소(사양)** | `components` | VARCHAR(255) | NULLABLE | CPU, RAM, SSD, 어댑터 등 상세 하드웨어 구성요소 |
+| **15**| **비고** | `remark` | VARCHAR(255) | NULLABLE | 자산 특이사항 메모 |
 
 ---
 

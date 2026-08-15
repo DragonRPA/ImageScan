@@ -25,6 +25,16 @@ export const DEFAULT_SCHEMA_DEF = {
       order: 1
     },
     {
+      id: 'category_major',
+      name: '대분류',
+      type: 'VARCHAR',
+      length: 20,
+      isKey: false,
+      isRequired: false,
+      isBarcodeTarget: false,
+      order: 2
+    },
+    {
       id: 'product_name',
       name: '제품명',
       type: 'VARCHAR',
@@ -32,7 +42,7 @@ export const DEFAULT_SCHEMA_DEF = {
       isKey: false,
       isRequired: false,
       isBarcodeTarget: false,
-      order: 2
+      order: 3
     },
     {
       id: 'model_name',
@@ -42,7 +52,7 @@ export const DEFAULT_SCHEMA_DEF = {
       isKey: false,
       isRequired: false,
       isBarcodeTarget: false,
-      order: 3
+      order: 4
     },
     {
       id: 'serial_no',
@@ -52,7 +62,7 @@ export const DEFAULT_SCHEMA_DEF = {
       isKey: false,
       isRequired: false,
       isBarcodeTarget: true,
-      order: 4
+      order: 5
     },
     {
       id: 'asset_status',
@@ -62,7 +72,7 @@ export const DEFAULT_SCHEMA_DEF = {
       isKey: false,
       isRequired: false,
       isBarcodeTarget: false,
-      order: 5
+      order: 6
     },
     {
       id: 'earning_ratio',
@@ -71,7 +81,7 @@ export const DEFAULT_SCHEMA_DEF = {
       isKey: false,
       isRequired: false,
       isBarcodeTarget: false,
-      order: 6
+      order: 7
     },
     {
       id: 'shelf_no',
@@ -81,7 +91,7 @@ export const DEFAULT_SCHEMA_DEF = {
       isKey: false,
       isRequired: false,
       isBarcodeTarget: false,
-      order: 7
+      order: 8
     },
     {
       id: 'asset_option',
@@ -91,7 +101,7 @@ export const DEFAULT_SCHEMA_DEF = {
       isKey: false,
       isRequired: false,
       isBarcodeTarget: false,
-      order: 8
+      order: 9
     },
     {
       id: 'calibration_date',
@@ -101,7 +111,7 @@ export const DEFAULT_SCHEMA_DEF = {
       isKey: false,
       isRequired: false,
       isBarcodeTarget: false,
-      order: 9
+      order: 10
     },
     {
       id: 'mac_wlan',
@@ -111,7 +121,7 @@ export const DEFAULT_SCHEMA_DEF = {
       isKey: false,
       isRequired: false,
       isBarcodeTarget: false,
-      order: 10
+      order: 11
     },
     {
       id: 'mac_lan',
@@ -121,7 +131,7 @@ export const DEFAULT_SCHEMA_DEF = {
       isKey: false,
       isRequired: false,
       isBarcodeTarget: false,
-      order: 11
+      order: 12
     },
     {
       id: 'imei',
@@ -131,7 +141,7 @@ export const DEFAULT_SCHEMA_DEF = {
       isKey: false,
       isRequired: false,
       isBarcodeTarget: true,
-      order: 12
+      order: 13
     },
     {
       id: 'components',
@@ -141,7 +151,7 @@ export const DEFAULT_SCHEMA_DEF = {
       isKey: false,
       isRequired: false,
       isBarcodeTarget: false,
-      order: 13
+      order: 14
     },
     {
       id: 'remark',
@@ -151,7 +161,7 @@ export const DEFAULT_SCHEMA_DEF = {
       isKey: false,
       isRequired: false,
       isBarcodeTarget: false,
-      order: 14
+      order: 15
     }
   ]
 };

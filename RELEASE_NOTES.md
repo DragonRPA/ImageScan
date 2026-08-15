@@ -1,5 +1,18 @@
 # 릴리즈 노트 (RELEASE_NOTES.md)
 
+## [v1.4.0.Build.3] - 2026-08-15 16:48:00 (KST)
+
+### 🏷️ asset 및 temp_asset 테이블에 '대분류(category_major, VARCHAR(20))' 헤더 정식 추가
+
+1. **`category_major` 스키마 및 DB 바인딩 (`dynamicSchema.js`, `supabaseClient.js`)**
+   - 20자 이하 자산 카테고리 대분류 컬럼 공식 등록 및 조회/저장 파이프라인 연동
+2. **엑셀 파서 엔진 `대분류` 자동 감지 (`excelParserEngine.js`)**
+   - `대분류`, `카테고리`, `category`, `대구분` 등 다양한 한글/영문 헤더 자동 파싱 지원
+3. **자산목록 그리드 및 통합 검색 필터 탑재 (`PCDashboard.jsx`)**
+   - 자산번호 바로 옆에 `대분류` 컬럼 신설 및 시원한 하늘색 강조 표출
+
+---
+
 ## [v1.4.0.Build.2] - 2026-08-15 16:44:00 (KST)
 
 ### 🧹 자산목록 그리드 '등록일시' 완전 제거 및 순수 14대 비즈니스 컬럼 엄격 일치화

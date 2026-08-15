@@ -10,6 +10,10 @@ export const FIELD_SYNONYMS = {
     label: '자산번호',
     aliases: ['자산번호', '자산 번호', 'asset_no', 'assetno', '관리번호', '바코드', 'barcode', '자산코드', '자산_번호']
   },
+  category_major: {
+    label: '대분류',
+    aliases: ['대분류', '대 분류', 'category_major', 'categorymajor', '카테고리', 'category', '대구분', '장비구분', '대_분류']
+  },
   product_name: {
     label: '제품명',
     aliases: ['제품명', '제품 명', 'product_name', 'productname', '품명', '품목명', '품목', '제품_명']
