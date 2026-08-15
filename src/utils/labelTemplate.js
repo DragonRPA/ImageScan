@@ -584,8 +584,12 @@ export function generateDynamicZpl(item = {}, template = DEFAULT_LABEL_TEMPLATE)
   (t.elements || []).forEach(elem => {
     if (!elem.visible) return;
 
-    const posX = mmToDots(elem.xMm, dpi);
-    const posY = mmToDots(elem.yMm, dpi);
+    // ⭐️ 기본 X, Y 좌표 (mm) + 개별 요소 인쇄 미세 보정값 (mm) 정밀 합산
+    const finalXMm = (Number(elem.xMm) || 0) + (Number(elem.offsetX) || 0);
+    const finalYMm = (Number(elem.yMm) || 0) + (Number(elem.offsetY) || 0);
+
+    const posX = mmToDots(finalXMm, dpi);
+    const posY = mmToDots(finalYMm, dpi);
 
     if (elem.type === 'text') {
       const val = getValue(elem);

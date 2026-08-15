@@ -989,6 +989,56 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                     </div>
                   </div>
 
+                  {/* ⭐️ X / Y 인쇄 미세 보정 (mm) */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', backgroundColor: '#0f172a', padding: '4px 6px', borderRadius: '4px', border: '1px dashed #334155' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <label style={{ fontSize: '0.62rem', color: '#38bdf8', fontWeight: 600 }}>X 보정 (mm)</label>
+                        <span style={{ fontSize: '0.65rem', color: '#facc15', fontWeight: 700 }}>
+                          {selectedElem.offsetX > 0 ? `+${selectedElem.offsetX}` : (selectedElem.offsetX || 0)}
+                        </span>
+                      </div>
+                      <input
+                        type="number"
+                        step="0.5"
+                        value={selectedElem.offsetX || 0}
+                        onChange={e => handleElemPropChange('offsetX', parseFloat(e.target.value) || 0)}
+                        style={{
+                          backgroundColor: '#1e293b',
+                          border: '1px solid #0284c7',
+                          borderRadius: '3px',
+                          padding: '2px 4px',
+                          color: '#facc15',
+                          fontSize: '0.70rem',
+                          fontWeight: 700
+                        }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <label style={{ fontSize: '0.62rem', color: '#38bdf8', fontWeight: 600 }}>Y 보정 (mm)</label>
+                        <span style={{ fontSize: '0.65rem', color: '#facc15', fontWeight: 700 }}>
+                          {selectedElem.offsetY > 0 ? `+${selectedElem.offsetY}` : (selectedElem.offsetY || 0)}
+                        </span>
+                      </div>
+                      <input
+                        type="number"
+                        step="0.5"
+                        value={selectedElem.offsetY || 0}
+                        onChange={e => handleElemPropChange('offsetY', parseFloat(e.target.value) || 0)}
+                        style={{
+                          backgroundColor: '#1e293b',
+                          border: '1px solid #0284c7',
+                          borderRadius: '3px',
+                          padding: '2px 4px',
+                          color: '#facc15',
+                          fontSize: '0.70rem',
+                          fontWeight: 700
+                        }}
+                      />
+                    </div>
+                  </div>
+
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <label style={{ fontSize: '0.68rem', color: '#cbd5e1' }}>폰트 크기 (1 pt 단위)</label>
@@ -1114,6 +1164,56 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                         value={selectedElem.yMm}
                         onChange={e => handleElemPropChange('yMm', e.target.value)}
                         style={{ backgroundColor: '#0f172a', border: '1px solid #475569', borderRadius: '4px', padding: '3px 6px', color: '#f8fafc', fontSize: '0.72rem' }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* ⭐️ X / Y 인쇄 미세 보정 (mm) */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', backgroundColor: '#0f172a', padding: '4px 6px', borderRadius: '4px', border: '1px dashed #334155' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <label style={{ fontSize: '0.62rem', color: '#38bdf8', fontWeight: 600 }}>X 보정 (mm)</label>
+                        <span style={{ fontSize: '0.65rem', color: '#facc15', fontWeight: 700 }}>
+                          {selectedElem.offsetX > 0 ? `+${selectedElem.offsetX}` : (selectedElem.offsetX || 0)}
+                        </span>
+                      </div>
+                      <input
+                        type="number"
+                        step="0.5"
+                        value={selectedElem.offsetX || 0}
+                        onChange={e => handleElemPropChange('offsetX', parseFloat(e.target.value) || 0)}
+                        style={{
+                          backgroundColor: '#1e293b',
+                          border: '1px solid #0284c7',
+                          borderRadius: '3px',
+                          padding: '2px 4px',
+                          color: '#facc15',
+                          fontSize: '0.70rem',
+                          fontWeight: 700
+                        }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <label style={{ fontSize: '0.62rem', color: '#38bdf8', fontWeight: 600 }}>Y 보정 (mm)</label>
+                        <span style={{ fontSize: '0.65rem', color: '#facc15', fontWeight: 700 }}>
+                          {selectedElem.offsetY > 0 ? `+${selectedElem.offsetY}` : (selectedElem.offsetY || 0)}
+                        </span>
+                      </div>
+                      <input
+                        type="number"
+                        step="0.5"
+                        value={selectedElem.offsetY || 0}
+                        onChange={e => handleElemPropChange('offsetY', parseFloat(e.target.value) || 0)}
+                        style={{
+                          backgroundColor: '#1e293b',
+                          border: '1px solid #0284c7',
+                          borderRadius: '3px',
+                          padding: '2px 4px',
+                          color: '#facc15',
+                          fontSize: '0.70rem',
+                          fontWeight: 700
+                        }}
                       />
                     </div>
                   </div>
@@ -1343,6 +1443,56 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                       />
                     </div>
                   </div>
+
+                  {/* ⭐️ X / Y 인쇄 미세 보정 (mm) - QR 및 바코드 위치 오차 정밀 극복 */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', backgroundColor: '#0f172a', padding: '4px 6px', borderRadius: '4px', border: '1px dashed #38bdf8', marginTop: '2px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <label style={{ fontSize: '0.62rem', color: '#38bdf8', fontWeight: 700 }}>X 보정 (mm)</label>
+                        <span style={{ fontSize: '0.65rem', color: '#facc15', fontWeight: 700 }}>
+                          {selectedElem.offsetX > 0 ? `+${selectedElem.offsetX}` : (selectedElem.offsetX || 0)}
+                        </span>
+                      </div>
+                      <input
+                        type="number"
+                        step="0.5"
+                        value={selectedElem.offsetX || 0}
+                        onChange={e => handleElemPropChange('offsetX', parseFloat(e.target.value) || 0)}
+                        style={{
+                          backgroundColor: '#1e293b',
+                          border: '1px solid #38bdf8',
+                          borderRadius: '3px',
+                          padding: '2px 4px',
+                          color: '#facc15',
+                          fontSize: '0.70rem',
+                          fontWeight: 700
+                        }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <label style={{ fontSize: '0.62rem', color: '#38bdf8', fontWeight: 700 }}>Y 보정 (mm)</label>
+                        <span style={{ fontSize: '0.65rem', color: '#facc15', fontWeight: 700 }}>
+                          {selectedElem.offsetY > 0 ? `+${selectedElem.offsetY}` : (selectedElem.offsetY || 0)}
+                        </span>
+                      </div>
+                      <input
+                        type="number"
+                        step="0.5"
+                        value={selectedElem.offsetY || 0}
+                        onChange={e => handleElemPropChange('offsetY', parseFloat(e.target.value) || 0)}
+                        style={{
+                          backgroundColor: '#1e293b',
+                          border: '1px solid #38bdf8',
+                          borderRadius: '3px',
+                          padding: '2px 4px',
+                          color: '#facc15',
+                          fontSize: '0.70rem',
+                          fontWeight: 700
+                        }}
+                      />
+                    </div>
+                  </div>
                 </>
               )}
 
@@ -1416,6 +1566,56 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                     </div>
                   </div>
 
+                  {/* ⭐️ X / Y 인쇄 미세 보정 (mm) */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', backgroundColor: '#0f172a', padding: '4px 6px', borderRadius: '4px', border: '1px dashed #334155' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <label style={{ fontSize: '0.62rem', color: '#38bdf8', fontWeight: 600 }}>X 보정 (mm)</label>
+                        <span style={{ fontSize: '0.65rem', color: '#facc15', fontWeight: 700 }}>
+                          {selectedElem.offsetX > 0 ? `+${selectedElem.offsetX}` : (selectedElem.offsetX || 0)}
+                        </span>
+                      </div>
+                      <input
+                        type="number"
+                        step="0.5"
+                        value={selectedElem.offsetX || 0}
+                        onChange={e => handleElemPropChange('offsetX', parseFloat(e.target.value) || 0)}
+                        style={{
+                          backgroundColor: '#1e293b',
+                          border: '1px solid #0284c7',
+                          borderRadius: '3px',
+                          padding: '2px 4px',
+                          color: '#facc15',
+                          fontSize: '0.70rem',
+                          fontWeight: 700
+                        }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <label style={{ fontSize: '0.62rem', color: '#38bdf8', fontWeight: 600 }}>Y 보정 (mm)</label>
+                        <span style={{ fontSize: '0.65rem', color: '#facc15', fontWeight: 700 }}>
+                          {selectedElem.offsetY > 0 ? `+${selectedElem.offsetY}` : (selectedElem.offsetY || 0)}
+                        </span>
+                      </div>
+                      <input
+                        type="number"
+                        step="0.5"
+                        value={selectedElem.offsetY || 0}
+                        onChange={e => handleElemPropChange('offsetY', parseFloat(e.target.value) || 0)}
+                        style={{
+                          backgroundColor: '#1e293b',
+                          border: '1px solid #0284c7',
+                          borderRadius: '3px',
+                          padding: '2px 4px',
+                          color: '#facc15',
+                          fontSize: '0.70rem',
+                          fontWeight: 700
+                        }}
+                      />
+                    </div>
+                  </div>
+
                   {selectedElem.imageDataUrl && (
                     <div style={{ marginTop: '4px', textAlign: 'center' }}>
                       <div style={{ fontSize: '0.65rem', color: '#94a3b8', marginBottom: '2px' }}>이미지 미리보기 (비율 무시)</div>
@@ -1481,6 +1681,56 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                         value={selectedElem.yMm}
                         onChange={e => handleElemPropChange('yMm', e.target.value)}
                         style={{ width: '100%', backgroundColor: '#0f172a', border: '1px solid #475569', borderRadius: '4px', padding: '3px 6px', color: '#f8fafc', fontSize: '0.72rem' }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* ⭐️ X / Y 인쇄 미세 보정 (mm) */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', backgroundColor: '#0f172a', padding: '4px 6px', borderRadius: '4px', border: '1px dashed #334155' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <label style={{ fontSize: '0.62rem', color: '#38bdf8', fontWeight: 600 }}>X 보정 (mm)</label>
+                        <span style={{ fontSize: '0.65rem', color: '#facc15', fontWeight: 700 }}>
+                          {selectedElem.offsetX > 0 ? `+${selectedElem.offsetX}` : (selectedElem.offsetX || 0)}
+                        </span>
+                      </div>
+                      <input
+                        type="number"
+                        step="0.5"
+                        value={selectedElem.offsetX || 0}
+                        onChange={e => handleElemPropChange('offsetX', parseFloat(e.target.value) || 0)}
+                        style={{
+                          backgroundColor: '#1e293b',
+                          border: '1px solid #0284c7',
+                          borderRadius: '3px',
+                          padding: '2px 4px',
+                          color: '#facc15',
+                          fontSize: '0.70rem',
+                          fontWeight: 700
+                        }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <label style={{ fontSize: '0.62rem', color: '#38bdf8', fontWeight: 600 }}>Y 보정 (mm)</label>
+                        <span style={{ fontSize: '0.65rem', color: '#facc15', fontWeight: 700 }}>
+                          {selectedElem.offsetY > 0 ? `+${selectedElem.offsetY}` : (selectedElem.offsetY || 0)}
+                        </span>
+                      </div>
+                      <input
+                        type="number"
+                        step="0.5"
+                        value={selectedElem.offsetY || 0}
+                        onChange={e => handleElemPropChange('offsetY', parseFloat(e.target.value) || 0)}
+                        style={{
+                          backgroundColor: '#1e293b',
+                          border: '1px solid #0284c7',
+                          borderRadius: '3px',
+                          padding: '2px 4px',
+                          color: '#facc15',
+                          fontSize: '0.70rem',
+                          fontWeight: 700
+                        }}
                       />
                     </div>
                   </div>
@@ -1555,8 +1805,8 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
           >
             {template.elements.filter(e => e.visible).map(elem => {
               const isElemSelected = elem.id === selectedElemId;
-              const leftPx = elem.xMm * PX_PER_MM;
-              const topPx = elem.yMm * PX_PER_MM;
+              const leftPx = ((Number(elem.xMm) || 0) + (Number(elem.offsetX) || 0)) * PX_PER_MM;
+              const topPx = ((Number(elem.yMm) || 0) + (Number(elem.offsetY) || 0)) * PX_PER_MM;
 
               // 1. 텍스트 요소
               if (elem.type === 'text') {
