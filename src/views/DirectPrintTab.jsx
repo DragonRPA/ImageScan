@@ -352,10 +352,21 @@ export default function DirectPrintTab({ onError, onOpenPrintModal }) {
         }
       }
 
-      // 조회 결과가 있는 경우: 즉시 라벨 인쇄 집행!
-      if (matchedItem) {
-        triggerSuccessFeedback();
-        setLastScannedItem(matchedItem);
+      // ⭐️ 조회 결과가 없더라도 스캔된 번호로 기본 라벨 즉시 생성 & 100% 인쇄 보장
+      if (!matchedItem) {
+        matchedItem = {
+          asset_no: query,
+          serial_no: query,
+          product_name: '스캔 출력',
+          model_name: '-',
+          asset_status: '정상',
+          shelf_no: '-'
+        };
+      }
+
+      // 즉시 라벨 인쇄 집행!
+      triggerSuccessFeedback();
+      setLastScannedItem(matchedItem);
 
         // 1. ⭐️ 캔버스 100% WYSIWYG 비트맵 ZPL 코드 생성 (한글/위치/바코드 1:1 완벽 일치)
         let zpl = '';
@@ -409,13 +420,6 @@ export default function DirectPrintTab({ onError, onOpenPrintModal }) {
 
         // 5. 입력창 자동 비움 및 포커스 복원
         setScanInput('');
-      } else {
-        // 조회 결과가 없는 경우
-        setStatusMessage({
-          type: 'error',
-          text: `[${query}] 일치하는 자산 데이터가 없습니다. (테이블: ${targetTable})`
-        });
-      }
     } catch (err) {
       setStatusMessage({ type: 'error', text: `오류 발생: ${err.message}` });
       if (onError) onError(err);
@@ -675,7 +679,9 @@ export default function DirectPrintTab({ onError, onOpenPrintModal }) {
                 onChange={e => setScanInput(e.target.value)}
                 onKeyDown={e => {
                   if (e.key === 'Enter') {
-                    handleExecuteScanAndPrint();
+                    e.preventDefault();
+                    const val = e.currentTarget.value;
+                    handleExecuteScanAndPrint(val);
                   }
                 }}
                 placeholder={targetTable === 'temp_asset' ? "임시자산번호 또는 PK(ID) 스캔 / 입력" : "자산번호 또는 제조번호(S/N) 스캔 / 입력"}
