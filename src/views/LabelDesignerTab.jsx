@@ -24,12 +24,14 @@ import {
   saveBackendLabelTemplate,
   syncTemplatesWithBackend,
   generateDynamicZpl,
+  generateWysiwygZpl,
   mmToDots,
   getAllPresets,
   createEmptyTemplate
 } from '../utils/labelTemplate';
 import { generateCode39DataUrl, RealBarcodeSvg } from '../utils/barcode39';
 import { insertPrintQueue } from '../utils/supabaseClient';
+import { getRegisteredPrinters, getActivePrinterId, sendZplToPrinter } from '../utils/printerManager';
 
 import {
   DEFAULT_SCHEMA_DEF,
@@ -405,13 +407,16 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
   const handleTestPrint = async () => {
     setIsPrinting(true);
     try {
-      await insertPrintQueue({
-        asset_no: SAMPLE_ITEM.asset_no,
-        imei: SAMPLE_ITEM.imei,
-        mac_address: SAMPLE_ITEM.mac_address || SAMPLE_ITEM.mac_wlan,
-        serial_no: SAMPLE_ITEM.serial_no
-      }, template);
-      alert('테스트 인쇄 요청이 등록되었습니다.');
+      // 1. ⭐️ 캔버스 100% WYSIWYG 비트맵 ZPL 생성
+      const zpl = await generateWysiwygZpl(SAMPLE_ITEM, template);
+
+      // 2. 활성 프린터 조회 및 직통 전송
+      const registered = getRegisteredPrinters();
+      const activeId = getActivePrinterId();
+      const activePrinter = registered.find(p => p.id === activeId) || registered[0] || { type: 'agent_auto', name: '기본 라벨 프린터' };
+
+      const res = await sendZplToPrinter(zpl, activePrinter);
+      alert(`[테스트 인쇄 완료] ${res?.message || '라벨이 출력되었습니다.'}`);
     } catch (err) {
       if (onOpenPrintModal) {
         onOpenPrintModal([SAMPLE_ITEM]);

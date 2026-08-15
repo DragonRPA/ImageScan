@@ -185,14 +185,15 @@ export async function sendZplToPrinter(zplString, printer) {
         }).catch(() => {});
       }
 
-      // 에이전트 직통 인쇄 요청
-      const res = await fetch('http://127.0.0.1:9988/api/test-print', {
+      // ⭐️ 에이전트 실제 ZPL 직통 인쇄 요청
+      const res = await fetch('http://127.0.0.1:9988/api/print-direct', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ zpl: zplString })
       });
 
       if (res.ok) {
-        return { success: true, message: `[${printer.name}] 로컬 에이전트 ZPL 출력 완료!` };
+        return { success: true, message: `[${printer.name}] 로컬 에이전트 ZPL 직통 출력 완료!` };
       }
     } catch (e) {
       console.warn('에이전트 직통 인쇄 폴백 to 큐:', e);

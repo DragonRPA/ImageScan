@@ -24,6 +24,7 @@ import {
   getAllPresets,
   getStoredLabelTemplate,
   generateDynamicZpl,
+  generateWysiwygZpl,
   saveStoredLabelTemplate,
   syncTemplatesWithBackend
 } from '../utils/labelTemplate';
@@ -356,8 +357,8 @@ export default function DirectPrintTab({ onError, onOpenPrintModal }) {
         triggerSuccessFeedback();
         setLastScannedItem(matchedItem);
 
-        // 1. ZPL 코드 동적 생성
-        const zpl = generateDynamicZpl(matchedItem, selectedTemplate);
+        // 1. ⭐️ 캔버스 100% WYSIWYG 비트맵 ZPL 코드 생성 (한글/위치/바코드 1:1 완벽 일치)
+        const zpl = await generateWysiwygZpl(matchedItem, selectedTemplate);
         setLastZpl(zpl);
 
         // 2. 선택된 프린터로 즉시 ZPL 전송

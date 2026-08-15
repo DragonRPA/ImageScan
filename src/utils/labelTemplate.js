@@ -496,6 +496,137 @@ export function mmToDots(mm, dpi = 203) {
   return Math.round(Number(mm || 0) * (dpi / 25.4));
 }
 
+import JsBarcode from 'jsbarcode';
+
+/**
+ * ⭐️ 캔버스 기반 100% WYSIWYG 비트맵 ZPL II 생성 엔진 (^GFA)
+ * - 한글 폰트 내장 여부와 무관하게 모든 Zebra 프린터에서 화면과 100% 동일하게 출력!
+ */
+export async function generateWysiwygZpl(item = {}, template = DEFAULT_LABEL_TEMPLATE) {
+  if (typeof document === 'undefined') {
+    return generateDynamicZpl(item, template);
+  }
+
+  const t = template || DEFAULT_LABEL_TEMPLATE;
+  const paper = t.paper || DEFAULT_LABEL_TEMPLATE.paper;
+  const dpi = paper.dpi || 203;
+  const dotsW = paper.dotsWidth || mmToDots(paper.widthMm, dpi);
+  const dotsH = paper.dotsHeight || mmToDots(paper.heightMm, dpi);
+
+  const canvas = document.createElement('canvas');
+  canvas.width = dotsW;
+  canvas.height = dotsH;
+  const ctx = canvas.getContext('2d');
+
+  // 1. 순백색 배경
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(0, 0, dotsW, dotsH);
+
+  const getValue = (elem) => {
+    if (!elem) return '';
+    if (elem.field === 'custom' || elem.field?.startsWith('custom_text_')) return elem.customValue || '';
+    const raw = item[elem.field] || item.data?.[elem.field] || item[elem.id];
+    if (raw !== undefined && raw !== null && raw !== '') return String(raw);
+    if (elem.field === 'asset_no') return String(item.key_value || item.asset_no || 'TEST0001');
+    if (elem.field === 'serial_no') return String(item.serial_no || 'R5KL60F0CZW');
+    if (elem.field === 'model_name') return String(item.model_name || 'SM-S921N');
+    if (elem.field === 'product_name') return String(item.product_name || '갤럭시 S24');
+    return '';
+  };
+
+  for (const elem of (t.elements || [])) {
+    if (!elem.visible) continue;
+
+    const posX = mmToDots(elem.xMm, dpi);
+    const posY = mmToDots(elem.yMm, dpi);
+
+    if (elem.type === 'text') {
+      const val = getValue(elem);
+      const prefix = elem.prefix || '';
+      const text = `${prefix}${val}`;
+      const fontPt = elem.fontSizePt || 20;
+      // 203 DPI 기준 Pt -> Dots (1pt ≈ 2.82 dots)
+      const fontDots = Math.round(fontPt * (dpi / 72) * 0.78);
+
+      ctx.fillStyle = '#000000';
+      ctx.font = `bold ${fontDots}px 'Malgun Gothic', 'Noto Sans KR', sans-serif`;
+      ctx.textBaseline = 'top';
+      ctx.fillText(text, posX, posY);
+    } else if (elem.type === 'line') {
+      const lineW = mmToDots(elem.widthMm || 60, dpi);
+      const lineThick = Math.max(1, mmToDots(elem.thicknessMm || 0.25, dpi));
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(posX, posY, lineW, lineThick);
+    } else if (elem.type === 'image' && elem.imageDataUrl) {
+      const imgW = mmToDots(elem.widthMm || 18, dpi);
+      const imgH = mmToDots(elem.heightMm || 12, dpi);
+      await new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+          ctx.drawImage(img, posX, posY, imgW, imgH);
+          resolve();
+        };
+        img.onerror = resolve;
+        img.src = elem.imageDataUrl;
+      });
+    } else if (elem.type === 'barcode') {
+      const targetVal = String(getValue({ field: elem.targetField }) || item[elem.targetField] || item.key_value || 'TEST0001');
+      const barH = mmToDots(elem.heightMm || 10, dpi);
+      const showText = elem.showText !== false;
+      const barcodeType = elem.barcodeType || 'CODE128';
+
+      try {
+        const tempCanvas = document.createElement('canvas');
+        JsBarcode(tempCanvas, targetVal, {
+          format: barcodeType === 'CODE39' ? 'CODE39' : 'CODE128',
+          height: barH,
+          displayValue: showText,
+          fontSize: Math.round(14 * (dpi / 72) * 0.7),
+          font: 'monospace',
+          textMargin: 2,
+          margin: 0
+        });
+        ctx.drawImage(tempCanvas, posX, posY);
+      } catch (bcErr) {
+        console.warn('JsBarcode 렌더링 실패:', bcErr);
+      }
+    }
+  }
+
+  // 2. Canvas ➔ 1비트 흑백 비트맵 ➔ Zebra ^GFA Hex 문자열 변환
+  const imgData = ctx.getImageData(0, 0, dotsW, dotsH);
+  const pixels = imgData.data;
+  const rowBytes = Math.ceil(dotsW / 8);
+  const totalBytes = rowBytes * dotsH;
+  let hexString = '';
+
+  for (let y = 0; y < dotsH; y++) {
+    for (let byteIdx = 0; byteIdx < rowBytes; byteIdx++) {
+      let byteVal = 0;
+      for (let bit = 0; bit < 8; bit++) {
+        const x = byteIdx * 8 + bit;
+        if (x < dotsW) {
+          const pIdx = (y * dotsW + x) * 4;
+          const brightness = (pixels[pIdx] + pixels[pIdx + 1] + pixels[pIdx + 2]) / 3;
+          if (brightness < 160) {
+            byteVal |= (1 << (7 - bit));
+          }
+        }
+      }
+      hexString += byteVal.toString(16).padStart(2, '0').toUpperCase();
+    }
+  }
+
+  return [
+    '^XA',
+    `^PW${dotsW}`,
+    `^LL${dotsH}`,
+    '^LH0,0',
+    `^GFA,${totalBytes},${totalBytes},${rowBytes},${hexString}`,
+    '^XZ'
+  ].join('\n');
+}
+
 /**
  * 템플릿과 데이터 아이템을 결합하여 ZPL II 동적 컴파일 (4대 핵심 헤더 기반)
  */
@@ -547,7 +678,6 @@ export function generateDynamicZpl(item = {}, template = DEFAULT_LABEL_TEMPLATE)
     } else if (elem.type === 'image') {
       const imgW = mmToDots(elem.widthMm || 20, dpi);
       const imgH = mmToDots(elem.heightMm || 10, dpi);
-      // ZPL 그래픽 플레이스홀더 / 박스
       zplCommands.push(`^FO${posX},${posY}^GB${imgW},${imgH},1^FS`);
     } else if (elem.type === 'barcode') {
       const targetVal = String(getValue({ field: elem.targetField }) || item[elem.targetField] || item.key_value || 'TEST0001');
@@ -561,7 +691,6 @@ export function generateDynamicZpl(item = {}, template = DEFAULT_LABEL_TEMPLATE)
         const barH = mmToDots(elem.heightMm || 10, dpi);
         zplCommands.push(`^FO${posX},${posY}^BY2,3,${barH}^BCN,${barH},${showTextParam},N,N^FD${targetVal}^FS`);
       } else {
-        // CODE128 기본
         const barHeightDots = mmToDots(elem.heightMm || 10, dpi);
         zplCommands.push(`^FO${posX},${posY}^BCN,${barHeightDots},${showTextParam},N,N^FD${targetVal}^FS`);
       }

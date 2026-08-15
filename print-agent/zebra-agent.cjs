@@ -396,7 +396,7 @@ function sendZplViaWindowsPort(zpl, printerName) {
     };
 
     try {
-      fs.writeFileSync(zplFile, Buffer.from(zpl, 'ascii'));
+      fs.writeFileSync(zplFile, Buffer.from(zpl, 'utf8'));
       fs.writeFileSync(psFile,  psScript, 'utf8');
       const cmd = `powershell -NoProfile -ExecutionPolicy Bypass -File "${psFile}" -pn "${printerName.replace(/"/g,'\\"')}" -fp "${zplFile.replace(/\\/g,'\\\\')}"`;
       log('PRINT', `winspool RAW 전송: ${printerName}`);
@@ -1143,20 +1143,31 @@ function startUiServer() {
       } catch { res.writeHead(500); return res.end('[]'); }
     }
 
-    if (url === '/api/test-print' && req.method === 'POST') {
-      if (!agentCfg) { res.writeHead(503); return res.end(JSON.stringify({ error: '설정 없음' })); }
+    // ⭐️ [직통 ZPL 인쇄] 웹 UI에서 렌더링된 실제 사용자 정의 ZPL 코드 즉시 출력
+    if (url === '/api/print-direct' && req.method === 'POST') {
+      if (!agentCfg) { res.writeHead(503); return res.end(JSON.stringify({ error: '프린터 설정 없음' })); }
+      let body = '';
+      req.on('data', c => body += c);
+      await new Promise(r => req.on('end', r));
       try {
-        const zpl = buildTestZpl();
-        if (agentCfg.connectionType === 'USB_RAW') {
-          await sendZplViaWindowsPort(zpl, agentCfg.printerName);
-        } else {
-          await sendZplViaTcp(zpl, agentCfg.printerHost, agentCfg.printerPort);
+        const payload = JSON.parse(body || '{}');
+        const rawZpl = payload.zpl;
+        if (!rawZpl) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          return res.end(JSON.stringify({ error: '출력할 zpl 코드가 비어 있습니다.' }));
         }
-        log('PRINT', '[테스트] 테스트 라벨 출력 완료');
+
+        if (agentCfg.connectionType === 'USB_RAW') {
+          await sendZplViaWindowsPort(rawZpl, agentCfg.printerName);
+        } else {
+          await sendZplViaTcp(rawZpl, agentCfg.printerHost, agentCfg.printerPort);
+        }
+        log('PRINT', `[직통출력] 사용자 지정 서식 ZPL 출력 완료 (${rawZpl.length} bytes)`);
         agentStatus.todayCount++;
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        return res.end(JSON.stringify({ ok: true }));
+        return res.end(JSON.stringify({ ok: true, message: '정상 출력 완료' }));
       } catch (e) {
+        log('ERR', `[직통출력] 인쇄 오류: ${e.message}`);
         res.writeHead(500, { 'Content-Type': 'application/json' });
         return res.end(JSON.stringify({ error: e.message }));
       }
