@@ -91,17 +91,17 @@ export default function App() {
               padding: '4px 8px',
               borderRadius: '6px',
               fontWeight: 800,
-              fontSize: '0.85rem',
+              fontSize: '0.82rem',
               letterSpacing: '0.5px'
             }}>
-              IMEI SCANNER
+              UBUS_DragonRPA_Agent
             </div>
             <div>
               <h1 style={{ fontSize: '0.9rem', fontWeight: 700, margin: 0, color: '#f8fafc' }}>
                 라벨 출력 관리
               </h1>
               <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>
-                v1.3.0.Build.5 | 2026-08-15
+                v1.3.0.Build.6 | 2026-08-15
               </span>
             </div>
           </div>

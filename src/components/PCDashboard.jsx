@@ -1,40 +1,50 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { RefreshCw, Download, Printer, Search, Plus, Trash2, Edit3, CheckCircle, Database, Zap, Upload, Table, CheckSquare, Clock } from 'lucide-react';
-import { fetchScansFromSupabase, subscribeRealtimeScans, deleteScanFromSupabase, saveScansToSupabase, deleteAllScansFromSupabase } from '../utils/supabaseClient';
+import React, { useState, useEffect } from 'react';
+import {
+  RefreshCw,
+  Download,
+  Upload,
+  Search,
+  Trash2,
+  Filter,
+  RotateCcw,
+  CheckSquare,
+  Square,
+  Printer,
+  SlidersHorizontal
+} from 'lucide-react';
+import {
+  fetchScansFromSupabase,
+  subscribeRealtimeScans,
+  deleteScanFromSupabase,
+  deleteAllScansFromSupabase
+} from '../utils/supabaseClient';
 
 export default function PCDashboard({
   onError,
   onOpenExportModal,
   onOpenPrintModal,
-  onOpenConfigModal,
-  onOpenImportModal,
-  offsetConfig
+  onOpenImportModal
 }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+
+  // 조회 필터 상태
+  const [filterModel, setFilterModel] = useState('');
+  const [filterSerial, setFilterSerial] = useState('');
+  const [filterStatus, setFilterStatus] = useState('ALL');
+  const [searchGeneral, setSearchGeneral] = useState('');
+
+  // 선택된 항목 IDs
   const [selectedIds, setSelectedIds] = useState([]);
-  
-  // Drawer/Modal toggle for viewing full data table
-  const [showTableDrawer, setShowTableDrawer] = useState(false);
 
-  // Realtime Auto-Print Toggle Switch
-  const [autoPrintEnabled, setAutoPrintEnabled] = useState(false);
-  const autoPrintRef = useRef(false);
-
-  useEffect(() => {
-    autoPrintRef.current = autoPrintEnabled;
-  }, [autoPrintEnabled]);
-
-  // Load scans strictly from DB (No seed fallback!)
+  // 데이터 로드
   const loadData = async () => {
     setLoading(true);
     try {
       const data = await fetchScansFromSupabase();
-      // If DB has no data, set empty array [] (Do NOT load seed fallback!)
       setItems(data || []);
     } catch (err) {
-      console.warn('Realtime fetch warning:', err);
+      console.warn('데이터 로드 경고:', err);
       setItems([]);
     } finally {
       setLoading(false);
@@ -44,14 +54,15 @@ export default function PCDashboard({
   useEffect(() => {
     loadData();
 
-    // Subscribe to Supabase Realtime channel for live mobile scans
+    // Supabase 실시간 동기화
     const channel = subscribeRealtimeScans((newRecord) => {
-      setItems((prev) => [newRecord, ...prev]);
-
-      if (autoPrintRef.current) {
-        console.log('[Auto-Print Triggered] Mobile scan received:', newRecord);
-        onOpenPrintModal([newRecord], offsetConfig);
-      }
+      setItems((prev) => {
+        const exists = prev.some(r => r.id === newRecord.id || (r.asset_no && r.asset_no === newRecord.asset_no));
+        if (exists) {
+          return prev.map(r => (r.id === newRecord.id || r.asset_no === newRecord.asset_no) ? newRecord : r);
+        }
+        return [newRecord, ...prev];
+      });
     });
 
     return () => {
@@ -59,22 +70,54 @@ export default function PCDashboard({
     };
   }, []);
 
-  // Production KPI Metrics
-  const printedItemsCount = items.filter(i => i.status === 'EXPORTED' || i.status === 'PRINTED').length;
-  const pendingItemsCount = items.length - printedItemsCount;
+  // 필터 초기화
+  const handleResetFilters = () => {
+    setFilterModel('');
+    setFilterSerial('');
+    setFilterStatus('ALL');
+    setSearchGeneral('');
+    setSelectedIds([]);
+  };
 
-  // Filtered Items
+  // 필터링 적용된 목록 계산
   const filteredItems = items.filter((item) => {
-    const q = searchQuery.toLowerCase();
-    return (
-      (item.asset_no && item.asset_no.toLowerCase().includes(q)) ||
-      (item.imei && item.imei.toLowerCase().includes(q)) ||
-      (item.mac_address && item.mac_address.toLowerCase().includes(q)) ||
-      (item.serial_no && item.serial_no.toLowerCase().includes(q))
-    );
+    // 1. 모델명 필터
+    if (filterModel.trim()) {
+      const targetModel = (item.model_name || item.data?.model_name || '').toLowerCase();
+      if (!targetModel.includes(filterModel.trim().toLowerCase())) return false;
+    }
+
+    // 2. 제조번호(시리얼) 필터
+    if (filterSerial.trim()) {
+      const targetSerial = (item.serial_no || item.data?.serial_no || item.imei || '').toLowerCase();
+      if (!targetSerial.includes(filterSerial.trim().toLowerCase())) return false;
+    }
+
+    // 3. 자산상태 필터
+    if (filterStatus !== 'ALL') {
+      const targetStatus = (item.asset_status || item.data?.asset_status || item.status || 'AVAILABLE').toUpperCase();
+      if (targetStatus !== filterStatus.toUpperCase()) return false;
+    }
+
+    // 4. 통합 검색어 (자산번호, 제품명, MAC, 비고, 구성요소 등)
+    if (searchGeneral.trim()) {
+      const q = searchGeneral.trim().toLowerCase();
+      const matchGeneral =
+        (item.asset_no && String(item.asset_no).toLowerCase().includes(q)) ||
+        (item.product_name && String(item.product_name).toLowerCase().includes(q)) ||
+        (item.shelf_no && String(item.shelf_no).toLowerCase().includes(q)) ||
+        (item.mac_wlan && String(item.mac_wlan).toLowerCase().includes(q)) ||
+        (item.mac_lan && String(item.mac_lan).toLowerCase().includes(q)) ||
+        (item.components && String(item.components).toLowerCase().includes(q)) ||
+        (item.remark && String(item.remark).toLowerCase().includes(q)) ||
+        (item.key_value && String(item.key_value).toLowerCase().includes(q));
+      if (!matchGeneral) return false;
+    }
+
+    return true;
   });
 
-  // Checkbox handlers
+  // 체크박스 선택/해제
   const handleSelectAll = (e) => {
     if (e.target.checked) {
       setSelectedIds(filteredItems.map((i) => i.id));
@@ -89,9 +132,10 @@ export default function PCDashboard({
     );
   };
 
+  // 선택 삭제
   const handleDeleteSelected = async () => {
     if (selectedIds.length === 0) return;
-    if (!confirm(`선택한 ${selectedIds.length}건의 데이터를 삭제하시겠습니까?`)) return;
+    if (!window.confirm(`선택한 ${selectedIds.length}건의 자산 데이터를 삭제하시겠습니까?`)) return;
 
     try {
       for (const id of selectedIds) {
@@ -100,295 +144,341 @@ export default function PCDashboard({
       setItems((prev) => prev.filter((item) => !selectedIds.includes(item.id)));
       setSelectedIds([]);
     } catch (err) {
-      onError(err.message || '삭제 중 오류가 발생했습니다.');
+      if (onError) onError(err.message || '데이터 삭제 실패');
     }
   };
 
-  const selectedObjects = items.filter((i) => selectedIds.includes(i.id));
+  // 상태 뱃지 렌더러
+  const renderStatusBadge = (statusStr) => {
+    const s = String(statusStr || 'AVAILABLE').toUpperCase();
+    if (s === 'AVAILABLE' || s === '임대가능' || s === '대여가능') {
+      return <span style={{ backgroundColor: '#052e16', color: '#4ade80', border: '1px solid #166534', padding: '1px 6px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: 600 }}>대여가능</span>;
+    }
+    if (s === 'RENTED' || s === '대여중' || s === '대여') {
+      return <span style={{ backgroundColor: '#172554', color: '#60a5fa', border: '1px solid #1e40af', padding: '1px 6px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: 600 }}>대여중</span>;
+    }
+    if (s === 'REPAIR' || s === '수리중' || s === '정비중') {
+      return <span style={{ backgroundColor: '#451a03', color: '#fb923c', border: '1px solid #9a3412', padding: '1px 6px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: 600 }}>수리중</span>;
+    }
+    if (s === 'DISCARD' || s === '폐기' || s === '망실') {
+      return <span style={{ backgroundColor: '#450a0a', color: '#f87171', border: '1px solid #991b1b', padding: '1px 6px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: 600 }}>폐기</span>;
+    }
+    return <span style={{ backgroundColor: '#1e293b', color: '#94a3b8', border: '1px solid #475569', padding: '1px 6px', borderRadius: '4px', fontSize: '0.68rem' }}>{statusStr}</span>;
+  };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      {/* Realtime Auto-Print Controller Banner */}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', color: '#f8fafc' }}>
+      {/* ── [1] 상단 정밀 조회 필터 및 액션 패널 ─────────────────────── */}
       <div style={{
-        backgroundColor: autoPrintEnabled ? 'rgba(16, 185, 129, 0.15)' : '#1e293b',
-        border: `1px solid ${autoPrintEnabled ? 'var(--accent-green)' : '#334155'}`,
-        padding: '14px 20px',
-        borderRadius: '10px',
-        display: 'flex',
-        alignItems: 'center',
-        justify: 'space-between',
-        flexWrap: 'wrap',
-        gap: '12px',
-        transition: 'all 0.3s ease'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <Zap size={22} style={{ color: autoPrintEnabled ? '#10b981' : '#94a3b8' }} />
-          <div>
-            <div style={{ fontWeight: 700, fontSize: '0.95rem', color: autoPrintEnabled ? '#6ee7b7' : '#f8fafc' }}>
-              모바일 스캔 ➔ PC 실시간 자동 라벨 인쇄 모드 (Auto Scan-to-Print)
-            </div>
-            <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
-              {autoPrintEnabled
-                ? '★ 활성화됨: 핸드폰에서 IMEI를 스캔하면 PC에서 0.1초 만에 라벨이 자동 인쇄됩니다.'
-                : '스위치를 켜면 핸드폰 수집 시 PC에 연결된 라벨 프린터로 라벨이 즉시 자동 출력됩니다.'}
-            </div>
-          </div>
-        </div>
-
-        <button
-          className={`btn ${autoPrintEnabled ? 'btn-success' : 'btn-outline'}`}
-          onClick={() => setAutoPrintEnabled(!autoPrintEnabled)}
-          style={{ padding: '8px 16px', fontSize: '0.85rem' }}
-        >
-          <Printer size={16} />
-          {autoPrintEnabled ? '자동 라벨 인쇄 [ON]' : '자동 라벨 인쇄 [OFF]'}
-        </button>
-      </div>
-
-      {/* Production KPI Summary Cards */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-        gap: '12px'
-      }}>
-        {/* KPI Card 1: Unprinted Pending */}
-        <div style={{
-          backgroundColor: '#1e293b',
-          border: '1px solid #334155',
-          borderRadius: '10px',
-          padding: '14px 18px',
-          display: 'flex',
-          justify: 'space-between',
-          alignItems: 'center'
-        }}>
-          <div>
-            <div style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600 }}>출력 대기 IMEI</div>
-            <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#facc15', marginTop: '2px' }}>
-              {pendingItemsCount} <span style={{ fontSize: '0.85rem', fontWeight: 500, color: '#94a3b8' }}>건</span>
-            </div>
-          </div>
-          <Clock size={28} style={{ color: '#facc15', opacity: 0.8 }} />
-        </div>
-
-        {/* KPI Card 2: Printed Completed */}
-        <div style={{
-          backgroundColor: '#1e293b',
-          border: '1px solid #334155',
-          borderRadius: '10px',
-          padding: '14px 18px',
-          display: 'flex',
-          justify: 'space-between',
-          alignItems: 'center'
-        }}>
-          <div>
-            <div style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600 }}>출력 완료 라벨</div>
-            <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#10b981', marginTop: '2px' }}>
-              {printedItemsCount} <span style={{ fontSize: '0.85rem', fontWeight: 500, color: '#94a3b8' }}>매</span>
-            </div>
-          </div>
-          <CheckSquare size={28} style={{ color: '#10b981', opacity: 0.8 }} />
-        </div>
-
-        {/* KPI Card 3: Total IMEI Count */}
-        <div style={{
-          backgroundColor: '#1e293b',
-          border: '1px solid #334155',
-          borderRadius: '10px',
-          padding: '14px 18px',
-          display: 'flex',
-          justify: 'space-between',
-          alignItems: 'center'
-        }}>
-          <div>
-            <div style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600 }}>전체 수집 수량</div>
-            <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#38bdf8', marginTop: '2px' }}>
-              {items.length} <span style={{ fontSize: '0.85rem', fontWeight: 500, color: '#94a3b8' }}>건</span>
-            </div>
-          </div>
-          <Database size={28} style={{ color: '#38bdf8', opacity: 0.8 }} />
-        </div>
-      </div>
-
-      {/* Main Production Toolbar */}
-      <div style={{
-        display: 'flex',
-        flexWrap: 'wrap',
-        justify: 'space-between',
-        alignItems: 'center',
-        gap: '12px',
         backgroundColor: '#1e293b',
-        padding: '14px 18px',
-        borderRadius: '10px',
-        border: '1px solid #334155'
+        border: '1px solid #334155',
+        borderRadius: '8px',
+        padding: '10px 14px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '8px'
       }}>
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-          <button className="btn btn-outline" onClick={loadData} disabled={loading}>
-            <RefreshCw size={15} className={loading ? 'spin' : ''} />
-            {loading ? '동기화 중...' : '새로고침'}
-          </button>
-
-          <button className="btn btn-outline" onClick={onOpenConfigModal}>
-            <Database size={15} />
-            DB 연동 설정
-          </button>
-
-          <button className="btn btn-outline" style={{ borderColor: '#f43f5e', color: '#fda4af' }} onClick={onOpenImportModal}>
-            <Upload size={15} />
-            양식 덮어쓰기 / 업로드
-          </button>
-        </div>
-
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          <button
-            className="btn btn-outline"
-            style={{ borderColor: '#38bdf8', color: '#7dd3fc' }}
-            onClick={() => setShowTableDrawer(!showTableDrawer)}
-          >
-            <Table size={15} />
-            {showTableDrawer ? '수집 목록 닫기' : `수집 데이터 목록 보기 (${items.length}건)`}
-          </button>
-
-          <button
-            className="btn btn-success"
-            onClick={() => onOpenExportModal(selectedObjects.length > 0 ? selectedObjects : items)}
-            disabled={items.length === 0}
-          >
-            <Download size={15} />
-            엑셀/CSV 내보내기
-          </button>
-
-          <button
-            className="btn btn-primary"
-            onClick={() => onOpenPrintModal(selectedObjects.length > 0 ? selectedObjects : items, offsetConfig)}
-            disabled={items.length === 0}
-          >
-            <Printer size={15} />
-            Code 39 라벨 인쇄 ({selectedObjects.length || items.length}매)
-          </button>
-        </div>
-      </div>
-
-      {/* Empty State Banner when 0 items */}
-      {items.length === 0 && !loading && (
+        {/* 필터 입력 필드 (상하 세로 스택 표준) */}
         <div style={{
-          backgroundColor: '#0f172a',
-          border: '2px dashed #334155',
-          borderRadius: '12px',
-          padding: '40px 20px',
-          textAlign: 'center',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '12px'
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+          gap: '8px',
+          alignItems: 'flex-end'
         }}>
-          <Database size={40} style={{ color: '#64748b' }} />
-          <h4 style={{ margin: 0, fontSize: '1.05rem', color: '#f8fafc' }}>
-            수집되거나 업로드된 IMEI 데이터가 없습니다
-          </h4>
-          <p style={{ margin: 0, fontSize: '0.85rem', color: '#94a3b8', maxWidth: '450px' }}>
-            상단의 <strong>[양식 덮어쓰기 / 업로드]</strong> 버튼을 클릭하여 엑셀 양식을 업로드하거나, 모바일 핸드폰 스캐너로 기기 IMEI를 스캔하세요.
-          </p>
-          <button className="btn btn-primary" style={{ marginTop: '8px' }} onClick={onOpenImportModal}>
-            <Upload size={16} /> 엑셀 파일 직접 업로드하기
-          </button>
-        </div>
-      )}
+          {/* 모델명 필터 */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+            <label style={{ fontSize: '0.68rem', color: '#94a3b8', fontWeight: 600, whiteSpace: 'nowrap' }}>
+              모델명 검색
+            </label>
+            <input
+              type="text"
+              value={filterModel}
+              onChange={(e) => setFilterModel(e.target.value)}
+              placeholder="예: SM-S921N"
+              style={{
+                backgroundColor: '#0f172a',
+                border: '1px solid #475569',
+                borderRadius: '4px',
+                padding: '5px 8px',
+                color: '#f8fafc',
+                fontSize: '0.75rem'
+              }}
+            />
+          </div>
 
-      {/* Drawer Data Table View (Collapsible) */}
-      {showTableDrawer && items.length > 0 && (
-        <div style={{
-          backgroundColor: '#1e293b',
-          borderRadius: '10px',
-          border: '1px solid #334155',
-          padding: '16px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '12px'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ position: 'relative', width: '280px' }}>
-              <Search size={16} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+          {/* 제조번호(시리얼) 필터 */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+            <label style={{ fontSize: '0.68rem', color: '#94a3b8', fontWeight: 600, whiteSpace: 'nowrap' }}>
+              제조번호(시리얼) 검색
+            </label>
+            <input
+              type="text"
+              value={filterSerial}
+              onChange={(e) => setFilterSerial(e.target.value)}
+              placeholder="예: R5KL60F0CZW"
+              style={{
+                backgroundColor: '#0f172a',
+                border: '1px solid #475569',
+                borderRadius: '4px',
+                padding: '5px 8px',
+                color: '#f8fafc',
+                fontSize: '0.75rem'
+              }}
+            />
+          </div>
+
+          {/* 자산상태 필터 */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+            <label style={{ fontSize: '0.68rem', color: '#94a3b8', fontWeight: 600, whiteSpace: 'nowrap' }}>
+              자산상태 구분
+            </label>
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              style={{
+                backgroundColor: '#0f172a',
+                border: '1px solid #475569',
+                borderRadius: '4px',
+                padding: '5px 8px',
+                color: '#f8fafc',
+                fontSize: '0.75rem',
+                fontWeight: 600
+              }}
+            >
+              <option value="ALL">전체 상태</option>
+              <option value="AVAILABLE">대여가능 (AVAILABLE)</option>
+              <option value="RENTED">대여중 (RENTED)</option>
+              <option value="REPAIR">수리/점검중 (REPAIR)</option>
+              <option value="DISCARD">폐기 (DISCARD)</option>
+            </select>
+          </div>
+
+          {/* 통합 검색어 */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+            <label style={{ fontSize: '0.68rem', color: '#94a3b8', fontWeight: 600, whiteSpace: 'nowrap' }}>
+              통합 키워드 검색
+            </label>
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
               <input
                 type="text"
-                className="form-input"
-                placeholder="자산번호, IMEI, MAC, 시리얼 검색..."
-                style={{ paddingLeft: '32px', width: '100%', fontSize: '0.85rem' }}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                value={searchGeneral}
+                onChange={(e) => setSearchGeneral(e.target.value)}
+                placeholder="자산번호, 제품명, 선반, MAC..."
+                style={{
+                  backgroundColor: '#0f172a',
+                  border: '1px solid #475569',
+                  borderRadius: '4px',
+                  padding: '5px 8px 5px 26px',
+                  color: '#f8fafc',
+                  fontSize: '0.75rem',
+                  width: '100%'
+                }}
               />
+              <Search size={12} style={{ position: 'absolute', left: '8px', color: '#64748b' }} />
             </div>
+          </div>
+        </div>
 
-            {selectedIds.length > 0 && (
-              <button className="btn btn-danger" style={{ padding: '6px 12px', fontSize: '0.8rem' }} onClick={handleDeleteSelected}>
-                <Trash2 size={14} /> 선택 삭제 ({selectedIds.length})
-              </button>
-            )}
+        {/* 액션 버튼 툴바 */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '6px',
+          paddingTop: '6px',
+          borderTop: '1px solid #334155'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+              조회 결과: <strong style={{ color: '#38bdf8' }}>{filteredItems.length}</strong> 건
+              {selectedIds.length > 0 && (
+                <span style={{ color: '#f59e0b', marginLeft: '6px', fontWeight: 700 }}>
+                  (선택 {selectedIds.length}건)
+                </span>
+              )}
+            </span>
+            <button
+              onClick={handleResetFilters}
+              className="btn btn-outline"
+              style={{ fontSize: '0.68rem', padding: '2px 8px' }}
+              title="필터 초기화"
+            >
+              <RotateCcw size={11} /> 필터 초기화
+            </button>
           </div>
 
-          <div style={{ overflowX: 'auto', maxHeight: '350px' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', textAlign: 'left' }}>
-              <thead>
-                <tr style={{ backgroundColor: '#0f172a', color: '#94a3b8', borderBottom: '1px solid #334155' }}>
-                  <th style={{ padding: '10px 12px', width: '40px' }} className="nowrap-cell">
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.length > 0 && selectedIds.length === filteredItems.length}
-                      onChange={handleSelectAll}
-                    />
-                  </th>
-                  <th style={{ padding: '10px 12px', color: '#38bdf8', fontWeight: 700 }} className="nowrap-cell">자산번호 (A)</th>
-                  <th style={{ padding: '10px 12px', color: '#facc15', fontWeight: 700 }} className="nowrap-cell">IMEI (B)</th>
-                  <th style={{ padding: '10px 12px', color: '#f43f5e', fontWeight: 700 }} className="nowrap-cell">MAC Address (C)</th>
-                  <th style={{ padding: '10px 12px', color: '#a855f7', fontWeight: 700 }} className="nowrap-cell">시리얼 (D)</th>
-                  <th style={{ padding: '10px 12px' }} className="nowrap-cell">스캔/등록 일시</th>
-                  <th style={{ padding: '10px 12px', textAlign: 'center' }} className="nowrap-cell">인쇄 상태</th>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            {selectedIds.length > 0 && (
+              <button
+                onClick={handleDeleteSelected}
+                className="btn btn-outline"
+                style={{ fontSize: '0.72rem', padding: '3px 8px', borderColor: '#ef4444', color: '#fca5a5' }}
+              >
+                <Trash2 size={12} /> 선택 삭제 ({selectedIds.length})
+              </button>
+            )}
+            <button
+              onClick={loadData}
+              disabled={loading}
+              className="btn btn-outline"
+              style={{ fontSize: '0.72rem', padding: '3px 8px' }}
+            >
+              <RefreshCw size={12} className={loading ? 'spin' : ''} /> 새로고침
+            </button>
+            <button
+              onClick={onOpenImportModal}
+              className="btn btn-outline"
+              style={{ fontSize: '0.72rem', padding: '3px 8px', borderColor: '#38bdf8', color: '#7dd3fc' }}
+            >
+              <Upload size={12} /> 엑셀 업로드
+            </button>
+            <button
+              onClick={onOpenExportModal}
+              className="btn btn-primary"
+              style={{ fontSize: '0.72rem', padding: '3px 10px' }}
+            >
+              <Download size={12} /> 엑셀 내보내기
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ── [2] 12대 필드 전면 자산목록 데이터 그리드 ──────────────────── */}
+      <div style={{
+        backgroundColor: '#1e293b',
+        border: '1px solid #334155',
+        borderRadius: '8px',
+        overflow: 'hidden',
+        boxShadow: '0 4px 6px -1px rgba(0,0,0,0.2)'
+      }}>
+        <div style={{ overflowX: 'auto', maxHeight: 'calc(100vh - 280px)', minHeight: '380px' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.72rem' }}>
+            <thead>
+              <tr style={{
+                backgroundColor: '#0f172a',
+                color: '#94a3b8',
+                borderBottom: '1px solid #334155',
+                position: 'sticky',
+                top: 0,
+                zIndex: 10
+              }}>
+                <th style={{ padding: '6px 8px', textAlign: 'center', width: '36px', whiteSpace: 'nowrap' }}>
+                  <input
+                    type="checkbox"
+                    checked={filteredItems.length > 0 && selectedIds.length === filteredItems.length}
+                    onChange={handleSelectAll}
+                  />
+                </th>
+                <th style={{ padding: '6px 8px', textAlign: 'left', whiteSpace: 'nowrap' }}>자산번호</th>
+                <th style={{ padding: '6px 8px', textAlign: 'left', whiteSpace: 'nowrap' }}>제품명</th>
+                <th style={{ padding: '6px 8px', textAlign: 'left', whiteSpace: 'nowrap' }}>모델명</th>
+                <th style={{ padding: '6px 8px', textAlign: 'left', whiteSpace: 'nowrap' }}>제조번호(시리얼)</th>
+                <th style={{ padding: '6px 8px', textAlign: 'left', whiteSpace: 'nowrap' }}>선반번호</th>
+                <th style={{ padding: '6px 8px', textAlign: 'center', whiteSpace: 'nowrap' }}>자산상태</th>
+                <th style={{ padding: '6px 8px', textAlign: 'left', whiteSpace: 'nowrap' }}>옵션</th>
+                <th style={{ padding: '6px 8px', textAlign: 'left', whiteSpace: 'nowrap' }}>교정일자</th>
+                <th style={{ padding: '6px 8px', textAlign: 'left', whiteSpace: 'nowrap' }}>MAC wlan</th>
+                <th style={{ padding: '6px 8px', textAlign: 'left', whiteSpace: 'nowrap' }}>MAC lan</th>
+                <th style={{ padding: '6px 8px', textAlign: 'left', whiteSpace: 'nowrap' }}>구성요소(사양)</th>
+                <th style={{ padding: '6px 8px', textAlign: 'left', whiteSpace: 'nowrap' }}>비고</th>
+                <th style={{ padding: '6px 8px', textAlign: 'left', whiteSpace: 'nowrap' }}>스캔일시</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan={14} style={{ padding: '32px', textAlign: 'center', color: '#64748b' }}>
+                    자산 데이터를 불러오는 중입니다...
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {filteredItems.map((item) => {
-                  const isSelected = selectedIds.includes(item.id);
+              ) : filteredItems.length === 0 ? (
+                <tr>
+                  <td colSpan={14} style={{ padding: '32px', textAlign: 'center', color: '#64748b' }}>
+                    등록된 자산 데이터가 없습니다. [엑셀 업로드]를 통해 데이터를 등록하세요.
+                  </td>
+                </tr>
+              ) : (
+                filteredItems.map((row, idx) => {
+                  const isSelected = selectedIds.includes(row.id);
+                  const assetNo = row.asset_no || row.key_value || row.data?.asset_no || '-';
+                  const productName = row.product_name || row.data?.product_name || '-';
+                  const modelName = row.model_name || row.data?.model_name || '-';
+                  const serialNo = row.serial_no || row.data?.serial_no || row.imei || '-';
+                  const shelfNo = row.shelf_no || row.data?.shelf_no || '-';
+                  const status = row.asset_status || row.data?.asset_status || row.status || 'AVAILABLE';
+                  const option = row.asset_option || row.data?.asset_option || '-';
+                  const calDate = row.calibration_date || row.data?.calibration_date || '-';
+                  const macWlan = row.mac_wlan || row.data?.mac_wlan || row.mac_address || '-';
+                  const macLan = row.mac_lan || row.data?.mac_lan || '-';
+                  const components = row.components || row.data?.components || '-';
+                  const remark = row.remark || row.data?.remark || '-';
+                  const scannedAt = row.scanned_at || row.created_at ? new Date(row.scanned_at || row.created_at).toLocaleString('ko-KR', { hour12: false }) : '-';
+
                   return (
                     <tr
-                      key={item.id}
+                      key={row.id || idx}
+                      onClick={() => handleToggleSelect(row.id)}
                       style={{
-                        borderBottom: '1px solid #334155',
-                        backgroundColor: isSelected ? 'rgba(37, 99, 235, 0.15)' : 'transparent'
+                        borderBottom: '1px solid #1e293b',
+                        backgroundColor: isSelected ? 'rgba(56, 189, 248, 0.12)' : (idx % 2 === 0 ? '#0f172a' : '#141e30'),
+                        cursor: 'pointer'
                       }}
                     >
-                      <td style={{ padding: '10px 12px' }} className="nowrap-cell">
+                      <td style={{ padding: '6px 8px', textAlign: 'center', whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
                         <input
                           type="checkbox"
                           checked={isSelected}
-                          onChange={() => handleToggleSelect(item.id)}
+                          onChange={() => handleToggleSelect(row.id)}
                         />
                       </td>
-                      <td style={{ padding: '10px 12px', fontWeight: 700, color: '#38bdf8' }} className="nowrap-cell">{item.asset_no}</td>
-                      <td style={{ padding: '10px 12px', fontFamily: 'monospace', fontWeight: 700, color: '#fef08a' }} className="nowrap-cell">{item.imei}</td>
-                      <td style={{ padding: '10px 12px', fontFamily: 'monospace', color: '#fda4af' }} className="nowrap-cell">{item.mac_address || '-'}</td>
-                      <td style={{ padding: '10px 12px', fontFamily: 'monospace', color: '#d8b4fe' }} className="nowrap-cell">{item.serial_no || '-'}</td>
-                      <td style={{ padding: '10px 12px', color: '#94a3b8', fontSize: '0.78rem' }} className="nowrap-cell">
-                        {new Date(item.created_at || item.scanned_at || Date.now()).toLocaleString('ko-KR')}
+                      <td style={{ padding: '6px 8px', color: '#38bdf8', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                        {assetNo}
                       </td>
-                      <td style={{ padding: '10px 12px', textAlign: 'center' }} className="nowrap-cell">
-                        <span style={{
-                          padding: '3px 6px',
-                          borderRadius: '4px',
-                          fontSize: '0.72rem',
-                          fontWeight: 600,
-                          backgroundColor: item.status === 'EXPORTED' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(234, 179, 8, 0.2)',
-                          color: item.status === 'EXPORTED' ? '#6ee7b7' : '#fef08a'
-                        }}>
-                          {item.status === 'EXPORTED' ? '인쇄 완료' : '출력 대기'}
-                        </span>
+                      <td style={{ padding: '6px 8px', color: '#f8fafc', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                        {productName}
+                      </td>
+                      <td style={{ padding: '6px 8px', color: '#cbd5e1', whiteSpace: 'nowrap' }}>
+                        {modelName}
+                      </td>
+                      <td style={{ padding: '6px 8px', color: '#cbd5e1', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
+                        {serialNo}
+                      </td>
+                      <td style={{ padding: '6px 8px', color: '#94a3b8', whiteSpace: 'nowrap' }}>
+                        {shelfNo}
+                      </td>
+                      <td style={{ padding: '6px 8px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                        {renderStatusBadge(status)}
+                      </td>
+                      <td style={{ padding: '6px 8px', color: '#94a3b8', whiteSpace: 'nowrap' }}>
+                        {option}
+                      </td>
+                      <td style={{ padding: '6px 8px', color: '#94a3b8', whiteSpace: 'nowrap' }}>
+                        {calDate}
+                      </td>
+                      <td style={{ padding: '6px 8px', color: '#94a3b8', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
+                        {macWlan}
+                      </td>
+                      <td style={{ padding: '6px 8px', color: '#94a3b8', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
+                        {macLan}
+                      </td>
+                      <td style={{ padding: '6px 8px', color: '#94a3b8', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {components}
+                      </td>
+                      <td style={{ padding: '6px 8px', color: '#64748b', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {remark}
+                      </td>
+                      <td style={{ padding: '6px 8px', color: '#64748b', fontSize: '0.68rem', whiteSpace: 'nowrap' }}>
+                        {scannedAt}
                       </td>
                     </tr>
                   );
-                })}
-              </tbody>
-            </table>
-          </div>
+                })
+              )}
+            </tbody>
+          </table>
         </div>
-      )}
+      </div>
     </div>
   );
 }

@@ -13,7 +13,6 @@ import {
   FileText
 } from 'lucide-react';
 import PCDashboard from '../components/PCDashboard';
-import LabelOffsetController, { getStoredOffsetConfig, saveStoredOffsetConfig } from '../components/LabelOffsetController';
 import LabelDesignerTab from './LabelDesignerTab';
 import SchemaBuilderTab from './SchemaBuilderTab';
 import RPADashboardTab from './RPADashboardTab';
@@ -391,24 +390,12 @@ export default function PCDashboardView({
 
       {/* Tab 1: 데이터 목록 */}
       {activeTab === 'data' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <LabelOffsetController
-            offsetConfig={offsetConfig}
-            onChangeConfig={setOffsetConfig}
-            onResetConfig={handleResetConfig}
-            onTestPrint={handleTestPrint}
-            onOpenPrinterGuide={onOpenPrinterGuide}
-            onZplDirectPrint={() => {}}
-          />
-          <PCDashboard
-            onError={onError}
-            onOpenExportModal={onOpenExportModal}
-            onOpenPrintModal={(items) => onOpenPrintModal(items, offsetConfig)}
-            onOpenConfigModal={onOpenConfigModal}
-            onOpenImportModal={onOpenImportModal}
-            offsetConfig={offsetConfig}
-          />
-        </div>
+        <PCDashboard
+          onError={onError}
+          onOpenExportModal={onOpenExportModal}
+          onOpenPrintModal={onOpenPrintModal}
+          onOpenImportModal={onOpenImportModal}
+        />
       )}
 
       {/* Tab 2: RPA 실행 컨트롤러 */}
