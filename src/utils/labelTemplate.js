@@ -525,7 +525,8 @@ export function generateDynamicZpl(item = {}, template = DEFAULT_LABEL_TEMPLATE)
   ];
 
   const getValue = (elem) => {
-    if (elem.field === 'custom') return elem.customValue || '';
+    if (!elem) return '';
+    if (elem.field === 'custom' || elem.field?.startsWith('custom_text_')) return elem.customValue || '';
     const raw = item[elem.field] || item.data?.[elem.field] || item[elem.id];
     if (raw !== undefined && raw !== null && raw !== '') return String(raw);
     if (elem.field === 'asset_no') return String(item.key_value || item.asset_no || 'TEST0001');
@@ -551,6 +552,11 @@ export function generateDynamicZpl(item = {}, template = DEFAULT_LABEL_TEMPLATE)
       const lineW = mmToDots(elem.widthMm || 60, dpi);
       const lineThick = Math.max(1, mmToDots(elem.thicknessMm || 0.25, dpi));
       zplCommands.push(`^FO${posX},${posY}^GB${lineW},${lineThick},${lineThick}^FS`);
+    } else if (elem.type === 'image') {
+      const imgW = mmToDots(elem.widthMm || 20, dpi);
+      const imgH = mmToDots(elem.heightMm || 10, dpi);
+      // ZPL 그래픽 플레이스홀더 / 박스
+      zplCommands.push(`^FO${posX},${posY}^GB${imgW},${imgH},1^FS`);
     } else if (elem.type === 'barcode') {
       const targetVal = String(getValue({ field: elem.targetField }) || item[elem.targetField] || item.key_value || 'TEST0001');
       const showTextParam = elem.showText ? 'Y' : 'N';
@@ -559,10 +565,9 @@ export function generateDynamicZpl(item = {}, template = DEFAULT_LABEL_TEMPLATE)
       if (barcodeType === 'QR') {
         const qrMag = Math.max(1, Math.min(10, elem.qrScale || 4));
         zplCommands.push(`^FO${posX},${posY}^BQN,2,${qrMag}^FDQA,${targetVal}^FS`);
-      } else if (barcodeType === 'CODE39') {
-        const cleanVal = targetVal.toUpperCase().replace(/[^A-Z0-9\-\.\$\/\+%\s]/g, '');
-        const barHeightDots = mmToDots(elem.heightMm || 10, dpi);
-        zplCommands.push(`^FO${posX},${posY}^B3N,N,${barHeightDots},${showTextParam},N^FD${cleanVal}^FS`);
+      } else if (barcodeType === 'CODE128') {
+        const barH = mmToDots(elem.heightMm || 10, dpi);
+        zplCommands.push(`^FO${posX},${posY}^BY2,3,${barH}^BCN,${barH},${showTextParam},N,N^FD${targetVal}^FS`);
       } else {
         // CODE128 기본
         const barHeightDots = mmToDots(elem.heightMm || 10, dpi);

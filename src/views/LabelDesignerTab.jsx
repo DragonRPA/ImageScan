@@ -158,6 +158,50 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
       }
     });
 
+    // ⭐️ 3. 임의 추가 텍스트 1 ~ 4 요소 자동 보장
+    const customTexts = [
+      { id: 'elem_custom_text_1', name: '추가 텍스트 1', defaultVal: '(주)드래곤렌탈' },
+      { id: 'elem_custom_text_2', name: '추가 텍스트 2', defaultVal: '검수완료' },
+      { id: 'elem_custom_text_3', name: '추가 텍스트 3', defaultVal: '취급주의' },
+      { id: 'elem_custom_text_4', name: '추가 텍스트 4', defaultVal: '' }
+    ];
+
+    customTexts.forEach((ct, i) => {
+      const found = updatedElements.find(e => e.id === ct.id);
+      if (!found) {
+        hasChanges = true;
+        updatedElements.push({
+          id: ct.id,
+          name: ct.name,
+          type: 'text',
+          field: `custom_text_${i + 1}`,
+          customValue: ct.defaultVal,
+          prefix: '',
+          xMm: 2.0,
+          yMm: 24.0 + (i * 3.5),
+          fontSizePt: 14,
+          fontFamily: 'A0N',
+          visible: false
+        });
+      }
+    });
+
+    // ⭐️ 4. 자유 비율 이미지 / 로고 요소 자동 보장
+    if (!updatedElements.some(e => e.id === 'elem_image' || e.type === 'image')) {
+      hasChanges = true;
+      updatedElements.push({
+        id: 'elem_image',
+        name: '이미지 / 로고',
+        type: 'image',
+        imageDataUrl: '',
+        widthMm: 18.0,
+        heightMm: 12.0,
+        xMm: 50.0,
+        yMm: 2.0,
+        visible: false
+      });
+    }
+
     if (hasChanges) {
       setTemplate(prev => ({
         ...prev,
@@ -237,6 +281,24 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
     const current = selectedElem.fontSizePt || 20;
     const next = Math.max(6, Math.min(60, current + delta));
     handleElemPropChange('fontSizePt', next);
+  };
+
+  // ⭐️ [이미지 파일 업로드 ➔ Base64 DataURL]
+  const handleImageUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('이미지 파일(PNG, JPG, SVG 등)만 선택할 수 있습니다.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (loadEvt) => {
+      const dataUrl = loadEvt.target.result;
+      handleElemPropChange('imageDataUrl', dataUrl);
+    };
+    reader.readAsDataURL(file);
   };
 
   // 캔버스 드래그 앤 드롭 이동
@@ -1012,6 +1074,87 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                   </div>
                 </>
               )}
+
+              {/* 이미지 요소 속성 (비율 고정 무시 자유 리사이징) */}
+              {selectedElem.type === 'image' && (
+                <>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '0.68rem', color: '#cbd5e1' }}>이미지 파일 선택</label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      style={{
+                        fontSize: '0.68rem',
+                        color: '#94a3b8',
+                        backgroundColor: '#0f172a',
+                        border: '1px solid #475569',
+                        borderRadius: '4px',
+                        padding: '3px'
+                      }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', width: '100%' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <label style={{ fontSize: '0.68rem', color: '#cbd5e1' }}>너비 (mm)</label>
+                      <input
+                        type="number"
+                        step="0.5"
+                        min="2"
+                        max="100"
+                        value={selectedElem.widthMm || 18}
+                        onChange={e => handleElemPropChange('widthMm', e.target.value)}
+                        style={{
+                          backgroundColor: '#0f172a',
+                          border: '1px solid #475569',
+                          borderRadius: '4px',
+                          padding: '3px 6px',
+                          color: '#f8fafc',
+                          fontSize: '0.72rem'
+                        }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <label style={{ fontSize: '0.68rem', color: '#cbd5e1' }}>높이 (mm)</label>
+                      <input
+                        type="number"
+                        step="0.5"
+                        min="2"
+                        max="100"
+                        value={selectedElem.heightMm || 12}
+                        onChange={e => handleElemPropChange('heightMm', e.target.value)}
+                        style={{
+                          backgroundColor: '#0f172a',
+                          border: '1px solid #475569',
+                          borderRadius: '4px',
+                          padding: '3px 6px',
+                          color: '#f8fafc',
+                          fontSize: '0.72rem'
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {selectedElem.imageDataUrl && (
+                    <div style={{ marginTop: '4px', textAlign: 'center' }}>
+                      <div style={{ fontSize: '0.65rem', color: '#94a3b8', marginBottom: '2px' }}>이미지 미리보기 (비율 무시)</div>
+                      <img
+                        src={selectedElem.imageDataUrl}
+                        alt="preview"
+                        style={{
+                          width: `${(selectedElem.widthMm || 18) * 3.5}px`,
+                          height: `${(selectedElem.heightMm || 12) * 3.5}px`,
+                          objectFit: 'fill',
+                          border: '1px solid #38bdf8',
+                          borderRadius: '2px',
+                          backgroundColor: '#ffffff'
+                        }}
+                      />
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           )}
         </div>
@@ -1086,7 +1229,7 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
               // 1. 텍스트 요소
               if (elem.type === 'text') {
                 let displayVal = elem.prefix || '';
-                if (elem.field === 'custom') {
+                if (elem.field === 'custom' || elem.field?.startsWith('custom_text_')) {
                   displayVal += (elem.customValue || '');
                 } else {
                   displayVal += (SAMPLE_ITEM[elem.field] || elem.field?.toUpperCase() || '');
@@ -1193,6 +1336,62 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                       outline: isElemSelected ? '2px solid #0284c7' : 'none'
                     }}
                   />
+                );
+              }
+
+              // 4. 이미지 요소 (비율 고정 무시 자유 리사이징)
+              if (elem.type === 'image') {
+                const imgWPx = (elem.widthMm || 18) * PX_PER_MM;
+                const imgHPx = (elem.heightMm || 12) * PX_PER_MM;
+
+                return (
+                  <div
+                    key={elem.id}
+                    onMouseDown={(e) => handleMouseDown(e, elem.id)}
+                    style={{
+                      position: 'absolute',
+                      left: `${leftPx}px`,
+                      top: `${topPx}px`,
+                      width: `${imgWPx}px`,
+                      height: `${imgHPx}px`,
+                      cursor: 'grab',
+                      outline: isElemSelected ? '2px solid #0284c7' : '1px dashed rgba(2, 132, 199, 0.3)',
+                      backgroundColor: isElemSelected ? 'rgba(56, 189, 248, 0.1)' : 'transparent',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      overflow: 'hidden'
+                    }}
+                  >
+                    {elem.imageDataUrl ? (
+                      <img
+                        src={elem.imageDataUrl}
+                        alt="logo"
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'fill',
+                          display: 'block',
+                          pointerEvents: 'none'
+                        }}
+                      />
+                    ) : (
+                      <div style={{
+                        width: '100%',
+                        height: '100%',
+                        border: '1px dashed #38bdf8',
+                        color: '#0284c7',
+                        fontSize: '9px',
+                        fontWeight: 700,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: 'rgba(2, 132, 199, 0.05)'
+                      }}>
+                        이미지 선택
+                      </div>
+                    )}
+                  </div>
                 );
               }
 
