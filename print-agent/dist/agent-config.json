@@ -1,0 +1,10 @@
+{
+  "printerName": "Apeos C2060",
+  "connectionType": "USB_RAW",
+  "printerHost": "127.0.0.1",
+  "printerPort": 9100,
+  "usbPort": "WSD-8b7e870c-5cb4-4715-9f45-882748bd0129",
+  "labelWidthMm": 72,
+  "labelHeightMm": 40,
+  "lastConfigured": "2026-08-15T06:21:55.762Z"
+}

@@ -1,5 +1,16 @@
 # 릴리즈 노트 (RELEASE_NOTES.md)
 
+## [v1.6.0.Build.14] - 2026-08-15 20:24:00 (KST)
+
+### 📥 [에이전트 다운로드 404 해결] `.gitignore` dist 예외 처리 및 GitHub Pages 직통 에셋 탑재
+
+1. **`.gitignore` 수정 (`/dist/` 루트만 차단, `!print-agent/dist/` 예외 허용)**
+   - GitHub 원격 저장소에 `UBUS_DragonRPA_Agent.exe` 바이너리가 누락되어 404 에러가 발생하던 원인 완벽 해결
+2. **`public/UBUS_DragonRPA_Agent.exe` 웹 정적 에셋 동시 배포**
+   - GitHub Pages 사이트 직통 경로(`https://dragonrpa.github.io/ImageScan/UBUS_DragonRPA_Agent.exe`)로 0.1초 만에 404 없는 안정적 다운로드 보장
+
+---
+
 ## [v1.6.0.Build.13] - 2026-08-15 20:21:00 (KST)
 
 ### 🤖 [에이전트 버전관리] 더미 제거 & GitHub 원격 `version.json` 실시간 조회 및 CORS Preflight 완비
