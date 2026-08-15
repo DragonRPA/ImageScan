@@ -814,6 +814,24 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                 />
               </div>
             </div>
+
+            {/* ⭐️ ZPL 공식 원점 규약 자동 산출 표시 */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              backgroundColor: '#0f172a',
+              padding: '4px 6px',
+              borderRadius: '4px',
+              border: '1px solid #1e293b',
+              fontSize: '0.62rem',
+              color: '#94a3b8'
+            }}>
+              <span>ZPL 자동 원점 (^LH):</span>
+              <span style={{ color: '#38bdf8', fontWeight: 700, fontFamily: 'monospace' }}>
+                ^LH{Number(template.paper?.widthMm || 72) < 104 ? Math.max(0, Math.round(((104 - Number(template.paper?.widthMm || 72)) / 2.0) * 8.0)) : 0},0 (^PW{Math.round(Number(template.paper?.widthMm || 72) * 8.0)})
+              </span>
+            </div>
           </div>
 
           {/* ═════════════════════════════════════════════════════════════════════ */}
