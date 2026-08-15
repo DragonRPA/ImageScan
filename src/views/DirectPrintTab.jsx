@@ -13,7 +13,8 @@ import {
   FolderOpen,
   Layers,
   Sparkles,
-  Volume2
+  Volume2,
+  RefreshCw
 } from 'lucide-react';
 import { getSupabaseClient, insertPrintQueue } from '../utils/supabaseClient';
 import {
@@ -29,7 +30,8 @@ import {
   setActivePrinterId,
   saveRegisteredPrinter,
   deleteRegisteredPrinter,
-  sendZplToPrinter
+  sendZplToPrinter,
+  fetchActualConnectedPrinters
 } from '../utils/printerManager';
 import { RealBarcodeSvg } from '../utils/barcode39';
 import { triggerSuccessFeedback } from '../utils/soundFeedback';
@@ -64,8 +66,11 @@ export default function DirectPrintTab({ onError, onOpenPrintModal }) {
   // 활성 프린터 객체
   const activePrinter = printers.find(p => p.id === activePrinterIdState) || printers[0];
 
-  // ⭐️ 마운트 시 온라인 DB 전체 서식 목록 실시간 동기화 (SSOT)
+  const [isScanningPrinters, setIsScanningPrinters] = useState(false);
+
+  // ⭐️ 마운트 시 실제 연결된 프린터 및 온라인 DB 전체 서식 목록 동기화
   useEffect(() => {
+    // 1. 온라인 DB 서식 동기화
     syncTemplatesWithBackend().then(syncedPresets => {
       if (syncedPresets && syncedPresets.length > 0) {
         setPresets(syncedPresets);
@@ -76,7 +81,42 @@ export default function DirectPrintTab({ onError, onOpenPrintModal }) {
         }
       }
     });
+
+    // 2. 실제 PC에 연결된 프린터 실시간 스캔 동기화
+    fetchActualConnectedPrinters().then(detectedPrinters => {
+      if (detectedPrinters && detectedPrinters.length > 0) {
+        setPrinters(detectedPrinters);
+        const currentActive = getActivePrinterId();
+        const exists = detectedPrinters.some(p => p.id === currentActive);
+        if (!exists) {
+          setActivePrinterIdState(detectedPrinters[0].id);
+          setActivePrinterId(detectedPrinters[0].id);
+        }
+      }
+    });
   }, []);
+
+  // ⭐️ 실제 컴퓨터 연결 프린터 수동 재검색
+  const handleDiscoverPrinters = async () => {
+    setIsScanningPrinters(true);
+    try {
+      const detected = await fetchActualConnectedPrinters();
+      if (detected && detected.length > 0) {
+        setPrinters(detected);
+        const currentActive = getActivePrinterId();
+        const exists = detected.some(p => p.id === currentActive);
+        if (!exists) {
+          setActivePrinterIdState(detected[0].id);
+          setActivePrinterId(detected[0].id);
+        }
+        setStatusMessage({ type: 'success', text: `컴퓨터에 연결된 실제 프린터 ${detected.length}대를 감지하였습니다.` });
+      }
+    } catch (err) {
+      setStatusMessage({ type: 'error', text: `프린터 검색 실패: ${err.message}` });
+    } finally {
+      setIsScanningPrinters(false);
+    }
+  };
 
   // 렌더링 시 입력창 항상 자동 포커스 유지
   useEffect(() => {
@@ -378,15 +418,27 @@ export default function DirectPrintTab({ onError, onOpenPrintModal }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <Printer size={13} /> 프린터 선택 및 등록
+              <Printer size={13} /> 프린터 선택 및 연결
             </label>
-            <button
-              onClick={() => setIsPrinterModalOpen(true)}
-              className="btn btn-outline"
-              style={{ fontSize: '0.65rem', padding: '1px 6px', borderColor: '#38bdf8', color: '#38bdf8' }}
-            >
-              <Plus size={10} /> 프린터 등록
-            </button>
+            <div style={{ display: 'flex', gap: '4px' }}>
+              <button
+                onClick={handleDiscoverPrinters}
+                disabled={isScanningPrinters}
+                className="btn btn-outline"
+                style={{ fontSize: '0.65rem', padding: '1px 6px', borderColor: '#4ade80', color: '#4ade80', display: 'flex', alignItems: 'center', gap: '3px' }}
+                title="내 컴퓨터에 연결된 실제 프린터 실시간 검색"
+              >
+                <RefreshCw size={10} className={isScanningPrinters ? 'spin' : ''} />
+                {isScanningPrinters ? '검색중...' : '실제 프린터 검색'}
+              </button>
+              <button
+                onClick={() => setIsPrinterModalOpen(true)}
+                className="btn btn-outline"
+                style={{ fontSize: '0.65rem', padding: '1px 6px', borderColor: '#38bdf8', color: '#38bdf8' }}
+              >
+                <Plus size={10} /> 등록
+              </button>
+            </div>
           </div>
           <select
             value={activePrinterIdState}
@@ -404,7 +456,7 @@ export default function DirectPrintTab({ onError, onOpenPrintModal }) {
           >
             {printers.map(p => (
               <option key={p.id} value={p.id}>
-                {p.name} ({p.type})
+                {p.isHardwareDetected ? `🟢 ${p.name}` : p.name}
               </option>
             ))}
           </select>
