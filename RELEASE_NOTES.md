@@ -1,5 +1,27 @@
 # 릴리즈 노트 (RELEASE_NOTES.md)
 
+## [v1.2.0.Build.1] - 2026-08-15 12:35:00 (KST)
+
+### 🏛️ 범용 동적 스키마 빌더 & 3대 바코드(Code39/128/QR) & 백엔드 라벨 서식 통합
+
+1. **글로벌 헌장 3.1 무수식어 건조한 명사·동사 UI 표준화 영구 학습 (`AGENTS.md`)**
+   - 형용사, 수식어, 불필요한 가이드 텍스트 전면 배제 및 건조한 명사(+동사) 단일 표준 엄격 강제
+
+2. **범용 동적 스키마 빌더 & DDL 자동 패치 엔진 신설 (`SchemaBuilderTab.jsx`, `dynamicSchema.js`)**
+   - 사용자 정의 헤더 자유 추가/수정/삭제 및 필수 키 인덱스(Primary Key) 라디오 지정
+   - `exec_schema_patch` RPC 함수 및 동적 DDL 패치 트랜잭션 구축
+
+3. **3대 바코드 & QR 코드 엔진 & 하단 텍스트 토글 지원 (`labelTemplate.js`, `LabelDesignerTab.jsx`)**
+   - `Code 39`, `Code 128`, `QR Code` 3종 선택 지원
+   - `[v] 하단 텍스트 표시` 체크박스로 바코드 선만 인쇄할지 하단 텍스트를 함께 인쇄할지 즉시 제어
+   - Supabase `label_templates` 테이블 백엔드 동기화 (전사 기기 100% 공유)
+
+4. **모바일 스캔 큐 & 범용 프린트 큐 파이프라인 개편 (`schema.sql`, `supabaseClient.js`, `zebra-agent.cjs`)**
+   - `scan_records` 테이블 신설 및 스키마 기반 동적 수집/검색 지원
+   - `print_queue`에 사전 컴파일된 `zpl_payload` 지원 $\to$ PC 에이전트(Zebra GK-420D)로 즉시 무변형 직통 인쇄
+
+---
+
 ## [v1.1.0.Build.1] - 2026-08-15 12:05:00 (KST)
 
 ### 🎨 PC 라벨 서식 디자이너 (Visual Label Designer) 탭 신설 & 드래그 앤 드롭 캔버스 구축

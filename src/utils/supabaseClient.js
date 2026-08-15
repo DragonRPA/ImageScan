@@ -237,22 +237,26 @@ export function subscribeRealtimeScans(onInsertCallback) {
 
 /**
  * Insert a single confirmed asset record into the print_queue table.
- * Called by MobileScannerView when the user confirms an IMEI/asset match.
- * The PC local agent (zebra-agent.mjs) watches this table via Realtime
- * and immediately sends a ZPL print job to the Zebra GK-420D.
- *
- * @param {Object} item - { asset_no, imei, mac_address, serial_no }
- * @returns {Promise<Object>} - inserted row data
+ * Supports dynamic ZPL payload, key_value and record_data.
  */
-export async function insertPrintQueue(item) {
+export async function insertPrintQueue(item, templateOverride = null) {
   const client = getSupabaseClient();
   if (!client) {
     console.warn('[print_queue] Supabase 미연결 - 큐 등록 건너뜀');
     return null;
   }
 
+  const { getStoredLabelTemplate, generateDynamicZpl } = await import('./labelTemplate');
+  const template = templateOverride || getStoredLabelTemplate();
+  const zpl = generateDynamicZpl(item, template);
+
+  const keyValue = item.key_value || item.asset_no || item.assetNo || item.imei || 'RECORD';
+
   const payload = {
-    asset_no:     item.asset_no     || item.assetNo  || '',
+    key_value:    String(keyValue),
+    record_data:  item,
+    zpl_payload:  zpl,
+    asset_no:     item.asset_no     || item.assetNo  || keyValue,
     imei:         item.imei                           || '',
     mac_address:  item.mac_address  || item.macAddress || '',
     serial_no:    item.serial_no    || item.serialNo  || '',

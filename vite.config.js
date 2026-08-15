@@ -5,4 +5,9 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   base: '/ImageScan/',
+  server: {
+    watch: {
+      ignored: ['**/print-agent/**', '**/*.exe', '**/*.zpl', '**/*.ps1']
+    }
+  }
 })

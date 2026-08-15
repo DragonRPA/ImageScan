@@ -51,82 +51,82 @@ export default function App() {
   };
 
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: deviceMode === 'mobile' ? '4px' : '12px' }}>
-      {/* Header Bar - Rendered ONLY on PC View */}
+    <div style={{ width: '100%', maxWidth: '100%', margin: '0', padding: deviceMode === 'mobile' ? '4px' : '6px 10px' }}>
+      {/* Header Bar */}
       {deviceMode === 'pc' && (
         <header style={{
           display: 'flex',
           flexWrap: 'wrap',
-          justify: 'space-between',
+          justifyContent: 'space-between',
           alignItems: 'center',
-          padding: '12px 16px',
+          padding: '6px 12px',
           backgroundColor: '#1e293b',
-          borderRadius: '12px',
+          borderRadius: '8px',
           border: '1px solid #334155',
-          marginBottom: '16px',
-          gap: '10px'
+          marginBottom: '8px',
+          gap: '8px'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <div style={{
               backgroundColor: 'var(--primary)',
               color: '#fff',
-              padding: '6px 10px',
-              borderRadius: '8px',
+              padding: '4px 8px',
+              borderRadius: '6px',
               fontWeight: 800,
-              fontSize: '1rem',
+              fontSize: '0.85rem',
               letterSpacing: '0.5px'
             }}>
               IMEI SCANNER
             </div>
             <div>
-              <h1 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: '#f8fafc' }}>
-                PC 라벨 프린터 ZPL 직통 출력 대시보드
+              <h1 style={{ fontSize: '0.9rem', fontWeight: 700, margin: 0, color: '#f8fafc' }}>
+                라벨 출력 관리
               </h1>
-              <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
-                버전: v1.1.0.Build.1 | 2026-08-15
+              <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>
+                v1.2.0.Build.1 | 2026-08-15
               </span>
             </div>
           </div>
 
           {/* Mode Switcher & DB Config Status */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <button
               className="btn btn-outline"
               style={{
-                padding: '4px 10px',
-                fontSize: '0.75rem',
+                padding: '4px 8px',
+                fontSize: '0.72rem',
                 borderColor: isConfigured ? 'var(--accent-green)' : '#f59e0b',
                 color: isConfigured ? '#6ee7b7' : '#fef08a'
               }}
               onClick={() => setIsConfigOpen(true)}
             >
-              <Database size={14} />
-              {isConfigured ? 'Supabase 연동됨' : 'DB 연동 필요'}
+              <Database size={13} />
+              {isConfigured ? 'DB 연결됨' : 'DB 설정'}
             </button>
 
             {/* Device View Switcher Tabs */}
             <div style={{
               backgroundColor: '#0f172a',
-              padding: '3px',
-              borderRadius: '8px',
+              padding: '2px',
+              borderRadius: '6px',
               display: 'flex',
-              gap: '3px'
+              gap: '2px'
             }}>
               <button
                 className={`btn ${deviceMode === 'mobile' ? 'btn-primary' : 'btn-outline'}`}
-                style={{ padding: '4px 10px', fontSize: '0.75rem', border: 'none' }}
+                style={{ padding: '3px 8px', fontSize: '0.72rem', border: 'none' }}
                 onClick={() => setDeviceMode('mobile')}
               >
-                <Smartphone size={13} />
-                모바일 뷰
+                <Smartphone size={12} />
+                모바일
               </button>
               <button
                 className={`btn ${deviceMode === 'pc' ? 'btn-primary' : 'btn-outline'}`}
-                style={{ padding: '4px 10px', fontSize: '0.75rem', border: 'none' }}
+                style={{ padding: '3px 8px', fontSize: '0.72rem', border: 'none' }}
                 onClick={() => setDeviceMode('pc')}
               >
-                <Monitor size={13} />
-                PC 대시보드 뷰
+                <Monitor size={12} />
+                PC
               </button>
             </div>
           </div>

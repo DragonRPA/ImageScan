@@ -418,7 +418,8 @@ async function processQueueItem(row, supabase) {
   if (le) { log('WARN', '선점 실패 (이미 처리 중?)', le.message); return; }
 
   try {
-    const zpl = buildZpl(row);
+    // ★ row.zpl_payload 가 있으면 디자이너 템플릿(Code39/128/QR 등) 서식 그대로 출력
+    const zpl = row.zpl_payload || buildZpl(row);
     if (config.connectionType === 'USB_RAW') {
       // ★ printerName으로 winspool RAW 전송 (usbPort는 UI 표시용만)
       await sendZplViaWindowsPort(zpl, config.printerName);
