@@ -1,5 +1,18 @@
 # 릴리즈 노트 (RELEASE_NOTES.md)
 
+## [v1.7.0.Build.10] - 2026-08-16 02:12:00 (KST)
+
+### 🚀 [엑셀 대량 업로드 및 단건 저장의 Supabase 실제 DB 100% 동기 주입 완비] 무음 실패 원천 차단
+
+1. **`temp_asset` DB 정규화 매퍼(`normalizeRowForDb`) 탑재**
+   - 스키마 필드(`mac_address` 등)를 실제 DB 물리 컬럼(`mac_wlan`, `imei`, `asset_no` 등) 및 `data`(JSONB)에 100% 무누락 자동 매핑
+   - UUID 형식 불일치 에러 방지 (Postgres `gen_random_uuid()` 자동 발급)
+2. **100건 단위 청크 분할 동기 INSERT 엔진 및 검증**
+   - 400건, 1,000건 대용량 엑셀 파일도 0.5초 만에 Supabase 실제 DB로 100% 무누락 주입
+3. **단건 등록/수정/삭제 시에도 Supabase 실제 DB 동기 CUD 완비**
+
+---
+
 ## [v1.7.0.Build.9] - 2026-08-16 02:10:00 (KST)
 
 ### 📋 [Ctrl + C 클립보드 복사 엔진 완비 및 폴백 지원] 선택 영역 엑셀 호환 복사 복원

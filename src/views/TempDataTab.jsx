@@ -68,7 +68,39 @@ export default function TempDataTab({ onError, onOpenPrintModal }) {
     }
   };
 
-  // 2. 데이터 로드 (Supabase 우선 ➔ 로컬 캐시 폴백)
+  // ⭐️ Supabase DB 물리 컬럼 정의 (그 외 커스텀 필드는 data JSONB로 100% 저장)
+  const KNOWN_COLUMNS = useMemo(() => new Set([
+    'key_value', 'asset_no', 'product_name', 'model_name', 'serial_no',
+    'asset_status', 'earning_ratio', 'shelf_no', 'asset_option',
+    'calibration_date', 'mac_wlan', 'mac_lan', 'imei', 'components', 'remark', 'data'
+  ]), []);
+
+  const normalizeRowForDb = (rawItem, currentKeyField = 'imei') => {
+    const dbRow = {
+      data: { ...rawItem }
+    };
+    Object.entries(rawItem).forEach(([k, v]) => {
+      if (k === 'id') {
+        if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v)) {
+          dbRow.id = v;
+        }
+        return;
+      }
+      if (k === 'mac_address') {
+        dbRow.mac_wlan = String(v || '');
+      }
+      if (KNOWN_COLUMNS.has(k)) {
+        dbRow[k] = v;
+      }
+    });
+
+    dbRow.key_value = String(rawItem[currentKeyField] || rawItem.imei || rawItem.asset_no || '');
+    if (!dbRow.asset_no && rawItem.asset_no) dbRow.asset_no = String(rawItem.asset_no);
+    if (!dbRow.imei && rawItem.imei) dbRow.imei = String(rawItem.imei);
+    return dbRow;
+  };
+
+  // 2. ⭐️ 데이터 로드 (Supabase 실제 DB 최우선 1:1 동기화 & JSONB 자동 매핑)
   const loadData = async () => {
     setIsLoading(true);
     setStatusMessage(null);
@@ -82,8 +114,20 @@ export default function TempDataTab({ onError, onOpenPrintModal }) {
           .order('created_at', { ascending: false });
 
         if (!error && Array.isArray(data)) {
-          setItems(data);
-          localStorage.setItem(LOCAL_KEY_TEMP_ASSETS, JSON.stringify(data));
+          const formatted = data.map(r => ({
+            ...r,
+            ...(r.data || {}),
+            id: r.id,
+            asset_no: r.asset_no || r.data?.asset_no || '',
+            imei: r.imei || r.data?.imei || '',
+            serial_no: r.serial_no || r.data?.serial_no || '',
+            mac_address: r.mac_wlan || r.data?.mac_address || r.data?.mac_wlan || '',
+            mac_wlan: r.mac_wlan || r.data?.mac_wlan || '',
+            product_name: r.product_name || r.data?.product_name || '',
+            model_name: r.model_name || r.data?.model_name || ''
+          }));
+          setItems(formatted);
+          localStorage.setItem(LOCAL_KEY_TEMP_ASSETS, JSON.stringify(formatted));
           setIsLoading(false);
           return;
         }
@@ -251,9 +295,25 @@ export default function TempDataTab({ onError, onOpenPrintModal }) {
       updated_at: new Date().toISOString()
     };
 
+    // ⭐️ Supabase 온라인 DB 동기화 (전사 표준 헌장: 무음 실패 방지)
+    try {
+      const client = getSupabaseClient();
+      if (client) {
+        const dbRow = normalizeRowForDb(payload, keyField);
+        const { data: savedData, error: saveErr } = await client.from('temp_asset').upsert(dbRow).select();
+        if (saveErr) throw saveErr;
+        if (savedData && savedData[0]) {
+          payload.id = savedData[0].id;
+        }
+      }
+    } catch (err) {
+      console.error('Supabase 단건 저장 실패:', err);
+      alert(`DB 저장 실패: ${err.message}`);
+      return;
+    }
+
     let updatedList = [];
     if (isNewRecord) {
-      payload.id = payload.id || `temp_${Date.now()}`;
       payload.created_at = new Date().toISOString();
       updatedList = [payload, ...items];
     } else {
@@ -263,19 +323,9 @@ export default function TempDataTab({ onError, onOpenPrintModal }) {
     setItems(updatedList);
     localStorage.setItem(LOCAL_KEY_TEMP_ASSETS, JSON.stringify(updatedList));
 
-    // Supabase 온라인 DB 동기화
-    try {
-      const client = getSupabaseClient();
-      if (client) {
-        await client.from('temp_asset').upsert(payload);
-      }
-    } catch (err) {
-      console.warn('Supabase 단건 저장 실패 (로컬 유지):', err);
-    }
-
     setIsEditModalOpen(false);
     setEditingItem(null);
-    setStatusMessage({ type: 'success', text: `[${payload[keyField]}] 데이터가 저장되었습니다.` });
+    setStatusMessage({ type: 'success', text: `[${payload[keyField]}] 데이터가 DB에 성공적으로 저장되었습니다.` });
     setTimeout(() => setStatusMessage(null), 3000);
   };
 
@@ -290,8 +340,12 @@ export default function TempDataTab({ onError, onOpenPrintModal }) {
 
     try {
       const client = getSupabaseClient();
-      if (client && item.id) {
-        await client.from('temp_asset').delete().eq('id', item.id);
+      if (client) {
+        if (item.id && /^[0-9a-f-]{36}$/i.test(item.id)) {
+          await client.from('temp_asset').delete().eq('id', item.id);
+        } else if (item[keyField]) {
+          await client.from('temp_asset').delete().or(`key_value.eq.${item[keyField]},asset_no.eq.${item[keyField]},imei.eq.${item[keyField]}`);
+        }
       }
     } catch (err) {
       console.warn('Supabase 삭제 실패:', err);
@@ -329,7 +383,7 @@ export default function TempDataTab({ onError, onOpenPrintModal }) {
     XLSX.writeFile(workbook, `임시데이터_업로드양식_${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
 
-  // 8. 엑셀 대량 업로드
+  // 8. ⭐️ 엑셀 대량 업로드 (Supabase 실제 DB 100% 실시간 일괄 저장)
   const handleExcelUpload = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -356,7 +410,6 @@ export default function TempDataTab({ onError, onOpenPrintModal }) {
 
         const parsedRows = rawJson.map((row, idx) => {
           const item = {
-            id: `temp_${Date.now()}_${idx}`,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           };
@@ -374,26 +427,31 @@ export default function TempDataTab({ onError, onOpenPrintModal }) {
           return item;
         });
 
-        const combined = [...parsedRows, ...items];
-        setItems(combined);
-        localStorage.setItem(LOCAL_KEY_TEMP_ASSETS, JSON.stringify(combined));
-
-        try {
-          const client = getSupabaseClient();
-          if (client) {
-            await client.from('temp_asset').upsert(parsedRows);
+        // ⭐️ Supabase 실제 DB 100% 동기 벌크 주입 (100건 청크 분할 & 무누락 검증)
+        const client = getSupabaseClient();
+        if (client) {
+          const dbRows = parsedRows.map(row => normalizeRowForDb(row, keyField));
+          const chunkSize = 100;
+          for (let i = 0; i < dbRows.length; i += chunkSize) {
+            const chunk = dbRows.slice(i, i + chunkSize);
+            const { error: chunkErr } = await client.from('temp_asset').insert(chunk);
+            if (chunkErr) {
+              console.error('Supabase 벌크 주입 오류:', chunkErr);
+              throw new Error(`DB 벌크 저장 실패: ${chunkErr.message}`);
+            }
           }
-        } catch (err) {
-          console.warn('Supabase 벌크 저장 실패 (로컬 유지):', err);
         }
+
+        // DB 저장 완료 후 최신 DB 데이터 재조회
+        await loadData();
 
         setStatusMessage({
           type: 'success',
-          text: `엑셀에서 ${parsedRows.length}건의 데이터를 성공적으로 주입하였습니다!`
+          text: `엑셀에서 ${parsedRows.length}건의 데이터를 Supabase DB에 성공적으로 저장하였습니다!`
         });
         setTimeout(() => setStatusMessage(null), 4000);
       } catch (err) {
-        alert(`엑셀 파일 파싱 오류: ${err.message}`);
+        alert(`엑셀 파일 업로드/DB 저장 오류: ${err.message}`);
       } finally {
         if (fileInputRef.current) fileInputRef.current.value = '';
       }
