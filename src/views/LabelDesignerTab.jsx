@@ -265,7 +265,12 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
     const item = { ...base };
     tableFields.forEach(f => {
       if (item[f.id] === undefined) {
-        item[f.id] = f.id.toUpperCase();
+        if (f.id === 'asset_no') item[f.id] = '224011319';
+        else if (f.id === 'imei') item[f.id] = '351379300225052';
+        else if (f.id === 'serial_no') item[f.id] = 'RSKL60F0CZW';
+        else if (f.id === 'mac_address') item[f.id] = '4C:EB:B0:B5:7A:51';
+        else if (f.id === 'scanned_at') item[f.id] = '2026-08-16 02:25';
+        else item[f.id] = f.name;
       }
     });
     return item;
