@@ -9,13 +9,17 @@ import {
   CheckSquare,
   Square,
   Plus,
+  FolderOpen,
+  Trash2,
   Database,
-  X
+  X,
+  Minus
 } from 'lucide-react';
 import {
   DEFAULT_LABEL_TEMPLATE,
   getStoredLabelTemplate,
   saveStoredLabelTemplate,
+  deleteStoredLabelTemplate,
   fetchBackendLabelTemplate,
   saveBackendLabelTemplate,
   generateDynamicZpl,
@@ -71,10 +75,10 @@ const DEFAULT_SAMPLE_TEMP = {
 export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
   const [template, setTemplate] = useState(getStoredLabelTemplate);
   const [selectedElemId, setSelectedElemId] = useState('elem_asset_no');
-  const [activeRightTab, setActiveRightTab] = useState('preview');
   const [isSaved, setIsSaved] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
   const [presets, setPresets] = useState(getAllPresets);
+  const [showZplCode, setShowZplCode] = useState(false);
 
   // ⭐️ [디자인 추가] 모달 상태
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -83,14 +87,17 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
   const [newDesignWidth, setNewDesignWidth] = useState(72);
   const [newDesignHeight, setNewDesignHeight] = useState(40);
 
+  // ⭐️ [디자인 불러오기] 관리 모달 상태
+  const [isLoadModalOpen, setIsLoadModalOpen] = useState(false);
+
   const [draggingId, setDraggingId] = useState(null);
   const [dragStartPos, setDragStartPos] = useState({ x: 0, y: 0 });
   const [elemStartPos, setElemStartPos] = useState({ xMm: 0, yMm: 0 });
 
   const canvasRef = useRef(null);
 
-  // 캔버스 화면 픽셀 배율 (1mm당 8.5px로 시원하게 확대)
-  const PX_PER_MM = 8.5;
+  // 캔버스 화면 픽셀 배율 (1mm당 9.0px로 실제 용지 크기 정밀 비례)
+  const PX_PER_MM = 9.0;
   const canvasWidthPx = (template.paper?.widthMm || 72) * PX_PER_MM;
   const canvasHeightPx = (template.paper?.heightMm || 40) * PX_PER_MM;
 
@@ -118,7 +125,6 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
     currentTableSchema.fields.forEach(f => schemaFieldMap.set(f.id, f));
 
     let hasChanges = false;
-    // 1. 기존 text 요소의 name을 최신 스키마 표시명으로 동기화
     const updatedElements = template.elements.map(elem => {
       if (elem.type === 'text' && elem.field && schemaFieldMap.has(elem.field)) {
         const schemaField = schemaFieldMap.get(elem.field);
@@ -130,7 +136,6 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
       return elem;
     });
 
-    // 2. 스키마에 정의된 모든 필드가 템플릿 elements에 존재하는지 확인 (없으면 추가)
     const existingFieldIds = new Set(
       template.elements.filter(e => e.type === 'text').map(e => e.field)
     );
@@ -205,97 +210,114 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
   const handleToggleVisible = (id) => {
     setTemplate(prev => ({
       ...prev,
-      elements: prev.elements.map(elem => {
-        if (elem.id === id) return { ...elem, visible: !elem.visible };
-        return elem;
-      })
+      elements: prev.elements.map(e => e.id === id ? { ...e, visible: !e.visible } : e)
     }));
     setIsSaved(false);
   };
 
-  const handleElemPropChange = (field, value) => {
+  const handleElemPropChange = (prop, val) => {
     if (!selectedElemId) return;
     setTemplate(prev => ({
       ...prev,
-      elements: prev.elements.map(elem => {
-        if (elem.id === selectedElemId) {
-          return {
-            ...elem,
-            [field]: (field === 'xMm' || field === 'yMm' || field === 'fontSizePt' || field === 'heightMm' || field === 'widthMm' || field === 'thicknessMm' || field === 'qrScale')
-              ? Number(value)
-              : typeof value === 'boolean' ? value : value
-          };
+      elements: prev.elements.map(e => {
+        if (e.id === selectedElemId) {
+          const numProps = ['xMm', 'yMm', 'fontSizePt', 'heightMm', 'qrScale', 'widthMm', 'thicknessMm'];
+          const parsed = numProps.includes(prop) ? (Number(val) || 0) : val;
+          return { ...e, [prop]: parsed };
         }
-        return elem;
+        return e;
       })
     }));
     setIsSaved(false);
   };
 
+  // ⭐️ [폰트 크기 1pt 단위 조작 헬퍼]
+  const handleAdjustFontSize = (delta) => {
+    if (!selectedElem || selectedElem.type !== 'text') return;
+    const current = selectedElem.fontSizePt || 20;
+    const next = Math.max(6, Math.min(60, current + delta));
+    handleElemPropChange('fontSizePt', next);
+  };
+
+  // 캔버스 드래그 앤 드롭 이동
   const handleMouseDown = (e, elemId) => {
     e.stopPropagation();
     setSelectedElemId(elemId);
     setDraggingId(elemId);
     setDragStartPos({ x: e.clientX, y: e.clientY });
-
-    const targetElem = template.elements.find(el => el.id === elemId);
-    if (targetElem) {
-      setElemStartPos({ xMm: targetElem.xMm, yMm: targetElem.yMm });
+    const target = template.elements.find(el => el.id === elemId);
+    if (target) {
+      setElemStartPos({ xMm: target.xMm, yMm: target.yMm });
     }
   };
 
-  useEffect(() => {
-    const handleMouseMove = (e) => {
-      if (!draggingId) return;
+  const handleMouseMove = (e) => {
+    if (!draggingId) return;
+    const dxPx = e.clientX - dragStartPos.x;
+    const dyPx = e.clientY - dragStartPos.y;
+    const dxMm = dxPx / PX_PER_MM;
+    const dyMm = dyPx / PX_PER_MM;
 
-      const deltaX = e.clientX - dragStartPos.x;
-      const deltaY = e.clientY - dragStartPos.y;
+    const rawX = elemStartPos.xMm + dxMm;
+    const rawY = elemStartPos.yMm + dyMm;
+    // 0.5mm 단위 스냅
+    const snappedX = Math.round(rawX * 2) / 2;
+    const snappedY = Math.round(rawY * 2) / 2;
 
-      const deltaXmm = deltaX / PX_PER_MM;
-      const deltaYmm = deltaY / PX_PER_MM;
+    const clampedX = Math.max(0, Math.min(template.paper.widthMm - 2, snappedX));
+    const clampedY = Math.max(0, Math.min(template.paper.heightMm - 2, snappedY));
 
-      const rawX = Math.max(0, Math.min(template.paper.widthMm - 5, elemStartPos.xMm + deltaXmm));
-      const rawY = Math.max(0, Math.min(template.paper.heightMm - 2, elemStartPos.yMm + deltaYmm));
-      const snapX = Math.round(rawX * 4) / 4;
-      const snapY = Math.round(rawY * 4) / 4;
+    setTemplate(prev => ({
+      ...prev,
+      elements: prev.elements.map(el => {
+        if (el.id === draggingId) {
+          return { ...el, xMm: clampedX, yMm: clampedY };
+        }
+        return el;
+      })
+    }));
+    setIsSaved(false);
+  };
 
-      setTemplate(prev => ({
-        ...prev,
-        elements: prev.elements.map(el => {
-          if (el.id === draggingId) {
-            return { ...el, xMm: snapX, yMm: snapY };
-          }
-          return el;
-        })
-      }));
-      setIsSaved(false);
-    };
-
-    const handleMouseUp = () => {
-      if (draggingId) setDraggingId(null);
-    };
-
-    if (draggingId) {
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
-    }
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [draggingId, dragStartPos, elemStartPos, template.paper.widthMm, template.paper.heightMm]);
-
-  const handleSave = async () => {
-    await saveBackendLabelTemplate(template);
-    setIsSaved(true);
-    setTimeout(() => setIsSaved(false), 2000);
+  const handleMouseUp = () => {
+    setDraggingId(null);
   };
 
   const handleReset = () => {
-    if (window.confirm('서식을 기본값으로 초기화하시겠습니까?')) {
-      setTemplate(DEFAULT_LABEL_TEMPLATE);
-      saveBackendLabelTemplate(DEFAULT_LABEL_TEMPLATE);
-      setSelectedElemId('elem_asset_no');
+    if (window.confirm('서식 설정을 기본값으로 되돌리시겠습니까?')) {
+      const def = createEmptyTemplate('기본 서식', 'asset', 72, 40);
+      setTemplate(def);
+      setSelectedElemId(def.elements[0]?.id || 'elem_asset_no');
+      saveStoredLabelTemplate(def);
+      setIsSaved(true);
+    }
+  };
+
+  // ⭐️ [수정 저장] 현재 서식 저장
+  const handleSave = async () => {
+    saveStoredLabelTemplate(template);
+    setPresets(getAllPresets());
+    try {
+      await saveBackendLabelTemplate(template);
+    } catch (err) {
+      console.warn('백엔드 템플릿 저장 실패 (로컬 보존됨):', err);
+    }
+    setIsSaved(true);
+    setTimeout(() => setIsSaved(false), 2500);
+  };
+
+  // ⭐️ [디자인 삭제] 현재 서식 삭제
+  const handleDeleteCurrentDesign = async () => {
+    if (presets.length <= 1) {
+      alert('최소 1개의 라벨 서식은 유지되어야 합니다.');
+      return;
+    }
+    if (window.confirm(`'${template.name}' 서식을 삭제하시겠습니까?`)) {
+      await deleteStoredLabelTemplate(template.templateId);
+      const updated = getAllPresets();
+      setPresets(updated);
+      setTemplate(updated[0] || DEFAULT_LABEL_TEMPLATE);
+      setSelectedElemId(updated[0]?.elements[0]?.id || 'elem_asset_no');
     }
   };
 
@@ -305,7 +327,7 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
       await insertPrintQueue({
         asset_no: SAMPLE_ITEM.asset_no,
         imei: SAMPLE_ITEM.imei,
-        mac_address: SAMPLE_ITEM.mac_address,
+        mac_address: SAMPLE_ITEM.mac_address || SAMPLE_ITEM.mac_wlan,
         serial_no: SAMPLE_ITEM.serial_no
       }, template);
       alert('테스트 인쇄 요청이 등록되었습니다.');
@@ -321,15 +343,6 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
   };
 
   const currentZpl = generateDynamicZpl(SAMPLE_ITEM, template);
-
-  const handleSelectPreset = (presetId) => {
-    const found = presets.find(p => p.templateId === presetId);
-    if (found) {
-      setTemplate(found);
-      saveStoredLabelTemplate(found);
-      setSelectedElemId(found.elements[0]?.id || 'elem_asset_no');
-    }
-  };
 
   // ⭐️ [디자인 추가] 모달 열기
   const handleOpenCreateModal = () => {
@@ -360,6 +373,35 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
     setIsCreateModalOpen(false);
   };
 
+  // ⭐️ [디자인 불러오기] 서식 선택
+  const handleLoadDesign = (presetId) => {
+    const found = presets.find(p => p.templateId === presetId);
+    if (found) {
+      setTemplate(found);
+      saveStoredLabelTemplate(found);
+      setSelectedElemId(found.elements[0]?.id || 'elem_asset_no');
+      setIsLoadModalOpen(false);
+    }
+  };
+
+  // ⭐️ [디자인 불러오기 모달 내 삭제]
+  const handleDeleteDesignInModal = async (presetId, name, e) => {
+    e.stopPropagation();
+    if (presets.length <= 1) {
+      alert('최소 1개의 라벨 서식은 유지되어야 합니다.');
+      return;
+    }
+    if (window.confirm(`'${name}' 서식을 영구 삭제하시겠습니까?`)) {
+      await deleteStoredLabelTemplate(presetId);
+      const updated = getAllPresets();
+      setPresets(updated);
+      if (template.templateId === presetId) {
+        setTemplate(updated[0] || DEFAULT_LABEL_TEMPLATE);
+        setSelectedElemId(updated[0]?.elements[0]?.id || 'elem_asset_no');
+      }
+    }
+  };
+
   // ⭐️ 대상 테이블 전환 (asset <-> temp_asset)
   const handleSwitchTargetTable = (tableId) => {
     if (template.targetTable === tableId) return;
@@ -369,6 +411,7 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
       targetTable: tableId,
       schemaId: nextSchema.id
     }));
+    setIsSaved(false);
   };
 
   return (
@@ -379,7 +422,7 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
       color: '#f8fafc',
       width: '100%'
     }}>
-      {/* Top Action Bar */}
+      {/* ── Top Action Bar ────────────────────────────────────────── */}
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
@@ -391,51 +434,61 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
         flexWrap: 'wrap',
         gap: '6px'
       }}>
-        {/* Left: Title & Presets & Active Printer Status */}
+        {/* Left: Title & Actions & Active Template Badge */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           <Sliders size={16} style={{ color: '#38bdf8' }} />
           <span style={{ fontSize: '0.85rem', fontWeight: 700 }}>라벨 서식 디자인</span>
 
-          {/* ★ 다중 서식 프리셋 선택 드롭다운 & [디자인 추가] 버튼 */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <select
-              value={template.templateId}
-              onChange={e => handleSelectPreset(e.target.value)}
-              style={{
-                backgroundColor: '#0f172a',
-                border: '1px solid #38bdf8',
-                borderRadius: '4px',
-                padding: '3px 8px',
-                color: '#38bdf8',
-                fontSize: '0.75rem',
-                fontWeight: 600
-              }}
-            >
-              {presets.map(p => (
-                <option key={p.templateId} value={p.templateId}>
-                  {p.name} ({p.targetTable === 'temp_asset' ? '임시자산' : '자산'} | {p.paper?.widthMm || 72}×{p.paper?.heightMm || 40}mm)
-                </option>
-              ))}
-            </select>
-            <button
-              onClick={handleOpenCreateModal}
-              className="btn btn-primary"
-              style={{
-                fontSize: '0.68rem',
-                padding: '3px 9px',
-                backgroundColor: '#0284c7',
-                borderColor: '#38bdf8',
-                color: '#ffffff',
-                fontWeight: 700,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '3px'
-              }}
-              title="새로운 라벨 서식 디자인 추가"
-            >
-              <Plus size={12} /> 디자인 추가
-            </button>
-          </div>
+          {/* 현재 서식명 표기 */}
+          <span style={{
+            fontSize: '0.75rem',
+            fontWeight: 700,
+            color: '#38bdf8',
+            backgroundColor: '#0f172a',
+            padding: '3px 8px',
+            borderRadius: '4px',
+            border: '1px solid #0284c7'
+          }}>
+            {template.name} ({template.paper?.widthMm}×{template.paper?.heightMm}mm)
+          </span>
+
+          {/* [디자인 추가] 버튼 */}
+          <button
+            onClick={handleOpenCreateModal}
+            className="btn btn-primary"
+            style={{
+              fontSize: '0.68rem',
+              padding: '3px 9px',
+              backgroundColor: '#0284c7',
+              borderColor: '#38bdf8',
+              color: '#ffffff',
+              fontWeight: 700,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '3px'
+            }}
+            title="새로운 라벨 서식 추가"
+          >
+            <Plus size={12} /> 디자인 추가
+          </button>
+
+          {/* [디자인 불러오기] 버튼 */}
+          <button
+            onClick={() => setIsLoadModalOpen(true)}
+            className="btn btn-outline"
+            style={{
+              fontSize: '0.68rem',
+              padding: '3px 9px',
+              borderColor: '#38bdf8',
+              color: '#7dd3fc',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}
+            title="저장된 라벨 서식 목록 불러오기"
+          >
+            <FolderOpen size={12} /> 디자인 불러오기
+          </button>
 
           {/* 대상 테이블 뱃지 */}
           <span style={{
@@ -449,54 +502,33 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
           }}>
             {currentTargetTable === 'temp_asset' ? 'temp_asset (임시자산)' : 'asset (자산관리)'}
           </span>
-
-          {/* 활성 라벨 프린터 정보 표시 & 프린터 지정 버튼 */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            marginLeft: '6px',
-            padding: '2px 8px',
-            backgroundColor: '#0f172a',
-            borderRadius: '6px',
-            border: '1px solid #334155'
-          }}>
-            <Printer size={13} style={{ color: '#4ade80' }} />
-            <span style={{ fontSize: '0.72rem', color: '#f8fafc', fontWeight: 600 }}>
-              Zebra GK420d (USB)
-            </span>
-            <button
-              onClick={() => window.open('http://127.0.0.1:9988', '_blank')}
-              className="btn btn-outline"
-              style={{
-                fontSize: '0.68rem',
-                padding: '2px 6px',
-                borderColor: '#38bdf8',
-                color: '#7dd3fc',
-                marginLeft: '4px'
-              }}
-              title="에이전트 프린터 설정 열기"
-            >
-              프린터 지정
-            </button>
-          </div>
         </div>
 
-        {/* Right: Actions */}
+        {/* Right: Save & Delete & Test Print Actions */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <button
             onClick={handleReset}
             className="btn btn-outline"
-            style={{ fontSize: '0.72rem', padding: '4px 10px' }}
+            style={{ fontSize: '0.72rem', padding: '4px 8px' }}
+            title="서식 초기화"
           >
             <RotateCcw size={12} /> 초기화
+          </button>
+          <button
+            onClick={handleDeleteCurrentDesign}
+            className="btn btn-outline"
+            style={{ fontSize: '0.72rem', padding: '4px 8px', borderColor: '#ef4444', color: '#fca5a5' }}
+            title="현재 서식 삭제"
+          >
+            <Trash2 size={12} /> 디자인 삭제
           </button>
           <button
             onClick={handleSave}
             className={`btn ${isSaved ? 'btn-success' : 'btn-primary'}`}
             style={{ fontSize: '0.72rem', padding: '4px 12px' }}
+            title="현재 서식 수정 저장"
           >
-            <Save size={12} /> {isSaved ? '저장됨' : '서식 저장'}
+            <Save size={12} /> {isSaved ? '저장됨' : '수정 저장'}
           </button>
           <button
             onClick={handleTestPrint}
@@ -515,18 +547,18 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
         </div>
       </div>
 
-      {/* 3-Column Workspace (Optimized Proportions: 290px | 1fr | 340px) */}
+      {/* ── 2-Column Wide Workspace (좌측: 340px 설정 패널 | 우측: 1fr 라벨 캔버스) ── */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: '290px minmax(500px, 1fr) 340px',
+        gridTemplateColumns: '340px minmax(500px, 1fr)',
         gap: '8px',
         alignItems: 'stretch',
         width: '100%',
-        minHeight: '560px'
+        minHeight: '620px'
       }}>
-        {/* ── [1/3] Left Panel (290px) ────────────────────────────── */}
+        {/* ── [1/2] Left Panel: 설정 및 속성 편집기 ───────────────────── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', minWidth: 0 }}>
-          {/* 용지 규격 */}
+          {/* 1. 용지 규격 */}
           <div style={{
             backgroundColor: '#1e293b',
             border: '1px solid #334155',
@@ -578,7 +610,7 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
             </div>
           </div>
 
-          {/* 출력 항목 선택 */}
+          {/* 2. 출력 항목 선택 */}
           <div style={{
             backgroundColor: '#1e293b',
             border: '1px solid #334155',
@@ -613,7 +645,7 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
               </div>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', maxHeight: '280px', overflowY: 'auto' }} className="grid-scrollbar">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', maxHeight: '200px', overflowY: 'auto' }} className="grid-scrollbar">
               {template.elements.map(elem => {
                 const isSelected = elem.id === selectedElemId;
                 return (
@@ -624,7 +656,7 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      padding: '5px 8px',
+                      padding: '4px 8px',
                       borderRadius: '4px',
                       backgroundColor: isSelected ? '#334155' : '#0f172a',
                       border: `1px solid ${isSelected ? '#38bdf8' : '#1e293b'}`,
@@ -649,16 +681,13 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                         {getElemDisplayName(elem)}
                       </span>
                     </div>
-                    <span style={{ fontSize: '0.65rem', color: '#94a3b8', fontFamily: 'monospace' }}>
-                      {elem.xMm},{elem.yMm}
-                    </span>
                   </div>
                 );
               })}
             </div>
           </div>
 
-          {/* 속성 편집기 */}
+          {/* 3. 속성 편집기 (1 pt 단위 정밀 조작 지원) */}
           {selectedElem && (
             <div style={{
               backgroundColor: '#1e293b',
@@ -678,6 +707,7 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                 </span>
               </div>
 
+              {/* 위치 좌표 (X, Y) */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', width: '100%' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0 }}>
                   <label style={{ fontSize: '0.68rem', color: '#cbd5e1', whiteSpace: 'nowrap' }}>X (mm)</label>
@@ -719,6 +749,7 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                 </div>
               </div>
 
+              {/* 텍스트 요소 속성 (1 pt 단위 정밀 조작) */}
               {selectedElem.type === 'text' && (
                 <>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
@@ -744,65 +775,83 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                     </select>
                   </div>
 
-                  {selectedElem.field === 'custom' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                      <label style={{ fontSize: '0.68rem', color: '#cbd5e1' }}>고정 문구</label>
-                      <input
-                        type="text"
-                        value={selectedElem.customValue || ''}
-                        onChange={e => handleElemPropChange('customValue', e.target.value)}
-                        style={{
-                          backgroundColor: '#0f172a',
-                          border: '1px solid #475569',
-                          borderRadius: '4px',
-                          padding: '3px 6px',
-                          color: '#f8fafc',
-                          fontSize: '0.72rem'
-                        }}
-                      />
-                    </div>
-                  )}
-
+                  {/* ⭐️ 폰트 크기: 1 pt 단위 정밀 조작 (+ 직접 입력 & 증감 버튼) */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                    <label style={{ fontSize: '0.68rem', color: '#cbd5e1' }}>접두어</label>
-                    <input
-                      type="text"
-                      value={selectedElem.prefix || ''}
-                      onChange={e => handleElemPropChange('prefix', e.target.value)}
-                      style={{
-                        backgroundColor: '#0f172a',
-                        border: '1px solid #475569',
-                        borderRadius: '4px',
-                        padding: '3px 6px',
-                        color: '#f8fafc',
-                        fontSize: '0.72rem'
-                      }}
-                    />
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <label style={{ fontSize: '0.68rem', color: '#cbd5e1' }}>폰트 크기</label>
-                      <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#facc15' }}>{selectedElem.fontSizePt} Pt</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <label style={{ fontSize: '0.68rem', color: '#cbd5e1' }}>폰트 크기 (1 pt 단위)</label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <button
+                          onClick={() => handleAdjustFontSize(-1)}
+                          style={{
+                            background: '#0f172a',
+                            border: '1px solid #475569',
+                            color: '#cbd5e1',
+                            borderRadius: '3px',
+                            padding: '1px 4px',
+                            cursor: 'pointer',
+                            display: 'flex'
+                          }}
+                          title="1 pt 감소"
+                        >
+                          <Minus size={10} />
+                        </button>
+                        <input
+                          type="number"
+                          min="6"
+                          max="60"
+                          step="1"
+                          value={selectedElem.fontSizePt || 20}
+                          onChange={e => handleElemPropChange('fontSizePt', e.target.value)}
+                          style={{
+                            width: '44px',
+                            backgroundColor: '#0f172a',
+                            border: '1px solid #38bdf8',
+                            borderRadius: '3px',
+                            color: '#facc15',
+                            fontSize: '0.72rem',
+                            fontWeight: 700,
+                            textAlign: 'center',
+                            padding: '1px 2px'
+                          }}
+                        />
+                        <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>Pt</span>
+                        <button
+                          onClick={() => handleAdjustFontSize(1)}
+                          style={{
+                            background: '#0f172a',
+                            border: '1px solid #475569',
+                            color: '#cbd5e1',
+                            borderRadius: '3px',
+                            padding: '1px 4px',
+                            cursor: 'pointer',
+                            display: 'flex'
+                          }}
+                          title="1 pt 증가"
+                        >
+                          <Plus size={10} />
+                        </button>
+                      </div>
                     </div>
                     <input
                       type="range"
-                      min="12"
-                      max="40"
-                      step="2"
+                      min="6"
+                      max="60"
+                      step="1"
                       value={selectedElem.fontSizePt || 20}
                       onChange={e => handleElemPropChange('fontSizePt', e.target.value)}
-                      style={{ width: '100%', cursor: 'pointer' }}
+                      style={{ accentColor: '#38bdf8', width: '100%' }}
                     />
                   </div>
                 </>
               )}
 
+              {/* 바코드 요소 속성 (0.5mm / 1 pt 단위 정밀 조작) */}
               {selectedElem.type === 'barcode' && (
                 <>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                     <label style={{ fontSize: '0.68rem', color: '#cbd5e1' }}>바코드 종류</label>
                     <select
-                      value={selectedElem.barcodeType || 'CODE39'}
+                      value={selectedElem.barcodeType || 'CODE128'}
                       onChange={e => handleElemPropChange('barcodeType', e.target.value)}
                       style={{
                         backgroundColor: '#0f172a',
@@ -813,24 +862,23 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                         fontSize: '0.72rem'
                       }}
                     >
-                      <option value="CODE39">Code 39</option>
-                      <option value="CODE128">Code 128</option>
-                      <option value="QR">QR Code</option>
+                      <option value="CODE128">1D Barcode (CODE128)</option>
+                      <option value="CODE39">1D Barcode (CODE39)</option>
+                      <option value="QR">2D QR Code</option>
                     </select>
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                    <label style={{ fontSize: '0.68rem', color: '#cbd5e1' }}>대상 필드</label>
+                    <label style={{ fontSize: '0.68rem', color: '#cbd5e1' }}>바코드 대상 필드</label>
                     <select
-                      value={selectedElem.targetField || schemaDef.key_field || 'asset_no'}
+                      value={selectedElem.targetField || 'asset_no'}
                       onChange={e => handleElemPropChange('targetField', e.target.value)}
                       style={{
                         backgroundColor: '#0f172a',
                         border: '1px solid #475569',
                         borderRadius: '4px',
                         padding: '3px 6px',
-                        color: '#38bdf8',
-                        fontWeight: 600,
+                        color: '#f8fafc',
                         fontSize: '0.72rem'
                       }}
                     >
@@ -843,367 +891,344 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                   </div>
 
                   {selectedElem.barcodeType !== 'QR' ? (
-                    <>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <label style={{ fontSize: '0.68rem', color: '#cbd5e1' }}>바코드 높이</label>
-                          <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#10b981' }}>{selectedElem.heightMm} mm</span>
-                        </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <label style={{ fontSize: '0.68rem', color: '#cbd5e1' }}>바코드 높이 (mm)</label>
                         <input
-                          type="range"
-                          min="5"
-                          max="25"
+                          type="number"
+                          min="4"
+                          max="40"
                           step="0.5"
                           value={selectedElem.heightMm || 10}
                           onChange={e => handleElemPropChange('heightMm', e.target.value)}
-                          style={{ width: '100%', cursor: 'pointer' }}
+                          style={{
+                            width: '50px',
+                            backgroundColor: '#0f172a',
+                            border: '1px solid #38bdf8',
+                            borderRadius: '3px',
+                            color: '#facc15',
+                            fontSize: '0.72rem',
+                            fontWeight: 700,
+                            textAlign: 'center',
+                            padding: '1px 2px'
+                          }}
                         />
                       </div>
-
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', marginTop: '2px' }}>
-                        <input
-                          type="checkbox"
-                          checked={Boolean(selectedElem.showText)}
-                          onChange={e => handleElemPropChange('showText', e.target.checked)}
-                          style={{ cursor: 'pointer' }}
-                        />
-                        <span style={{ fontSize: '0.7rem', color: '#cbd5e1' }}>하단 텍스트 표시</span>
-                      </label>
-                    </>
+                      <input
+                        type="range"
+                        min="4"
+                        max="40"
+                        step="0.5"
+                        value={selectedElem.heightMm || 10}
+                        onChange={e => handleElemPropChange('heightMm', e.target.value)}
+                        style={{ accentColor: '#38bdf8', width: '100%' }}
+                      />
+                    </div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <label style={{ fontSize: '0.68rem', color: '#cbd5e1' }}>QR 크기 배율</label>
-                        <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#10b981' }}>{selectedElem.qrScale || 4}</span>
+                        <input
+                          type="number"
+                          min="2"
+                          max="10"
+                          step="1"
+                          value={selectedElem.qrScale || 4}
+                          onChange={e => handleElemPropChange('qrScale', e.target.value)}
+                          style={{
+                            width: '44px',
+                            backgroundColor: '#0f172a',
+                            border: '1px solid #38bdf8',
+                            borderRadius: '3px',
+                            color: '#facc15',
+                            fontSize: '0.72rem',
+                            fontWeight: 700,
+                            textAlign: 'center',
+                            padding: '1px 2px'
+                          }}
+                        />
                       </div>
                       <input
                         type="range"
                         min="2"
-                        max="8"
+                        max="10"
                         step="1"
                         value={selectedElem.qrScale || 4}
                         onChange={e => handleElemPropChange('qrScale', e.target.value)}
-                        style={{ width: '100%', cursor: 'pointer' }}
+                        style={{ accentColor: '#38bdf8', width: '100%' }}
                       />
                     </div>
                   )}
+
+                  {selectedElem.barcodeType !== 'QR' && (
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.68rem', color: '#cbd5e1', cursor: 'pointer', marginTop: '2px' }}>
+                      <input
+                        type="checkbox"
+                        checked={selectedElem.showText !== false}
+                        onChange={e => handleElemPropChange('showText', e.target.checked)}
+                      />
+                      하단 텍스트 표시
+                    </label>
+                  )}
+                </>
+              )}
+
+              {/* 구분선 요소 속성 */}
+              {selectedElem.type === 'line' && (
+                <>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <label style={{ fontSize: '0.68rem', color: '#cbd5e1' }}>선 길이 (mm)</label>
+                    <input
+                      type="number"
+                      step="0.5"
+                      value={selectedElem.widthMm || 65}
+                      onChange={e => handleElemPropChange('widthMm', e.target.value)}
+                      style={{
+                        backgroundColor: '#0f172a',
+                        border: '1px solid #475569',
+                        borderRadius: '4px',
+                        padding: '3px 6px',
+                        color: '#f8fafc',
+                        fontSize: '0.72rem'
+                      }}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <label style={{ fontSize: '0.68rem', color: '#cbd5e1' }}>선 두께 (mm)</label>
+                    <input
+                      type="number"
+                      step="0.05"
+                      value={selectedElem.thicknessMm || 0.25}
+                      onChange={e => handleElemPropChange('thicknessMm', e.target.value)}
+                      style={{
+                        backgroundColor: '#0f172a',
+                        border: '1px solid #475569',
+                        borderRadius: '4px',
+                        padding: '3px 6px',
+                        color: '#f8fafc',
+                        fontSize: '0.72rem'
+                      }}
+                    />
+                  </div>
                 </>
               )}
             </div>
           )}
         </div>
 
-        {/* ── [2/3] Center Canvas (Expansive Area) ─────────────────── */}
+        {/* ── [2/2] Right Main: 실제 용지 1:1 정밀 비례 라벨 캔버스 단일 메인 ── */}
         <div style={{
-          backgroundColor: '#1e293b',
+          backgroundColor: '#0f172a',
           border: '1px solid #334155',
           borderRadius: '8px',
-          padding: '10px',
+          padding: '16px',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: '8px',
-          width: '100%',
-          minWidth: 0,
-          boxSizing: 'border-box'
+          justifyContent: 'flex-start',
+          gap: '12px',
+          overflowX: 'auto',
+          position: 'relative'
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#f8fafc' }}>
-              라벨 캔버스
-            </span>
-            <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>
-              {template.paper.widthMm}mm × {template.paper.heightMm}mm
-            </span>
-          </div>
-
+          {/* Canvas Top Bar */}
           <div style={{
             width: '100%',
-            flex: 1,
             display: 'flex',
-            justifyContent: 'center',
+            justifyContent: 'space-between',
             alignItems: 'center',
-            backgroundColor: '#0f172a',
-            padding: '20px',
-            borderRadius: '6px',
-            border: '1px solid #334155',
-            overflow: 'auto',
-            boxSizing: 'border-box'
+            borderBottom: '1px solid #1e293b',
+            paddingBottom: '8px'
           }}>
-            <div
-              ref={canvasRef}
-              style={{
-                width: `${canvasWidthPx}px`,
-                height: `${canvasHeightPx}px`,
-                backgroundColor: '#ffffff',
-                color: '#000000',
-                borderRadius: '3px',
-                position: 'relative',
-                boxShadow: '0 6px 20px rgba(0,0,0,0.6)',
-                border: '1px solid #cbd5e1',
-                userSelect: 'none',
-                overflow: 'hidden'
-              }}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#f8fafc' }}>
+                라벨 캔버스
+              </span>
+              <span style={{ fontSize: '0.68rem', color: '#38bdf8', fontFamily: 'monospace' }}>
+                ({template.paper.widthMm}mm × {template.paper.heightMm}mm 정밀 비례)
+              </span>
+            </div>
+
+            <button
+              onClick={() => setShowZplCode(!showZplCode)}
+              className="btn btn-outline"
+              style={{ fontSize: '0.68rem', padding: '2px 8px', borderColor: '#334155', color: '#94a3b8' }}
             >
-              <div style={{
-                position: 'absolute',
-                inset: 0,
-                backgroundImage: 'linear-gradient(to right, #f1f5f9 1px, transparent 1px), linear-gradient(to bottom, #f1f5f9 1px, transparent 1px)',
-                backgroundSize: `${5 * PX_PER_MM}px ${5 * PX_PER_MM}px`,
-                pointerEvents: 'none'
-              }} />
+              <Code size={11} /> {showZplCode ? 'ZPL 코드 닫기' : 'ZPL 코드 보기'}
+            </button>
+          </div>
 
-              {template.elements.map(elem => {
-                if (!elem.visible) return null;
+          {/* ⭐️ 실제 용지 1:1 완벽 비례 라벨 캔버스 (Single Truth Visual Canvas) */}
+          <div
+            ref={canvasRef}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+            style={{
+              width: `${canvasWidthPx}px`,
+              height: `${canvasHeightPx}px`,
+              backgroundColor: '#ffffff',
+              color: '#000000',
+              borderRadius: '6px',
+              boxShadow: '0 8px 24px rgba(0, 0, 0, 0.6), 0 0 0 1px #38bdf8',
+              position: 'relative',
+              overflow: 'hidden',
+              userSelect: 'none',
+              flexShrink: 0,
+              cursor: draggingId ? 'grabbing' : 'default',
+              transition: 'box-shadow 0.2s'
+            }}
+          >
+            {template.elements.filter(e => e.visible).map(elem => {
+              const isElemSelected = elem.id === selectedElemId;
+              const leftPx = elem.xMm * PX_PER_MM;
+              const topPx = elem.yMm * PX_PER_MM;
 
-                const isSelected = elem.id === selectedElemId;
-                const leftPx = elem.xMm * PX_PER_MM;
-                const topPx = elem.yMm * PX_PER_MM;
-
-                let displayText = `${elem.prefix || ''}`;
+              // 1. 텍스트 요소
+              if (elem.type === 'text') {
+                let displayVal = elem.prefix || '';
                 if (elem.field === 'custom') {
-                  displayText += (elem.customValue || '');
+                  displayVal += (elem.customValue || '');
                 } else {
-                  displayText += (SAMPLE_ITEM[elem.field] || elem.field?.toUpperCase() || '');
+                  displayVal += (SAMPLE_ITEM[elem.field] || elem.field?.toUpperCase() || '');
                 }
 
-                if (elem.type === 'line') {
-                  const lineWPx = (elem.widthMm || 60) * PX_PER_MM;
-                  const lineThickPx = Math.max(1, (elem.thicknessMm || 0.25) * PX_PER_MM);
-                  return (
-                    <div
-                      key={elem.id}
-                      onMouseDown={e => handleMouseDown(e, elem.id)}
-                      style={{
-                        position: 'absolute',
-                        left: `${leftPx}px`,
-                        top: `${topPx}px`,
-                        width: `${lineWPx}px`,
-                        height: `${lineThickPx}px`,
-                        backgroundColor: '#000000',
-                        cursor: 'move',
-                        outline: isSelected ? '2px solid #0284c7' : 'none',
-                        zIndex: isSelected ? 10 : 2
-                      }}
-                    />
-                  );
-                }
+                // 폰트 크기 비례 변환
+                const fontSizePx = (elem.fontSizePt || 20) * 0.46 * (PX_PER_MM / 8.5);
 
-                if (elem.type === 'barcode') {
-                  const barcodeHeightPx = (elem.heightMm || 10) * PX_PER_MM;
-                  const bcVal = String(SAMPLE_ITEM[elem.targetField] || SAMPLE_ITEM[schemaDef.key_field] || 'TEST0001');
-
-                  const barcodeDataUrl = generateCode39DataUrl(bcVal, { height: barcodeHeightPx * 2 });
-
-                  return (
-                    <div
-                      key={elem.id}
-                      onMouseDown={e => handleMouseDown(e, elem.id)}
-                      style={{
-                        position: 'absolute',
-                        left: `${leftPx}px`,
-                        top: `${topPx}px`,
-                        cursor: 'move',
-                        padding: '1px 2px',
-                        border: isSelected ? '1.5px dashed #0284c7' : '1px solid transparent',
-                        backgroundColor: isSelected ? 'rgba(2,132,199,0.08)' : 'transparent',
-                        borderRadius: '2px',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        zIndex: isSelected ? 10 : 3
-                      }}
-                    >
-                      {elem.barcodeType === 'QR' ? (
-                        <div style={{
-                          width: `${(elem.qrScale || 4) * 12}px`,
-                          height: `${(elem.qrScale || 4) * 12}px`,
-                          border: '2px solid #000',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '10px',
-                          fontWeight: 700
-                        }}>
-                          QR
-                        </div>
-                      ) : barcodeDataUrl ? (
-                        <img
-                          src={barcodeDataUrl}
-                          alt="Barcode"
-                          style={{
-                            height: `${barcodeHeightPx}px`,
-                            maxWidth: '100%',
-                            pointerEvents: 'none',
-                            display: 'block'
-                          }}
-                        />
-                      ) : (
-                        <div style={{ fontSize: '9px', color: '#666', border: '1px solid #ccc', padding: '2px' }}>
-                          [{elem.barcodeType || 'Code39'}: {bcVal}]
-                        </div>
-                      )}
-                      {elem.showText && elem.barcodeType !== 'QR' && (
-                        <span style={{ fontSize: '9px', fontWeight: 700, fontFamily: 'monospace', marginTop: '1px' }}>
-                          *{bcVal}*
-                        </span>
-                      )}
-                    </div>
-                  );
-                }
-
-                const fontSizePx = (elem.fontSizePt || 20) * 0.6;
                 return (
                   <div
                     key={elem.id}
-                    onMouseDown={e => handleMouseDown(e, elem.id)}
+                    onMouseDown={(e) => handleMouseDown(e, elem.id)}
                     style={{
                       position: 'absolute',
                       left: `${leftPx}px`,
                       top: `${topPx}px`,
-                      cursor: 'move',
-                      padding: '1px 3px',
                       fontSize: `${fontSizePx}px`,
                       fontWeight: 700,
-                      fontFamily: 'monospace',
+                      fontFamily: elem.fontFamily === 'A0N' ? 'monospace, sans-serif' : 'sans-serif',
                       whiteSpace: 'nowrap',
-                      border: isSelected ? '1.5px dashed #0284c7' : '1px solid transparent',
-                      backgroundColor: isSelected ? 'rgba(2,132,199,0.08)' : 'transparent',
-                      borderRadius: '2px',
-                      zIndex: isSelected ? 10 : 4
+                      cursor: 'grab',
+                      outline: isElemSelected ? '2px solid #0284c7' : '1px dashed rgba(2, 132, 199, 0.3)',
+                      padding: '1px 2px',
+                      backgroundColor: isElemSelected ? 'rgba(56, 189, 248, 0.1)' : 'transparent',
+                      lineHeight: 1.1
                     }}
                   >
-                    {displayText}
+                    {displayVal}
                   </div>
                 );
-              })}
-            </div>
-          </div>
-        </div>
+              }
 
-        {/* ── [3/3] Right Panel (340px, Full-Height) ────────────────── */}
-        <div style={{
-          backgroundColor: '#1e293b',
-          border: '1px solid #334155',
-          borderRadius: '8px',
-          padding: '10px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '8px',
-          width: '100%',
-          boxSizing: 'border-box'
-        }}>
-          <div style={{
-            display: 'flex',
-            backgroundColor: '#0f172a',
-            borderRadius: '4px',
-            padding: '2px',
-            border: '1px solid #334155'
-          }}>
-            <button
-              onClick={() => setActiveRightTab('preview')}
-              style={{
-                flex: 1,
-                padding: '5px',
-                fontSize: '0.75rem',
-                fontWeight: 600,
-                border: 'none',
-                borderRadius: '3px',
-                cursor: 'pointer',
-                backgroundColor: activeRightTab === 'preview' ? '#334155' : 'transparent',
-                color: activeRightTab === 'preview' ? '#38bdf8' : '#94a3b8'
-              }}
-            >
-              미리보기
-            </button>
-            <button
-              onClick={() => setActiveRightTab('zpl')}
-              style={{
-                flex: 1,
-                padding: '5px',
-                fontSize: '0.75rem',
-                fontWeight: 600,
-                border: 'none',
-                borderRadius: '3px',
-                cursor: 'pointer',
-                backgroundColor: activeRightTab === 'zpl' ? '#334155' : 'transparent',
-                color: activeRightTab === 'zpl' ? '#38bdf8' : '#94a3b8'
-              }}
-            >
-              ZPL 코드
-            </button>
-          </div>
+              // 2. 바코드 / QR 요소
+              if (elem.type === 'barcode') {
+                const bcVal = SAMPLE_ITEM[elem.targetField] || SAMPLE_ITEM.asset_no || 'TEST0001';
+                const heightPx = (elem.heightMm || 10) * PX_PER_MM;
+                const qrSizePx = (elem.qrScale || 4) * 8.5 * (PX_PER_MM / 8.5);
 
-          {activeRightTab === 'preview' ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
-              <div style={{
-                backgroundColor: '#ffffff',
-                color: '#000000',
-                borderRadius: '4px',
-                padding: '12px 16px',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '3px',
-                fontSize: '11px',
-                fontFamily: 'monospace'
-              }}>
-                {template.elements.map(el => {
-                  if (!el.visible) return null;
-                  if (el.type === 'line') {
-                    return <div key={el.id} style={{ borderBottom: '1.5px solid #000', margin: '3px 0' }} />;
-                  }
-                  if (el.type === 'barcode') {
-                    const bcVal = String(SAMPLE_ITEM[el.targetField] || SAMPLE_ITEM[schemaDef.key_field] || 'TEST0001');
-                    const url = generateCode39DataUrl(bcVal, { height: 28 });
-                    return (
-                      <div key={el.id} style={{ textAlign: 'center', margin: '4px 0 0 0' }}>
-                        {el.barcodeType === 'QR' ? (
-                          <div style={{ width: '40px', height: '40px', border: '2px solid #000', margin: '0 auto', fontSize: '9px', lineHeight: '38px', fontWeight: 700 }}>QR</div>
-                        ) : url && (
-                          <img src={url} alt="bc" style={{ height: '26px', maxWidth: '90%' }} />
-                        )}
-                        {el.showText && el.barcodeType !== 'QR' && <div style={{ fontSize: '9px', fontWeight: 700 }}>*{bcVal}*</div>}
+                return (
+                  <div
+                    key={elem.id}
+                    onMouseDown={(e) => handleMouseDown(e, elem.id)}
+                    style={{
+                      position: 'absolute',
+                      left: `${leftPx}px`,
+                      top: `${topPx}px`,
+                      cursor: 'grab',
+                      outline: isElemSelected ? '2px solid #0284c7' : '1px dashed rgba(2, 132, 199, 0.3)',
+                      padding: '2px',
+                      backgroundColor: isElemSelected ? 'rgba(56, 189, 248, 0.1)' : 'transparent',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center'
+                    }}
+                  >
+                    {elem.barcodeType === 'QR' ? (
+                      <div style={{
+                        width: `${qrSizePx}px`,
+                        height: `${qrSizePx}px`,
+                        backgroundColor: '#000',
+                        color: '#fff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '9px',
+                        fontWeight: 700,
+                        letterSpacing: '-0.5px'
+                      }}>
+                        QR CODE
                       </div>
-                    );
-                  }
-                  let text = el.prefix || '';
-                  if (el.field === 'custom') {
-                    text += (el.customValue || '');
-                  } else {
-                    text += (SAMPLE_ITEM[el.field] || el.field?.toUpperCase() || '');
-                  }
-                  return (
-                    <div key={el.id} style={{ fontWeight: 700, fontSize: `${(el.fontSizePt || 20) * 0.6}px` }}>
-                      {text}
-                    </div>
-                  );
-                })}
+                    ) : (
+                      <img
+                        src={generateCode39DataUrl(bcVal)}
+                        alt={bcVal}
+                        style={{ height: `${heightPx}px`, maxWidth: `${canvasWidthPx - leftPx - 10}px` }}
+                      />
+                    )}
+                    {elem.showText && elem.barcodeType !== 'QR' && (
+                      <div style={{ fontSize: '9px', fontWeight: 700, marginTop: '1px' }}>
+                        *{bcVal}*
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
+              // 3. 구분선 요소
+              if (elem.type === 'line') {
+                const widthPx = (elem.widthMm || 65) * PX_PER_MM;
+                const thicknessPx = Math.max(1, (elem.thicknessMm || 0.25) * PX_PER_MM);
+
+                return (
+                  <div
+                    key={elem.id}
+                    onMouseDown={(e) => handleMouseDown(e, elem.id)}
+                    style={{
+                      position: 'absolute',
+                      left: `${leftPx}px`,
+                      top: `${topPx}px`,
+                      width: `${widthPx}px`,
+                      height: `${thicknessPx}px`,
+                      backgroundColor: '#000000',
+                      cursor: 'grab',
+                      outline: isElemSelected ? '2px solid #0284c7' : 'none'
+                    }}
+                  />
+                );
+              }
+
+              return null;
+            })}
+          </div>
+
+          {/* 하단 ZPL 코드 뷰어 (아코디언 토글) */}
+          {showZplCode && (
+            <div style={{ width: '100%', marginTop: '8px' }}>
+              <div style={{ fontSize: '0.68rem', color: '#94a3b8', marginBottom: '4px', fontWeight: 600 }}>
+                ZPL 코드
               </div>
+              <textarea
+                readOnly
+                value={currentZpl}
+                style={{
+                  width: '100%',
+                  height: '140px',
+                  backgroundColor: '#0a0f1d',
+                  border: '1px solid #334155',
+                  borderRadius: '4px',
+                  color: '#38bdf8',
+                  fontFamily: 'Consolas, monospace',
+                  fontSize: '0.72rem',
+                  padding: '8px',
+                  boxSizing: 'border-box',
+                  resize: 'none'
+                }}
+              />
             </div>
-          ) : (
-            <textarea
-              readOnly
-              value={currentZpl}
-              style={{
-                width: '100%',
-                flex: 1,
-                minHeight: '440px',
-                backgroundColor: '#0f172a',
-                border: '1px solid #334155',
-                borderRadius: '4px',
-                color: '#38bdf8',
-                fontFamily: 'Consolas, monospace',
-                fontSize: '0.72rem',
-                padding: '8px',
-                boxSizing: 'border-box',
-                resize: 'none'
-              }}
-            />
           )}
         </div>
       </div>
 
-      {/* ⭐️ [디자인 추가] 모달 다이얼로그 (전사 표준 레이블-입력 상하 스택 구조 준수) */}
+      {/* ── [모달 1] 디자인 추가 모달 ─────────────────────────────── */}
       {isCreateModalOpen && (
         <div style={{
           position: 'fixed',
@@ -1229,7 +1254,6 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
             flexDirection: 'column',
             gap: '12px'
           }}>
-            {/* Modal Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #334155', paddingBottom: '8px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <Plus size={16} style={{ color: '#38bdf8' }} />
@@ -1245,13 +1269,9 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
               </button>
             </div>
 
-            {/* Modal Form */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {/* 1. 서식 명칭 */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <label style={{ fontSize: '0.72rem', color: '#cbd5e1', fontWeight: 600 }}>
-                  서식 명칭
-                </label>
+                <label style={{ fontSize: '0.72rem', color: '#cbd5e1', fontWeight: 600 }}>서식 명칭</label>
                 <input
                   type="text"
                   value={newDesignName}
@@ -1269,11 +1289,8 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                 />
               </div>
 
-              {/* 2. 대상 테이블 선택 */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <label style={{ fontSize: '0.72rem', color: '#cbd5e1', fontWeight: 600 }}>
-                  대상 테이블 선택
-                </label>
+                <label style={{ fontSize: '0.72rem', color: '#cbd5e1', fontWeight: 600 }}>대상 테이블 선택</label>
                 <select
                   value={newDesignTable}
                   onChange={(e) => setNewDesignTable(e.target.value)}
@@ -1292,12 +1309,9 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                 </select>
               </div>
 
-              {/* 3. 용지 규격 (폭 x 높이) */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '0.72rem', color: '#cbd5e1', fontWeight: 600 }}>
-                    용지 폭 (mm)
-                  </label>
+                  <label style={{ fontSize: '0.72rem', color: '#cbd5e1', fontWeight: 600 }}>용지 폭 (mm)</label>
                   <input
                     type="number"
                     value={newDesignWidth}
@@ -1313,9 +1327,7 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                   />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '0.72rem', color: '#cbd5e1', fontWeight: 600 }}>
-                    용지 높이 (mm)
-                  </label>
+                  <label style={{ fontSize: '0.72rem', color: '#cbd5e1', fontWeight: 600 }}>용지 높이 (mm)</label>
                   <input
                     type="number"
                     value={newDesignHeight}
@@ -1333,7 +1345,6 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
               </div>
             </div>
 
-            {/* Modal Actions */}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px', marginTop: '6px', borderTop: '1px solid #334155', paddingTop: '10px' }}>
               <button
                 onClick={() => setIsCreateModalOpen(false)}
@@ -1355,6 +1366,132 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                 }}
               >
                 디자인 생성
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── [모달 2] 디자인 불러오기 관리 모달 ───────────────────────── */}
+      {isLoadModalOpen && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.75)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 99999
+        }}>
+          <div style={{
+            backgroundColor: '#1e293b',
+            border: '1px solid #38bdf8',
+            borderRadius: '8px',
+            width: '560px',
+            maxWidth: '92vw',
+            maxHeight: '80vh',
+            padding: '16px',
+            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '12px'
+          }}>
+            {/* Modal Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #334155', paddingBottom: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <FolderOpen size={16} style={{ color: '#38bdf8' }} />
+                <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#f8fafc' }}>
+                  라벨 서식 디자인 불러오기
+                </span>
+                <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
+                  (총 {presets.length}건)
+                </span>
+              </div>
+              <button
+                onClick={() => setIsLoadModalOpen(false)}
+                style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: 0 }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Presets List */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', overflowY: 'auto', maxHeight: '420px', paddingRight: '4px' }} className="grid-scrollbar">
+              {presets.map(p => {
+                const isCurrent = p.templateId === template.templateId;
+                const isTemp = p.targetTable === 'temp_asset';
+
+                return (
+                  <div
+                    key={p.templateId}
+                    onClick={() => handleLoadDesign(p.templateId)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '10px 12px',
+                      borderRadius: '6px',
+                      backgroundColor: isCurrent ? 'rgba(2, 132, 199, 0.15)' : '#0f172a',
+                      border: `1px solid ${isCurrent ? '#38bdf8' : '#334155'}`,
+                      cursor: 'pointer',
+                      transition: 'all 0.15s'
+                    }}
+                  >
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ fontSize: '0.8rem', fontWeight: 700, color: isCurrent ? '#38bdf8' : '#f8fafc' }}>
+                          {p.name}
+                        </span>
+                        {isCurrent && (
+                          <span style={{ fontSize: '0.65rem', backgroundColor: '#0284c7', color: '#fff', padding: '1px 5px', borderRadius: '3px', fontWeight: 700 }}>
+                            현재 서식
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.68rem', color: '#94a3b8' }}>
+                        <span style={{ color: isTemp ? '#d8b4fe' : '#93c5fd' }}>
+                          테이블: {isTemp ? 'temp_asset' : 'asset'}
+                        </span>
+                        <span>|</span>
+                        <span>용지: {p.paper?.widthMm} × {p.paper?.heightMm} mm</span>
+                        <span>|</span>
+                        <span>항목: {p.elements?.filter(e => e.visible)?.length || 0}개</span>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }} onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={() => handleLoadDesign(p.templateId)}
+                        className="btn btn-primary"
+                        style={{ fontSize: '0.68rem', padding: '3px 8px' }}
+                      >
+                        불러오기
+                      </button>
+                      <button
+                        onClick={(e) => handleDeleteDesignInModal(p.templateId, p.name, e)}
+                        className="btn btn-outline"
+                        style={{ fontSize: '0.68rem', padding: '3px 6px', borderColor: '#ef4444', color: '#fca5a5' }}
+                        title="서식 삭제"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Modal Footer */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid #334155', paddingTop: '8px' }}>
+              <button
+                onClick={() => setIsLoadModalOpen(false)}
+                className="btn btn-outline"
+                style={{ fontSize: '0.72rem', padding: '4px 12px' }}
+              >
+                닫기
               </button>
             </div>
           </div>

@@ -410,6 +410,34 @@ export function saveStoredLabelTemplate(template) {
 }
 
 /**
+ * ⭐️ 템플릿 삭제 및 로컬/백엔드 동기화
+ */
+export async function deleteStoredLabelTemplate(templateId) {
+  try {
+    const presets = getAllPresets();
+    const updatedPresets = presets.filter(p => p.templateId !== templateId);
+    localStorage.setItem(LOCAL_KEY_TEMPLATE_PRESETS, JSON.stringify(updatedPresets));
+
+    // 현재 활성 템플릿이 삭제된 경우 첫 번째 프리셋으로 전환
+    const activeId = localStorage.getItem(LOCAL_KEY_ACTIVE_TEMPLATE_ID);
+    if (activeId === templateId) {
+      const nextId = updatedPresets[0]?.templateId || DEFAULT_LABEL_TEMPLATE.templateId;
+      localStorage.setItem(LOCAL_KEY_ACTIVE_TEMPLATE_ID, nextId);
+    }
+
+    // Supabase 백엔드에서도 삭제 시도
+    const client = getSupabaseClient();
+    if (client) {
+      await client.from('label_templates').delete().eq('id', templateId);
+    }
+    return true;
+  } catch (e) {
+    console.warn('템플릿 삭제 실패:', e);
+    return false;
+  }
+}
+
+/**
  * Supabase 백엔드에서 활성 라벨 서식 로드
  */
 export async function fetchBackendLabelTemplate() {
