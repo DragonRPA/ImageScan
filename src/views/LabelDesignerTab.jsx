@@ -22,6 +22,7 @@ import {
   deleteStoredLabelTemplate,
   fetchBackendLabelTemplate,
   saveBackendLabelTemplate,
+  syncTemplatesWithBackend,
   generateDynamicZpl,
   mmToDots,
   getAllPresets,
@@ -114,11 +115,15 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
 
   const selectedElem = (template.elements || []).find(e => e.id === selectedElemId) || null;
 
-  // 초기 로드: 백엔드 라벨 서식 로드
+  // ⭐️ 초기 로드: 백엔드 전체 라벨 서식 목록 동기화 (온라인 DB 우선)
   useEffect(() => {
-    fetchBackendLabelTemplate().then(tpl => {
-      if (tpl) {
-        setTemplate(tpl);
+    syncTemplatesWithBackend().then(syncedPresets => {
+      if (syncedPresets && syncedPresets.length > 0) {
+        setPresets(syncedPresets);
+        const active = getStoredLabelTemplate();
+        if (active) {
+          setTemplate(active);
+        }
       }
     });
   }, []);

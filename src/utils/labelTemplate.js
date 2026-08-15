@@ -658,6 +658,52 @@ export async function deleteStoredLabelTemplate(templateId) {
 }
 
 /**
+ * ⭐️ Supabase 백엔드에서 전체 라벨 서식 목록 조회 및 로컬 스토리지 실시간 동기화 (SSOT)
+ */
+export async function syncTemplatesWithBackend() {
+  const client = getSupabaseClient();
+  const localPresets = getAllPresets();
+
+  if (!client) return localPresets;
+
+  try {
+    const { data, error } = await client
+      .from('label_templates')
+      .select('*')
+      .order('created_at', { ascending: true });
+
+    if (!error && data && data.length > 0) {
+      // 백엔드 데이터를 템플릿 포맷으로 매핑
+      const backendPresets = data.map(row => ({
+        templateId: row.id,
+        targetTable: row.target_table || (row.schema_id?.includes('temp') ? 'temp_asset' : 'asset'),
+        schemaId: row.schema_id || (row.target_table === 'temp_asset' ? 'temp_asset_schema' : 'asset_schema'),
+        name: row.name,
+        isDefault: Boolean(row.is_default),
+        paper: row.paper || { widthMm: 72, heightMm: 40, dpi: 203, dotsWidth: 576, dotsHeight: 320 },
+        elements: Array.isArray(row.elements) ? row.elements : []
+      }));
+
+      // 로컬에만 있는 커스텀 템플릿도 유실되지 않도록 병합 (templateId 기준)
+      const mergedMap = new Map();
+      BUILTIN_PRESETS.forEach(p => mergedMap.set(p.templateId, p));
+      backendPresets.forEach(p => mergedMap.set(p.templateId, p));
+      localPresets.forEach(p => {
+        if (!mergedMap.has(p.templateId)) mergedMap.set(p.templateId, p);
+      });
+
+      const mergedList = Array.from(mergedMap.values());
+      localStorage.setItem(LOCAL_KEY_TEMPLATE_PRESETS, JSON.stringify(mergedList));
+      return mergedList;
+    }
+  } catch (err) {
+    console.warn('백엔드 라벨 서식 동기화 실패 (로컬 유지):', err);
+  }
+
+  return localPresets;
+}
+
+/**
  * Supabase 백엔드에서 활성 라벨 서식 로드
  */
 export async function fetchBackendLabelTemplate() {
@@ -674,6 +720,7 @@ export async function fetchBackendLabelTemplate() {
     if (!error && data && data.paper && Array.isArray(data.elements)) {
       const tpl = {
         templateId: data.id,
+        targetTable: data.target_table || 'asset',
         schemaId: data.schema_id,
         name: data.name,
         paper: data.paper,
@@ -690,7 +737,7 @@ export async function fetchBackendLabelTemplate() {
 }
 
 /**
- * Supabase 백엔드에 라벨 서식 저장
+ * Supabase 백엔드에 라벨 서식 저장 (온라인 DB + 로컬 동시 보존)
  */
 export async function saveBackendLabelTemplate(template) {
   saveStoredLabelTemplate(template);
@@ -699,18 +746,19 @@ export async function saveBackendLabelTemplate(template) {
 
   try {
     const payload = {
-      id: template.templateId || 'tpl_asset_large_72x40',
+      id: template.templateId || `tpl_custom_${Date.now()}`,
       schema_id: template.schemaId || 'main_schema',
+      target_table: template.targetTable || 'asset',
       name: template.name || '자산 대형 72×40mm',
       paper: template.paper,
       elements: template.elements,
-      is_default: true,
+      is_default: Boolean(template.isDefault),
       updated_at: new Date().toISOString()
     };
 
     const { error } = await client.from('label_templates').upsert(payload);
     if (error) throw error;
-    return { success: true, message: '서식 백엔드 저장 완료' };
+    return { success: true, message: '온라인 DB 서식 저장 완료' };
   } catch (err) {
     console.warn('백엔드 라벨 서식 저장 오류 (로컬만 저장됨):', err);
     return { success: true, message: '로컬 서식 저장 완료' };

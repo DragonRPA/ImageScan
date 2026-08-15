@@ -1,5 +1,18 @@
 # 릴리즈 노트 (RELEASE_NOTES.md)
 
+## [v1.6.0.Build.5] - 2026-08-15 19:50:00 (KST)
+
+### ☁️ [라벨 서식 디자인] 온라인 DB (`label_templates` 테이블) 전체 서식 실시간 자동 동기화 탑재
+
+1. **온라인 DB ➔ 로컬 실시간 서식 동기화 엔진 구현 (`syncTemplatesWithBackend`)**
+   - 기존 로컬 스토리지에만 머무르던 한계를 해결하고, 화면 접속 시 Supabase `label_templates` 테이블의 전체 서식 목록을 즉시 조회하여 드롭다운 프리셋 목록에 자동 병합 및 갱신
+2. **`LabelDesignerTab` 및 `DirectPrintTab` 마운트 시 실시간 동기화**
+   - 어느 PC나 모바일에서 접속하더라도 온라인 DB에 등록된 최신 라벨 서식 목록이 즉시 표출됨
+3. **`saveBackendLabelTemplate` UPSERT 정합성 강화**
+   - 서식 저장 시 `target_table`, `is_default`, `elements`, `paper` 등이 온라인 DB에 1원/1필드도 오차 없이 저장 및 전사 실시간 공유
+
+---
+
 ## [v1.6.0.Build.4] - 2026-08-15 19:42:00 (KST)
 
 ### 🤖 [스마트 자가 업데이트] 프론트엔드 실시간 감지 & 에이전트 원클릭 Self-Update 워치독 탑재

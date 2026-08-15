@@ -20,7 +20,8 @@ import {
   getAllPresets,
   getStoredLabelTemplate,
   generateDynamicZpl,
-  saveStoredLabelTemplate
+  saveStoredLabelTemplate,
+  syncTemplatesWithBackend
 } from '../utils/labelTemplate';
 import {
   getRegisteredPrinters,
@@ -62,6 +63,20 @@ export default function DirectPrintTab({ onError, onOpenPrintModal }) {
 
   // 활성 프린터 객체
   const activePrinter = printers.find(p => p.id === activePrinterIdState) || printers[0];
+
+  // ⭐️ 마운트 시 온라인 DB 전체 서식 목록 실시간 동기화 (SSOT)
+  useEffect(() => {
+    syncTemplatesWithBackend().then(syncedPresets => {
+      if (syncedPresets && syncedPresets.length > 0) {
+        setPresets(syncedPresets);
+        const active = getStoredLabelTemplate();
+        if (active) {
+          setSelectedTemplate(active);
+          setTargetTable(active.targetTable || 'asset');
+        }
+      }
+    });
+  }, []);
 
   // 렌더링 시 입력창 항상 자동 포커스 유지
   useEffect(() => {
