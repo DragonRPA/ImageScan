@@ -65,12 +65,16 @@ export default function TempDataTab({ onError, onOpenPrintModal }) {
           return;
         }
       }
-      // 로컬 스토리지 캐시 로드 (사용자가 직접 주입/등록한 데이터만 유지)
+      // 로컬 스토리지 캐시 로드 (이전 더미 시드 자동 정리 및 순수 실제 데이터만 유지)
       const localData = localStorage.getItem(LOCAL_KEY_TEMP_ASSETS);
       if (localData) {
         try {
           const parsed = JSON.parse(localData);
-          setItems(Array.isArray(parsed) ? parsed : []);
+          const cleaned = (Array.isArray(parsed) ? parsed : []).filter(
+            it => it.id !== 'temp_001' && it.id !== 'temp_002' && it.asset_no !== 'TEMP-2026-001' && it.asset_no !== 'TEMP-2026-002'
+          );
+          setItems(cleaned);
+          localStorage.setItem(LOCAL_KEY_TEMP_ASSETS, JSON.stringify(cleaned));
         } catch (e) {
           setItems([]);
         }
