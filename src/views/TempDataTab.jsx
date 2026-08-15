@@ -160,6 +160,84 @@ export default function TempDataTab({ onError, onOpenPrintModal }) {
     });
   }, [items, searchQuery]);
 
+  // ⭐️ [복사 엔진] Ctrl + C 키보드 복사 이벤트 리스너
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // 입력창에 포커스가 있을 때는 기본 텍스트 복사 동작 유지
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) {
+        return;
+      }
+
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'C')) {
+        if (!cellSelection) return;
+
+        const minRow = Math.min(cellSelection.startRow, cellSelection.endRow);
+        const maxRow = Math.max(cellSelection.startRow, cellSelection.endRow);
+        const minCol = Math.min(cellSelection.startCol, cellSelection.endCol);
+        const maxCol = Math.max(cellSelection.startCol, cellSelection.endCol);
+
+        const selectedRows = filteredItems.slice(minRow, maxRow + 1);
+        if (selectedRows.length === 0) return;
+
+        const lines = selectedRows.map((row) => {
+          const rowValues = [];
+          for (let c = minCol; c <= maxCol; c++) {
+            const field = fields[c];
+            if (field) {
+              const val = row[field.id] ?? row[field.name] ?? '';
+              rowValues.push(val);
+            }
+          }
+          return rowValues.join('\t');
+        });
+
+        const copyText = lines.join('\r\n');
+        if (copyText) {
+          e.preventDefault();
+          const doToast = () => {
+            const cellCount = (maxRow - minRow + 1) * (maxCol - minCol + 1);
+            setCopyToast(`${cellCount}개 셀 복사 완료 (${minRow + 1}~${maxRow + 1}행)`);
+            setTimeout(() => setCopyToast(''), 2500);
+          };
+
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(copyText)
+              .then(doToast)
+              .catch(() => {
+                // 폴백 복사
+                fallbackCopy(copyText);
+                doToast();
+              });
+          } else {
+            fallbackCopy(copyText);
+            doToast();
+          }
+        }
+      }
+    };
+
+    // 클립보드 폴백 함수
+    const fallbackCopy = (text) => {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.top = '-9999px';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      try {
+        document.execCommand('copy');
+      } catch (err) {}
+      document.body.removeChild(ta);
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [cellSelection, filteredItems, fields]);
+
   // 4. 단건 저장 (추가 / 수정)
   const handleSaveItem = async (e) => {
     e.preventDefault();
