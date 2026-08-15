@@ -83,7 +83,7 @@ export async function testSupabaseConnection(url, anonKey) {
 }
 
 // Fetch scans from Supabase (Primary: asset, Fallback: scan_records, imei_scans)
-export async function fetchScansFromSupabase() {
+export async function fetchScansFromSupabase(filters = null) {
   const client = getSupabaseClient();
   if (!client) {
     try {
@@ -96,12 +96,44 @@ export async function fetchScansFromSupabase() {
 
   // 1. asset 정규 마스터 테이블 최우선 조회
   try {
-    const { data, error } = await client
-      .from('asset')
-      .select('*');
+    let query = client.from('asset').select('*');
+
+    // 필터 조건이 주어진 경우 DB 서버 레벨에서 직접 쿼리
+    let searchTokens = [];
+    if (filters) {
+      if (filters.category_major && filters.category_major !== 'ALL') {
+        query = query.eq('category_major', filters.category_major);
+      }
+      if (filters.model_name && filters.model_name.trim()) {
+        query = query.ilike('model_name', `%${filters.model_name.trim()}%`);
+      }
+      if (filters.serial_no && filters.serial_no.trim()) {
+        query = query.ilike('serial_no', `%${filters.serial_no.trim()}%`);
+      }
+      if (filters.asset_status && filters.asset_status !== 'ALL') {
+        query = query.eq('asset_status', filters.asset_status);
+      }
+      if (filters.searchGeneral && filters.searchGeneral.trim()) {
+        const rawSearch = filters.searchGeneral.trim();
+        searchTokens = rawSearch.split(/[\r\n\t,;\s]+/).map(t => t.trim()).filter(Boolean);
+        if (searchTokens.length > 1) {
+          // 다중 토큰 검색 (in 쿼리)
+          const inList = searchTokens.map(t => `"${t}"`).join(',');
+          query = query.or(`asset_no.in.(${inList}),serial_no.in.(${inList}),imei.in.(${inList})`);
+        } else if (searchTokens.length === 1) {
+          const q = searchTokens[0];
+          query = query.or(`asset_no.ilike.%${q}%,serial_no.ilike.%${q}%,imei.ilike.%${q}%,product_name.ilike.%${q}%,model_name.ilike.%${q}%,shelf_no.ilike.%${q}%,remark.ilike.%${q}%`);
+        }
+      }
+    }
+
+    // 최대 5만 건까지 제한 해제
+    query = query.range(0, 49999);
+
+    const { data, error } = await query;
 
     if (!error && data && data.length > 0) {
-      return data.map(r => ({
+      let mapped = data.map(r => ({
         ...r,
         id: r.asset_no || r.id,
         asset_no: r.asset_no,
@@ -120,6 +152,25 @@ export async function fetchScansFromSupabase() {
         components: r.components,
         remark: r.remark
       }));
+
+      // 다중 토큰 복사 순서대로 1:1 정렬 보존
+      if (searchTokens.length > 1) {
+        const tokenLower = searchTokens.map(t => t.toLowerCase());
+        mapped.sort((a, b) => {
+          const aAsset = String(a.asset_no || '').toLowerCase();
+          const aSerial = String(a.serial_no || '').toLowerCase();
+          const bAsset = String(b.asset_no || '').toLowerCase();
+          const bSerial = String(b.serial_no || '').toLowerCase();
+
+          let idxA = tokenLower.findIndex(t => aAsset === t || aSerial === t || aAsset.includes(t) || aSerial.includes(t));
+          let idxB = tokenLower.findIndex(t => bAsset === t || bSerial === t || bAsset.includes(t) || bSerial.includes(t));
+          if (idxA === -1) idxA = 999999;
+          if (idxB === -1) idxB = 999999;
+          return idxA - idxB;
+        });
+      }
+
+      return mapped;
     }
   } catch (err) {
     console.warn('asset 테이블 조회 실패, scan_records 폴백:', err.message);

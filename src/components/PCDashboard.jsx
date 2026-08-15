@@ -52,6 +52,28 @@ export default function PCDashboard({
     }
   };
 
+  // ⭐️ [명시적 조회] DB 직통 쿼리 실행 (17,000건 전량 범위 지원)
+  const handleSearch = async () => {
+    setLoading(true);
+    try {
+      const filters = {
+        category_major: filterCategory,
+        model_name: filterModel,
+        serial_no: filterSerial,
+        asset_status: filterStatus,
+        searchGeneral: searchGeneral
+      };
+      const data = await fetchScansFromSupabase(filters);
+      setItems(data || []);
+      setSelectedIds([]);
+    } catch (err) {
+      console.warn('데이터 조회 실패:', err);
+      setItems([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // 존재하는 대분류 목록 자동 추출 (IT, 측정기, DSLR 카메라 + DB 실제 데이터)
   const availableCategories = useMemo(() => {
     const catSet = new Set(['IT', '측정기', 'DSLR 카메라']);
@@ -83,13 +105,23 @@ export default function PCDashboard({
   }, []);
 
   // 필터 초기화
-  const handleResetFilters = () => {
+  const handleResetFilters = async () => {
     setFilterCategory('ALL');
     setFilterModel('');
     setFilterSerial('');
     setFilterStatus('ALL');
     setSearchGeneral('');
     setSelectedIds([]);
+    setLoading(true);
+    try {
+      const data = await fetchScansFromSupabase();
+      setItems(data || []);
+    } catch (err) {
+      console.warn('데이터 초기화 로드 경고:', err);
+      setItems([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // ⭐️ [핵심] 클립보드 다중 키워드 파싱 및 복사 순서 100% 보존 필터링/정렬 엔진
@@ -335,6 +367,7 @@ export default function PCDashboard({
               type="text"
               value={filterModel}
               onChange={(e) => setFilterModel(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
               placeholder="예: SM-S921N"
               style={{
                 backgroundColor: '#0f172a',
@@ -356,6 +389,7 @@ export default function PCDashboard({
               type="text"
               value={filterSerial}
               onChange={(e) => setFilterSerial(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
               placeholder="예: R5KL60F0CZW"
               style={{
                 backgroundColor: '#0f172a',
@@ -424,6 +458,7 @@ export default function PCDashboard({
                 type="text"
                 value={searchGeneral}
                 onChange={(e) => setSearchGeneral(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                 onPaste={(e) => {
                   const pastedText = e.clipboardData.getData('text');
                   if (pastedText && /[\r\n\t,]/.test(pastedText)) {
@@ -433,7 +468,7 @@ export default function PCDashboard({
                     setSearchGeneral(cleaned);
                   }
                 }}
-                placeholder="자산번호(다중 복사 붙여넣기 가능), 제품명, MAC..."
+                placeholder="자산번호(다중 붙여넣기 가능), 시리얼, 제품명..."
                 style={{
                   backgroundColor: '#0f172a',
                   border: '1px solid #475569',
@@ -464,6 +499,35 @@ export default function PCDashboard({
                 </button>
               )}
             </div>
+          </div>
+
+          {/* ⭐️ 명시적 [조회] 트리거 버튼 */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', justifyContent: 'flex-end' }}>
+            <label style={{ fontSize: '0.68rem', color: 'transparent', whiteSpace: 'nowrap' }}>
+              조회
+            </label>
+            <button
+              onClick={handleSearch}
+              disabled={loading}
+              className="btn btn-primary"
+              style={{
+                fontSize: '0.75rem',
+                padding: '5px 16px',
+                backgroundColor: '#2563eb',
+                borderColor: '#3b82f6',
+                color: '#ffffff',
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '5px',
+                height: '29px',
+                boxShadow: '0 0 10px rgba(37, 99, 235, 0.4)'
+              }}
+              title="설정된 조건으로 17,000건 전체 DB 실시간 조회 (Enter)"
+            >
+              <Search size={13} className={loading ? 'spin' : ''} /> 조회
+            </button>
           </div>
         </div>
 
