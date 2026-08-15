@@ -120,9 +120,10 @@ export default function TempDataTab({ onError, onOpenPrintModal }) {
   const fields = useMemo(() => schema.fields || [], [schema]);
   const keyField = schema.key_field || 'asset_no';
 
-  // ⭐️ 셀 마우스 다운 (영역 선택 시작)
+  // ⭐️ 셀 마우스 다운 (순수 엑셀 스타일 영역 선택 시작 - 기본 텍스트 드래그 방지)
   const handleCellMouseDown = (rowIdx, colIdx, e) => {
     if (e.button !== 0) return;
+    if (e.preventDefault) e.preventDefault();
     setCellSelection({
       startRow: rowIdx,
       startCol: colIdx,
@@ -567,7 +568,11 @@ export default function TempDataTab({ onError, onOpenPrintModal }) {
                     key={row.id || row[keyField] || `row_${rowIdx}`}
                     style={{
                       borderBottom: '1px solid #1e293b',
-                      backgroundColor: isSelected ? 'rgba(56, 189, 248, 0.08)' : 'transparent',
+                      backgroundColor: isSelected 
+                        ? 'rgba(2, 132, 199, 0.15)' 
+                        : (rowIdx % 2 === 0 ? '#0f172a' : '#141e30'),
+                      userSelect: 'none',
+                      WebkitUserSelect: 'none',
                       transition: 'background-color 0.15s'
                     }}
                   >
@@ -609,7 +614,7 @@ export default function TempDataTab({ onError, onOpenPrintModal }) {
                       </div>
                     </td>
 
-                    {/* 3. 동적 데이터 셀 (엑셀 드래그 영역 선택 & Ctrl+C 복사) */}
+                    {/* 3. 동적 데이터 셀 (순수 엑셀 드래그 영역 선택 & Ctrl+C 복사) */}
                     {fields.map((f, colIdx) => {
                       const cellVal = row[f.id] ?? row[f.name] ?? '';
                       const inSelection = isCellInSelection(rowIdx, colIdx);
@@ -625,7 +630,8 @@ export default function TempDataTab({ onError, onOpenPrintModal }) {
                             fontFamily: f.isKey ? 'monospace' : 'inherit',
                             whiteSpace: 'nowrap',
                             cursor: 'cell',
-                            userSelect: 'text',
+                            userSelect: 'none',
+                            WebkitUserSelect: 'none',
                             backgroundColor: inSelection ? 'rgba(2, 132, 199, 0.35)' : 'transparent',
                             outline: inSelection ? '1px solid #38bdf8' : 'none'
                           }}
