@@ -1368,10 +1368,42 @@ del "%~f0"
   });
 
   server.listen(UI_PORT, '127.0.0.1', () => {
-    log('UI', `웹 UI 시작: http://127.0.0.1:${UI_PORT}`);
-    // 브라우저 자동 열기
-    setTimeout(() => exec(`start http://127.0.0.1:${UI_PORT}`), 1200);
+    log('UI', `웹 UI 백그라운드 서비스 가동: http://127.0.0.1:${UI_PORT}`);
   });
+}
+
+// ── [프론트엔드 웹 URL 및 콘솔 윈도우 제어] ─────────────────────────────────
+const FRONTEND_URL = 'https://dragonrpa.github.io/ImageScan/';
+
+function openFrontendInBrowser() {
+  try {
+    const cmd = process.platform === 'win32' ? `start "" "${FRONTEND_URL}"` : `open "${FRONTEND_URL}"`;
+    exec(cmd, (err) => {
+      if (err) log('WARN', `프론트엔드 브라우저 열기 실패: ${err.message}`);
+      else log('INFO', `프론트엔드 웹 화면 자동 실행 완료: ${FRONTEND_URL}`);
+    });
+  } catch (e) {}
+}
+
+function hideConsoleWindow() {
+  if (process.platform !== 'win32') return;
+  try {
+    const psScript = `
+      Add-Type -Name Win32Utils -Namespace Win32 -MemberDefinition '
+        [DllImport("user32.dll")] public static extern bool ShowWindow(int hWnd, int nCmdShow);
+        [DllImport("kernel32.dll")] public static extern int GetConsoleWindow();
+      ';
+      $hWnd = [Win32.Win32Utils]::GetConsoleWindow();
+      if ($hWnd -ne 0) {
+        [Win32.Win32Utils]::ShowWindow($hWnd, 0)
+      }
+    `;
+    const child = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-WindowStyle', 'Hidden', '-Command', psScript], {
+      detached: true,
+      stdio: 'ignore'
+    });
+    child.unref();
+  } catch (e) {}
 }
 
 // ── [1] ZPL 파일 드롭 실시간 감시 엔진 (Folder Watcher) ───────────────────
@@ -1538,11 +1570,19 @@ async function main() {
   setInterval(() => runMonthlyPurgeAndLocalBackup(supabaseCli), 24 * 60 * 60 * 1000); // 매 24시간 검사
 
   log('INFO', '[PR] 상시 대기 중 -- 모바일 IMEI 확정 시 자동 라벨 출력');
-  log('UI',   `브라우저 http://127.0.0.1:${UI_PORT} 에서 프린터 설정 가능`);
   console.log('');
-  console.log('  재설정: UBUS_DragonRPA_Agent.exe --setup  (터미널에서 실행)');
-  console.log('  종료  : 이 창을 닫거나 Ctrl+C');
-  console.log('');
+
+  // ⭐️ [사장님 핵심 요구사항] 모든 설정값이 정상이면 콘솔 Hidden + 프론트엔드 URL 자동 실행
+  const isEnvValid = Boolean(SUPABASE_URL && SUPABASE_KEY && config);
+  if (isEnvValid) {
+    log('INFO', '모든 환경 설정 정상 검증 완료 ➔ 프론트엔드 웹 화면 자동 실행 & 콘솔창 숨김');
+    openFrontendInBrowser();
+    setTimeout(() => {
+      hideConsoleWindow();
+    }, 1200);
+  } else {
+    console.warn('\n⚠️ [설정 불완전] 필수 환경변수가 누락되어 콘솔 창을 유지합니다.');
+  }
 }
 
 main().catch(err => {
