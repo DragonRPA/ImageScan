@@ -1,5 +1,21 @@
 # 릴리즈 노트 (RELEASE_NOTES.md)
 
+## [v1.4.0.Build.1] - 2026-08-15 16:36:00 (KST)
+
+### 🏛️ 신규 'asset' 정규 마스터 테이블 14대 스키마 전면 개편 & 10대 자산상태 및 회수율(%) 정식 탑재
+
+1. **신규 정규 마스터 테이블 `asset` 1순위 전면 바인딩 (`supabaseClient.js`)**
+   - 사장님 정의 14대 정규 컬럼과 1:1 완벽 일치 (`asset_no` PK, `product_name`, `model_name`, `serial_no`, `asset_status`, `earning_ratio`, `shelf_no`, `asset_option`, `calibration_date`, `mac_wlan`, `mac_lan`, `imei`, `components`, `remark`)
+   - 엑셀 업로드 시 `asset` 테이블 직접 1:1 upsert 및 실시간 동기화 바인딩
+2. **신규 정규 헤더 `회수율(earning_ratio)` 탑재 (`excelParserEngine.js`, `PCDashboard.jsx`)**
+   - 취득가 대비 매출 회수율(%) 전용 정수형 필드 지원 및 초록색 강조 렌더링
+   - 엑셀 파서에 `회수율`, `매출회수율`, `earning_ratio` 별칭 자동 감지 등록
+3. **10대 비즈니스 자산상태 전면 지원 (`PCDashboard.jsx`)**
+   - `임대가능`, `임대중`, `출고완료`, `수리대기`, `수리중`, `사내사용중`, `입고검수중`, `팩토리상품`, `출고검수중`, `교정중` 10대 상태별 색상 뱃지 및 필터링 지원
+4. **`SPECIFICATION.md` 및 `MANUAL.md` 명세서 갱신**
+
+---
+
 ## [v1.3.0.Build.9] - 2026-08-15 16:20:00 (KST)
 
 ### 📐 데이터 그리드 고가시성 가로 스크롤바(1600px min-width) 탑재 및 '등록일시' 헤더 표준화

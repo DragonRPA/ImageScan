@@ -82,7 +82,7 @@ export async function testSupabaseConnection(url, anonKey) {
   }
 }
 
-// Fetch scans from Supabase (Primary: scan_records, Fallback: imei_scans)
+// Fetch scans from Supabase (Primary: asset, Fallback: scan_records, imei_scans)
 export async function fetchScansFromSupabase() {
   const client = getSupabaseClient();
   if (!client) {
@@ -94,7 +94,40 @@ export async function fetchScansFromSupabase() {
     }
   }
 
-  // 1. scan_records 마스터 테이블 우선 조회
+  // 1. asset 정규 마스터 테이블 최우선 조회
+  try {
+    const { data, error } = await client
+      .from('asset')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (!error && data && data.length > 0) {
+      return data.map(r => ({
+        ...r,
+        id: r.asset_no || r.id,
+        asset_no: r.asset_no,
+        product_name: r.product_name,
+        model_name: r.model_name,
+        serial_no: r.serial_no,
+        asset_status: r.asset_status || 'AVAILABLE',
+        earning_ratio: r.earning_ratio ?? 0,
+        shelf_no: r.shelf_no,
+        asset_option: r.asset_option,
+        calibration_date: r.calibration_date,
+        mac_wlan: r.mac_wlan,
+        mac_lan: r.mac_lan,
+        imei: r.imei,
+        components: r.components,
+        remark: r.remark,
+        created_at: r.created_at,
+        updated_at: r.updated_at
+      }));
+    }
+  } catch (err) {
+    console.warn('asset 테이블 조회 실패, scan_records 폴백:', err.message);
+  }
+
+  // 2. scan_records 2차 폴백
   try {
     const { data, error } = await client
       .from('scan_records')
@@ -110,22 +143,24 @@ export async function fetchScansFromSupabase() {
         product_name: r.product_name || r.data?.product_name,
         model_name: r.model_name || r.data?.model_name,
         serial_no: r.serial_no || r.data?.serial_no,
-        imei: r.imei || r.data?.imei,
-        shelf_no: r.shelf_no || r.data?.shelf_no,
         asset_status: r.asset_status || r.data?.asset_status || 'AVAILABLE',
+        earning_ratio: r.earning_ratio || r.data?.earning_ratio || 0,
+        shelf_no: r.shelf_no || r.data?.shelf_no,
         asset_option: r.asset_option || r.data?.asset_option,
         calibration_date: r.calibration_date || r.data?.calibration_date,
-        remark: r.remark || r.data?.remark,
         mac_wlan: r.mac_wlan || r.data?.mac_wlan,
         mac_lan: r.mac_lan || r.data?.mac_lan,
-        components: r.components || r.data?.components
+        imei: r.imei || r.data?.imei,
+        components: r.components || r.data?.components,
+        remark: r.remark || r.data?.remark,
+        created_at: r.created_at || r.scanned_at
       }));
     }
   } catch (err) {
     console.warn('scan_records 조회 실패, imei_scans 폴백:', err.message);
   }
 
-  // 2. 레거시 imei_scans 폴백
+  // 3. 레거시 imei_scans 폴백
   const { data, error } = await client
     .from('imei_scans')
     .select('*')
@@ -146,30 +181,32 @@ export async function saveScansToSupabaseBatch(scans, onProgressCallback, import
     const prodName = item.product_name || item.productName || item['제품명'] || '';
     const modelName = item.model_name || item.modelName || item['모델명'] || '';
     const serialNo = item.serial_no || item.serialNo || item['제조번호'] || item['시리얼'] || '';
-    const imeiVal = item.imei || item.imeiVal || item['IMEI'] || item['단말식별번호'] || '';
-    const shelfNo = item.shelf_no || item['선반번호'] || '';
     const assetStatus = item.asset_status || item['자산상태'] || 'AVAILABLE';
+    const earningRatio = parseInt(item.earning_ratio ?? item['회수율'] ?? 0, 10) || 0;
+    const shelfNo = item.shelf_no || item['선반번호'] || '';
     const assetOption = item.asset_option || item['옵션'] || '';
     const calibrationDate = item.calibration_date || item['교정일자'] || '';
-    const remark = item.remark || item['비고'] || '';
     const macWlan = item.mac_wlan || item['MAC wlan'] || item['mac_wlan'] || item.mac_address || '';
     const macLan = item.mac_lan || item['MAC lan'] || item['mac_lan'] || '';
-    const components = item.components || item['구성요소'] || '';
+    const imeiVal = item.imei || item.imeiVal || item['IMEI'] || item['단말식별번호'] || '';
+    const components = item.components || item['구성요소'] || item['구성요소(사양)'] || '';
+    const remark = item.remark || item['비고'] || '';
 
     return {
       asset_no: assetNo,
       product_name: prodName,
       model_name: modelName,
       serial_no: serialNo,
-      imei: imeiVal,
-      shelf_no: shelfNo,
       asset_status: assetStatus,
+      earning_ratio: earningRatio,
+      shelf_no: shelfNo,
       asset_option: assetOption,
       calibration_date: calibrationDate,
-      remark: remark,
       mac_wlan: macWlan,
       mac_lan: macLan,
+      imei: imeiVal,
       components: components,
+      remark: remark,
       status: item.status || 'COMPLETED',
       device_info: item.device_info || 'FILE_IMPORT'
     };
@@ -179,6 +216,7 @@ export async function saveScansToSupabaseBatch(scans, onProgressCallback, import
     if (importMode === 'replace') {
       if (onProgressCallback) onProgressCallback({ stage: 'wipe', percent: 5, message: '1단계: 기존 DB 데이터 전체 삭제 중...' });
       try {
+        await client.from('asset').delete().neq('asset_no', 'FORCE_DELETE_ALL_RECORDS');
         await client.from('scan_records').delete().neq('id', '00000000-0000-0000-0000-000000000000');
         await client.from('imei_scans').delete().neq('id', '00000000-0000-0000-0000-000000000000');
       } catch (e) {}
@@ -192,58 +230,54 @@ export async function saveScansToSupabaseBatch(scans, onProgressCallback, import
     for (let i = 0; i < totalCount; i += CHUNK_SIZE) {
       const chunk = formattedPayload.slice(i, i + CHUNK_SIZE);
       
-      // 1. scan_records 테이블에 직접 정규 컬럼 및 data JSONB 동시 저장
+      // 1. asset 테이블에 직접 정규 컬럼 upsert
+      const assetChunk = chunk.map(item => ({
+        asset_no: String(item.asset_no),
+        product_name: item.product_name,
+        model_name: item.model_name,
+        serial_no: item.serial_no,
+        asset_status: item.asset_status,
+        earning_ratio: item.earning_ratio,
+        shelf_no: item.shelf_no,
+        asset_option: item.asset_option,
+        calibration_date: item.calibration_date,
+        mac_wlan: item.mac_wlan,
+        mac_lan: item.mac_lan,
+        imei: item.imei,
+        components: item.components,
+        remark: item.remark,
+        updated_at: new Date().toISOString()
+      }));
+
+      try {
+        await client.from('asset').upsert(assetChunk, { onConflict: 'asset_no' });
+      } catch (err) {
+        console.warn('asset upsert 경고:', err.message);
+      }
+
+      // 2. scan_records 테이블 호환성 동시 저장
       const scanRecordsChunk = chunk.map(item => ({
         asset_no: String(item.asset_no),
         product_name: item.product_name,
         model_name: item.model_name,
         serial_no: item.serial_no,
-        imei: item.imei,
-        shelf_no: item.shelf_no,
         asset_status: item.asset_status,
+        shelf_no: item.shelf_no,
         asset_option: item.asset_option,
         calibration_date: item.calibration_date,
-        remark: item.remark,
         mac_wlan: item.mac_wlan,
         mac_lan: item.mac_lan,
+        imei: item.imei,
         components: item.components,
-        data: {
-          asset_no: item.asset_no,
-          product_name: item.product_name,
-          model_name: item.model_name,
-          serial_no: item.serial_no,
-          imei: item.imei,
-          shelf_no: item.shelf_no,
-          asset_status: item.asset_status,
-          asset_option: item.asset_option,
-          calibration_date: item.calibration_date,
-          remark: item.remark,
-          mac_wlan: item.mac_wlan,
-          mac_lan: item.mac_lan,
-          components: item.components
-        },
+        remark: item.remark,
+        data: item,
         scanned_at: new Date().toISOString()
       }));
 
       try {
         await client.from('scan_records').upsert(scanRecordsChunk, { onConflict: 'asset_no' });
-      } catch (err) {
-        console.warn('scan_records upsert 경고:', err.message);
-      }
+      } catch (err) {}
 
-      // 2. imei_scans 레거시 테이블 호환성 동기화
-      const imeiChunk = chunk.map(item => ({
-        asset_no: item.asset_no,
-        imei: item.serial_no,
-        serial_no: item.serial_no,
-        mac_address: item.model_name,
-        status: item.status,
-        device_info: item.device_info
-      }));
-
-      const { data, error } = await client.from('imei_scans').insert(imeiChunk).select();
-
-      if (data) insertedResults.push(...data);
       processedCount += chunk.length;
 
       const percent = Math.min(99, Math.round((processedCount / totalCount) * 90) + 10);
@@ -298,17 +332,22 @@ export async function deleteScanFromSupabase(id) {
       const existing = localStorage.getItem(LOCAL_STORAGE_SCANS_KEY);
       if (existing) {
         const parsed = JSON.parse(existing);
-        const filtered = parsed.filter(i => i.id !== id);
+        const filtered = parsed.filter(i => i.id !== id && i.asset_no !== id);
         localStorage.setItem(LOCAL_STORAGE_SCANS_KEY, JSON.stringify(filtered));
       }
     } catch (e) {}
     return;
   }
 
-  const { error } = await client.from('imei_scans').delete().eq('id', id);
-  if (error) {
-    throw new Error(`Supabase 삭제 실패: ${error.message}`);
-  }
+  try {
+    await client.from('asset').delete().or(`asset_no.eq.${id}`);
+  } catch (e) {}
+  try {
+    await client.from('scan_records').delete().or(`id.eq.${id},asset_no.eq.${id}`);
+  } catch (e) {}
+  try {
+    await client.from('imei_scans').delete().eq('id', id);
+  } catch (e) {}
 }
 
 export async function deleteAllScansFromSupabase() {
@@ -316,10 +355,15 @@ export async function deleteAllScansFromSupabase() {
   localStorage.removeItem(LOCAL_STORAGE_SCANS_KEY);
 
   if (!client) return;
-  const { error } = await client.from('imei_scans').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-  if (error) {
-    throw new Error(`Supabase 전체 데이터 삭제 실패: ${error.message}`);
-  }
+  try {
+    await client.from('asset').delete().neq('asset_no', 'FORCE_DELETE_ALL_RECORDS');
+  } catch (e) {}
+  try {
+    await client.from('scan_records').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+  } catch (e) {}
+  try {
+    await client.from('imei_scans').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+  } catch (e) {}
 }
 
 export function subscribeRealtimeScans(onInsertCallback) {
@@ -327,8 +371,8 @@ export function subscribeRealtimeScans(onInsertCallback) {
   if (!client) return null;
 
   const channel = client
-    .channel('public:imei_scans')
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'imei_scans' }, (payload) => {
+    .channel('public:asset')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'asset' }, (payload) => {
       if (payload.new && onInsertCallback) {
         onInsertCallback(payload.new);
       }

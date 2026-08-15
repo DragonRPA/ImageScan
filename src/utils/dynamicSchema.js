@@ -6,10 +6,10 @@ import { getSupabaseClient } from './supabaseClient';
 
 export const LOCAL_KEY_SCHEMA_DEF = 'IMAGE_SCAN_UNIVERSAL_SCHEMA_DEF_V1';
 
-// ── 자산 및 RPA 통합 스키마 정의 (SSOT) ──────────────────────────────────
+// ── 자산(asset) 정규 스키마 정의 (SSOT) ──────────────────────────────────
 export const DEFAULT_SCHEMA_DEF = {
-  id: 'main_schema',
-  schema_name: '자산 및 RPA 통합 스키마',
+  id: 'asset_schema',
+  schema_name: '자산 관리 정규 스키마 (asset)',
   key_field: 'asset_no',
   key_field_name: '자산번호',
   table_version: 1,
@@ -55,28 +55,27 @@ export const DEFAULT_SCHEMA_DEF = {
       order: 4
     },
     {
-      id: 'imei',
-      name: 'IMEI',
+      id: 'asset_status',
+      name: '자산상태',
       type: 'VARCHAR',
       length: 50,
       isKey: false,
       isRequired: false,
-      isBarcodeTarget: true,
+      isBarcodeTarget: false,
       order: 5
     },
     {
-      id: 'shelf_no',
-      name: '선반번호',
-      type: 'VARCHAR',
-      length: 50,
+      id: 'earning_ratio',
+      name: '회수율',
+      type: 'INTEGER',
       isKey: false,
       isRequired: false,
       isBarcodeTarget: false,
       order: 6
     },
     {
-      id: 'asset_status',
-      name: '자산상태',
+      id: 'shelf_no',
+      name: '선반번호',
       type: 'VARCHAR',
       length: 50,
       isKey: false,
@@ -105,16 +104,6 @@ export const DEFAULT_SCHEMA_DEF = {
       order: 9
     },
     {
-      id: 'remark',
-      name: '비고',
-      type: 'VARCHAR',
-      length: 255,
-      isKey: false,
-      isRequired: false,
-      isBarcodeTarget: false,
-      order: 10
-    },
-    {
       id: 'mac_wlan',
       name: 'MAC wlan',
       type: 'VARCHAR',
@@ -122,7 +111,7 @@ export const DEFAULT_SCHEMA_DEF = {
       isKey: false,
       isRequired: false,
       isBarcodeTarget: false,
-      order: 11
+      order: 10
     },
     {
       id: 'mac_lan',
@@ -132,11 +121,21 @@ export const DEFAULT_SCHEMA_DEF = {
       isKey: false,
       isRequired: false,
       isBarcodeTarget: false,
+      order: 11
+    },
+    {
+      id: 'imei',
+      name: 'IMEI',
+      type: 'VARCHAR',
+      length: 50,
+      isKey: false,
+      isRequired: false,
+      isBarcodeTarget: true,
       order: 12
     },
     {
       id: 'components',
-      name: '구성요소',
+      name: '구성요소(사양)',
       type: 'VARCHAR',
       length: 255,
       isKey: false,
@@ -145,13 +144,14 @@ export const DEFAULT_SCHEMA_DEF = {
       order: 13
     },
     {
-      id: 'scanned_at',
-      name: '스캔일시',
-      type: 'TIMESTAMPTZ',
+      id: 'remark',
+      name: '비고',
+      type: 'VARCHAR',
+      length: 255,
       isKey: false,
       isRequired: false,
       isBarcodeTarget: false,
-      order: 13
+      order: 14
     }
   ]
 };

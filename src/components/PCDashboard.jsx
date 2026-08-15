@@ -148,22 +148,40 @@ export default function PCDashboard({
     }
   };
 
-  // 상태 뱃지 렌더러
+  // 상태 뱃지 렌더러 (10대 표준 자산 상태)
   const renderStatusBadge = (statusStr) => {
-    const s = String(statusStr || 'AVAILABLE').toUpperCase();
+    const s = String(statusStr || '임대가능').trim();
     if (s === 'AVAILABLE' || s === '임대가능' || s === '대여가능') {
-      return <span style={{ backgroundColor: '#052e16', color: '#4ade80', border: '1px solid #166534', padding: '1px 6px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: 600 }}>대여가능</span>;
+      return <span style={{ backgroundColor: '#052e16', color: '#4ade80', border: '1px solid #166534', padding: '1px 6px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: 600 }}>임대가능</span>;
     }
-    if (s === 'RENTED' || s === '대여중' || s === '대여') {
-      return <span style={{ backgroundColor: '#172554', color: '#60a5fa', border: '1px solid #1e40af', padding: '1px 6px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: 600 }}>대여중</span>;
+    if (s === 'RENTED' || s === '임대중' || s === '대여중') {
+      return <span style={{ backgroundColor: '#172554', color: '#60a5fa', border: '1px solid #1e40af', padding: '1px 6px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: 600 }}>임대중</span>;
     }
-    if (s === 'REPAIR' || s === '수리중' || s === '정비중') {
+    if (s === '출고완료' || s === 'DELIVERED') {
+      return <span style={{ backgroundColor: '#082f49', color: '#38bdf8', border: '1px solid #0369a1', padding: '1px 6px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: 600 }}>출고완료</span>;
+    }
+    if (s === '수리대기' || s === 'REPAIR_WAIT') {
+      return <span style={{ backgroundColor: '#422006', color: '#facc15', border: '1px solid #854d0e', padding: '1px 6px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: 600 }}>수리대기</span>;
+    }
+    if (s === 'REPAIR' || s === '수리중') {
       return <span style={{ backgroundColor: '#451a03', color: '#fb923c', border: '1px solid #9a3412', padding: '1px 6px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: 600 }}>수리중</span>;
     }
-    if (s === 'DISCARD' || s === '폐기' || s === '망실') {
-      return <span style={{ backgroundColor: '#450a0a', color: '#f87171', border: '1px solid #991b1b', padding: '1px 6px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: 600 }}>폐기</span>;
+    if (s === '사내사용중' || s === 'IN_HOUSE') {
+      return <span style={{ backgroundColor: '#2e1065', color: '#c084fc', border: '1px solid #6b21a8', padding: '1px 6px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: 600 }}>사내사용중</span>;
     }
-    return <span style={{ backgroundColor: '#1e293b', color: '#94a3b8', border: '1px solid #475569', padding: '1px 6px', borderRadius: '4px', fontSize: '0.68rem' }}>{statusStr}</span>;
+    if (s === '입고검수중' || s === 'INSPECT_IN') {
+      return <span style={{ backgroundColor: '#042f2e', color: '#2dd4bf', border: '1px solid #115e59', padding: '1px 6px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: 600 }}>입고검수중</span>;
+    }
+    if (s === '팩토리상품' || s === 'FACTORY') {
+      return <span style={{ backgroundColor: '#1e1b4b', color: '#818cf8', border: '1px solid #3730a3', padding: '1px 6px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: 600 }}>팩토리상품</span>;
+    }
+    if (s === '출고검수중' || s === 'INSPECT_OUT') {
+      return <span style={{ backgroundColor: '#164e63', color: '#22d3ee', border: '1px solid #0e7490', padding: '1px 6px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: 600 }}>출고검수중</span>;
+    }
+    if (s === '교정중' || s === 'CALIBRATING') {
+      return <span style={{ backgroundColor: '#500724', color: '#f472b6', border: '1px solid #9d174d', padding: '1px 6px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: 600 }}>교정중</span>;
+    }
+    return <span style={{ backgroundColor: '#1e293b', color: '#94a3b8', border: '1px solid #475569', padding: '1px 6px', borderRadius: '4px', fontSize: '0.68rem' }}>{s}</span>;
   };
 
   return (
@@ -246,10 +264,16 @@ export default function PCDashboard({
               }}
             >
               <option value="ALL">전체 상태</option>
-              <option value="AVAILABLE">대여가능 (AVAILABLE)</option>
-              <option value="RENTED">대여중 (RENTED)</option>
-              <option value="REPAIR">수리/점검중 (REPAIR)</option>
-              <option value="DISCARD">폐기 (DISCARD)</option>
+              <option value="임대가능">임대가능</option>
+              <option value="임대중">임대중</option>
+              <option value="출고완료">출고완료</option>
+              <option value="수리대기">수리대기</option>
+              <option value="수리중">수리중</option>
+              <option value="사내사용중">사내사용중</option>
+              <option value="입고검수중">입고검수중</option>
+              <option value="팩토리상품">팩토리상품</option>
+              <option value="출고검수중">출고검수중</option>
+              <option value="교정중">교정중</option>
             </select>
           </div>
 
@@ -374,13 +398,14 @@ export default function PCDashboard({
                 <th style={{ padding: '6px 8px', textAlign: 'left', whiteSpace: 'nowrap' }}>제품명</th>
                 <th style={{ padding: '6px 8px', textAlign: 'left', whiteSpace: 'nowrap' }}>모델명</th>
                 <th style={{ padding: '6px 8px', textAlign: 'left', whiteSpace: 'nowrap' }}>제조번호(시리얼)</th>
-                <th style={{ padding: '6px 8px', textAlign: 'left', whiteSpace: 'nowrap' }}>IMEI</th>
-                <th style={{ padding: '6px 8px', textAlign: 'left', whiteSpace: 'nowrap' }}>선반번호</th>
                 <th style={{ padding: '6px 8px', textAlign: 'center', whiteSpace: 'nowrap' }}>자산상태</th>
+                <th style={{ padding: '6px 8px', textAlign: 'right', whiteSpace: 'nowrap' }}>회수율</th>
+                <th style={{ padding: '6px 8px', textAlign: 'left', whiteSpace: 'nowrap' }}>선반번호</th>
                 <th style={{ padding: '6px 8px', textAlign: 'left', whiteSpace: 'nowrap' }}>옵션</th>
                 <th style={{ padding: '6px 8px', textAlign: 'left', whiteSpace: 'nowrap' }}>교정일자</th>
                 <th style={{ padding: '6px 8px', textAlign: 'left', whiteSpace: 'nowrap' }}>MAC wlan</th>
                 <th style={{ padding: '6px 8px', textAlign: 'left', whiteSpace: 'nowrap' }}>MAC lan</th>
+                <th style={{ padding: '6px 8px', textAlign: 'left', whiteSpace: 'nowrap' }}>IMEI</th>
                 <th style={{ padding: '6px 8px', textAlign: 'left', whiteSpace: 'nowrap' }}>구성요소(사양)</th>
                 <th style={{ padding: '6px 8px', textAlign: 'left', whiteSpace: 'nowrap' }}>비고</th>
                 <th style={{ padding: '6px 8px', textAlign: 'left', whiteSpace: 'nowrap' }}>등록일시</th>
@@ -389,38 +414,39 @@ export default function PCDashboard({
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={15} style={{ padding: '32px', textAlign: 'center', color: '#64748b' }}>
+                  <td colSpan={16} style={{ padding: '32px', textAlign: 'center', color: '#64748b' }}>
                     자산 데이터를 불러오는 중입니다...
                   </td>
                 </tr>
               ) : filteredItems.length === 0 ? (
                 <tr>
-                  <td colSpan={15} style={{ padding: '32px', textAlign: 'center', color: '#64748b' }}>
+                  <td colSpan={16} style={{ padding: '32px', textAlign: 'center', color: '#64748b' }}>
                     등록된 자산 데이터가 없습니다. [엑셀 업로드]를 통해 데이터를 등록하세요.
                   </td>
                 </tr>
               ) : (
                 filteredItems.map((row, idx) => {
-                  const isSelected = selectedIds.includes(row.id);
-                  const assetNo = row.asset_no || row.key_value || row.data?.asset_no || '-';
-                  const productName = row.product_name || row.data?.product_name || '-';
-                  const modelName = row.model_name || row.data?.model_name || '-';
-                  const serialNo = row.serial_no || row.data?.serial_no || '-';
-                  const imei = row.imei || row.data?.imei || '-';
-                  const shelfNo = row.shelf_no || row.data?.shelf_no || '-';
-                  const status = row.asset_status || row.data?.asset_status || row.status || 'AVAILABLE';
-                  const option = row.asset_option || row.data?.asset_option || '-';
-                  const calDate = row.calibration_date || row.data?.calibration_date || '-';
-                  const macWlan = row.mac_wlan || row.data?.mac_wlan || row.mac_address || '-';
-                  const macLan = row.mac_lan || row.data?.mac_lan || '-';
-                  const components = row.components || row.data?.components || '-';
-                  const remark = row.remark || row.data?.remark || '-';
-                  const scannedAt = row.scanned_at || row.created_at ? new Date(row.scanned_at || row.created_at).toLocaleString('ko-KR', { hour12: false }) : '-';
+                  const isSelected = selectedIds.includes(row.id || row.asset_no);
+                  const assetNo = row.asset_no || row.key_value || '-';
+                  const productName = row.product_name || '-';
+                  const modelName = row.model_name || '-';
+                  const serialNo = row.serial_no || '-';
+                  const status = row.asset_status || '임대가능';
+                  const earningRatio = row.earning_ratio !== undefined && row.earning_ratio !== null ? `${row.earning_ratio}%` : '-';
+                  const shelfNo = row.shelf_no || '-';
+                  const option = row.asset_option || '-';
+                  const calDate = row.calibration_date || '-';
+                  const macWlan = row.mac_wlan || '-';
+                  const macLan = row.mac_lan || '-';
+                  const imei = row.imei || '-';
+                  const components = row.components || '-';
+                  const remark = row.remark || '-';
+                  const createdAt = row.created_at ? new Date(row.created_at).toLocaleString('ko-KR', { hour12: false }) : '-';
 
                   return (
                     <tr
-                      key={row.id || idx}
-                      onClick={() => handleToggleSelect(row.id)}
+                      key={row.asset_no || row.id || idx}
+                      onClick={() => handleToggleSelect(row.id || row.asset_no)}
                       style={{
                         borderBottom: '1px solid #1e293b',
                         backgroundColor: isSelected ? 'rgba(56, 189, 248, 0.12)' : (idx % 2 === 0 ? '#0f172a' : '#141e30'),
@@ -431,7 +457,7 @@ export default function PCDashboard({
                         <input
                           type="checkbox"
                           checked={isSelected}
-                          onChange={() => handleToggleSelect(row.id)}
+                          onChange={() => handleToggleSelect(row.id || row.asset_no)}
                         />
                       </td>
                       <td style={{ padding: '6px 8px', color: '#38bdf8', fontWeight: 700, whiteSpace: 'nowrap' }}>
@@ -446,14 +472,14 @@ export default function PCDashboard({
                       <td style={{ padding: '6px 8px', color: '#cbd5e1', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
                         {serialNo}
                       </td>
-                      <td style={{ padding: '6px 8px', color: '#a78bfa', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
-                        {imei}
+                      <td style={{ padding: '6px 8px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                        {renderStatusBadge(status)}
+                      </td>
+                      <td style={{ padding: '6px 8px', textAlign: 'right', color: '#34d399', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                        {earningRatio}
                       </td>
                       <td style={{ padding: '6px 8px', color: '#94a3b8', whiteSpace: 'nowrap' }}>
                         {shelfNo}
-                      </td>
-                      <td style={{ padding: '6px 8px', textAlign: 'center', whiteSpace: 'nowrap' }}>
-                        {renderStatusBadge(status)}
                       </td>
                       <td style={{ padding: '6px 8px', color: '#94a3b8', whiteSpace: 'nowrap' }}>
                         {option}
@@ -467,6 +493,9 @@ export default function PCDashboard({
                       <td style={{ padding: '6px 8px', color: '#94a3b8', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
                         {macLan}
                       </td>
+                      <td style={{ padding: '6px 8px', color: '#a78bfa', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
+                        {imei}
+                      </td>
                       <td style={{ padding: '6px 8px', color: '#94a3b8', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {components}
                       </td>
@@ -474,7 +503,7 @@ export default function PCDashboard({
                         {remark}
                       </td>
                       <td style={{ padding: '6px 8px', color: '#64748b', fontSize: '0.68rem', whiteSpace: 'nowrap' }}>
-                        {scannedAt}
+                        {createdAt}
                       </td>
                     </tr>
                   );

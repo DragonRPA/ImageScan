@@ -26,13 +26,17 @@ export const FIELD_SYNONYMS = {
     label: 'IMEI',
     aliases: ['imei', '단말식별번호', '단말기식별번호', '단말식별', 'imei_no', 'imeino', '단말기식별', 'imei번호']
   },
-  shelf_no: {
-    label: '선반번호',
-    aliases: ['선반번호', '선반 번호', 'shelf_no', 'shelfno', '선반', '위치', '로케이션', 'location', '선반_번호']
-  },
   asset_status: {
     label: '자산상태',
     aliases: ['자산상태', '자산 상태', 'asset_status', 'assetstatus', '상태', 'status', '자산_상태']
+  },
+  earning_ratio: {
+    label: '회수율',
+    aliases: ['회수율', '회수 율', 'earning_ratio', 'earningratio', '매출회수율', '회수율(%)', '회수비율', 'ratio']
+  },
+  shelf_no: {
+    label: '선반번호',
+    aliases: ['선반번호', '선반 번호', 'shelf_no', 'shelfno', '선반', '위치', '로케이션', 'location', '선반_번호']
   },
   asset_option: {
     label: '옵션',
