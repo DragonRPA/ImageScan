@@ -95,11 +95,11 @@ export default function PCDashboard({
   // ⭐️ [핵심] 클립보드 다중 키워드 파싱 및 복사 순서 100% 보존 필터링/정렬 엔진
   const filteredItems = useMemo(() => {
     const rawSearch = searchGeneral.trim();
-    // 줄바꿈(\n), 탭(\t), 쉼표(,)가 포함되었는지 감지
-    const isMultiSearch = /[\r\n\t,]/.test(rawSearch);
+    // 공백(\s), 줄바꿈(\r, \n), 탭(\t), 쉼표(,), 세미콜론(;) 모두 분리
     const searchTokens = rawSearch
-      ? rawSearch.split(/[\r\n\t,]+/).map(t => t.trim().toLowerCase()).filter(Boolean)
+      ? rawSearch.split(/[\r\n\t,;\s]+/).map(t => t.trim().toLowerCase()).filter(Boolean)
       : [];
+    const isMultiSearch = searchTokens.length > 1;
 
     let result = items.filter((item) => {
       // 0. 대분류 필터
@@ -141,10 +141,14 @@ export default function PCDashboard({
         const itemRemark = String(item.remark || '').toLowerCase();
 
         if (isMultiSearch) {
-          // 다중 복사 검색 모드: 자산번호, 시리얼, IMEI 중 일치 검사
+          // 다중 복사 검색 모드: 자산번호, 시리얼, IMEI, 모델명 중 정확 매칭 또는 포함 매칭
           const matched = searchTokens.some(token => 
-            itemAssetNo === token || itemSerialNo === token || itemImei === token ||
-            itemAssetNo.includes(token) || itemSerialNo.includes(token)
+            itemAssetNo === token || 
+            itemSerialNo === token || 
+            itemImei === token ||
+            (token.length >= 4 && itemAssetNo.includes(token)) ||
+            (token.length >= 4 && itemSerialNo.includes(token)) ||
+            (token.length >= 4 && itemModelName.includes(token))
           );
           if (!matched) return false;
         } else {
@@ -172,13 +176,13 @@ export default function PCDashboard({
     // ⭐️ [클립보드 순서 보존 정렬] 엑셀에서 복사해온 줄 순서대로 1:1 강제 정렬!
     if (isMultiSearch && searchTokens.length > 0) {
       result.sort((a, b) => {
-        const aKey1 = String(a.asset_no || '').toLowerCase();
-        const aKey2 = String(a.serial_no || '').toLowerCase();
-        const bKey1 = String(b.asset_no || '').toLowerCase();
-        const bKey2 = String(b.serial_no || '').toLowerCase();
+        const aAsset = String(a.asset_no || '').toLowerCase();
+        const aSerial = String(a.serial_no || '').toLowerCase();
+        const bAsset = String(b.asset_no || '').toLowerCase();
+        const bSerial = String(b.serial_no || '').toLowerCase();
 
-        let idxA = searchTokens.findIndex(t => aKey1 === t || aKey2 === t || aKey1.includes(t) || aKey2.includes(t));
-        let idxB = searchTokens.findIndex(t => bKey1 === t || bKey2 === t || bKey1.includes(t) || bKey2.includes(t));
+        let idxA = searchTokens.findIndex(t => aAsset === t || aSerial === t || (t.length >= 4 && (aAsset.includes(t) || aSerial.includes(t))));
+        let idxB = searchTokens.findIndex(t => bAsset === t || bSerial === t || (t.length >= 4 && (bAsset.includes(t) || bSerial.includes(t))));
         if (idxA === -1) idxA = 999999;
         if (idxB === -1) idxB = 999999;
         return idxA - idxB;
@@ -396,28 +400,69 @@ export default function PCDashboard({
             </select>
           </div>
 
-          {/* 통합 검색어 */}
+          {/* 통합 검색어 (엑셀 다중 복사/붙여넣기 100% 지원) */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-            <label style={{ fontSize: '0.68rem', color: '#94a3b8', fontWeight: 600, whiteSpace: 'nowrap' }}>
-              통합 키워드 검색
-            </label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <label style={{ fontSize: '0.68rem', color: '#94a3b8', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                통합 키워드 검색 (단일 / 엑셀 다중 붙여넣기)
+              </label>
+              {searchGeneral.trim() && searchGeneral.trim().split(/[\r\n\t,;\s]+/).filter(Boolean).length > 1 && (
+                <span style={{
+                  fontSize: '0.65rem',
+                  backgroundColor: '#0284c7',
+                  color: '#ffffff',
+                  padding: '1px 6px',
+                  borderRadius: '10px',
+                  fontWeight: 700
+                }}>
+                  다중 {searchGeneral.trim().split(/[\r\n\t,;\s]+/).filter(Boolean).length}건
+                </span>
+              )}
+            </div>
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
               <input
                 type="text"
                 value={searchGeneral}
                 onChange={(e) => setSearchGeneral(e.target.value)}
-                placeholder="자산번호, 제품명, 선반, MAC..."
+                onPaste={(e) => {
+                  const pastedText = e.clipboardData.getData('text');
+                  if (pastedText && /[\r\n\t,]/.test(pastedText)) {
+                    e.preventDefault();
+                    // 줄바꿈, 탭, 쉼표를 공백으로 치환하여 안전하게 검색 상태에 반영
+                    const cleaned = pastedText.split(/[\r\n\t,;]+/).map(s => s.trim()).filter(Boolean).join(' ');
+                    setSearchGeneral(cleaned);
+                  }
+                }}
+                placeholder="자산번호(다중 복사 붙여넣기 가능), 제품명, MAC..."
                 style={{
                   backgroundColor: '#0f172a',
                   border: '1px solid #475569',
                   borderRadius: '4px',
-                  padding: '5px 8px 5px 26px',
+                  padding: '5px 24px 5px 26px',
                   color: '#f8fafc',
                   fontSize: '0.75rem',
                   width: '100%'
                 }}
               />
               <Search size={12} style={{ position: 'absolute', left: '8px', color: '#64748b' }} />
+              {searchGeneral && (
+                <button
+                  onClick={() => setSearchGeneral('')}
+                  style={{
+                    position: 'absolute',
+                    right: '6px',
+                    background: 'none',
+                    border: 'none',
+                    color: '#94a3b8',
+                    cursor: 'pointer',
+                    fontSize: '0.8rem',
+                    padding: 0
+                  }}
+                  title="검색어 지우기"
+                >
+                  ✕
+                </button>
+              )}
             </div>
           </div>
         </div>
