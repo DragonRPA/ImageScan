@@ -1315,6 +1315,35 @@ del "%~f0"
       }
     }
 
+    // ── 블루투스 바코드 스캐너 고스트 세션 강제 리셋 & 1초 재연결 ─────────
+    if (url === '/api/bluetooth/reconnect' && req.method === 'POST') {
+      log('INFO', '블루투스 스택 리셋 및 스캐너 재연결 명령 수신');
+      try {
+        exec('powershell -Command "Restart-Service bthserv -Force -ErrorAction SilentlyContinue"', (err) => {
+          if (err) log('WARN', `블루투스 서비스 재시작 경고: ${err.message}`);
+          else log('INFO', '블루투스 Windows 스택 리프레시 완료');
+        });
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({
+          ok: true,
+          message: 'Windows 블루투스 스택이 리셋되었습니다. 스캐너 방아쇠(트리거)를 1회 누르시면 즉시 연결됩니다.'
+        }));
+      } catch (e) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ error: e.message }));
+      }
+    }
+
+    // ── Windows 블루투스 설정창 즉시 호출 ─────────────────────────────────
+    if (url === '/api/bluetooth/open-settings' && req.method === 'POST') {
+      exec('start ms-settings:bluetooth', (err) => {
+        if (err) log('WARN', `블루투스 설정 열기 실패: ${err.message}`);
+      });
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({ ok: true, message: 'Windows 블루투스 설정 창이 열렸습니다.' }));
+    }
+
     res.writeHead(404); res.end('Not found');
   });
 

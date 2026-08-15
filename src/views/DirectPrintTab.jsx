@@ -37,10 +37,8 @@ import {
   fetchActualConnectedPrinters
 } from '../utils/printerManager';
 import {
-  connectBluetoothScanner,
-  disconnectBluetoothScanner,
-  getActiveBluetoothScanner,
-  isWebBluetoothSupported
+  reconnectWindowsBluetoothViaAgent,
+  openWindowsBluetoothSettingsViaAgent
 } from '../utils/bluetoothScannerManager';
 import { RealBarcodeSvg } from '../utils/barcode39';
 import { triggerSuccessFeedback } from '../utils/soundFeedback';
@@ -69,10 +67,6 @@ export default function DirectPrintTab({ onError, onOpenPrintModal }) {
   const [newPrinterTarget, setNewPrinterTarget] = useState('COM Port / USB');
   const [newPrinterBaud, setNewPrinterBaud] = useState('9600');
 
-  // ── 블루투스 바코드 스캐너 상태 ─────────────────────────────
-  const [bleStatus, setBleStatus] = useState(getActiveBluetoothScanner);
-  const [isConnectingBle, setIsConnectingBle] = useState(false);
-
   const inputRef = useRef(null);
   const canvasRef = useRef(null);
 
@@ -80,30 +74,36 @@ export default function DirectPrintTab({ onError, onOpenPrintModal }) {
   const activePrinter = printers.find(p => p.id === activePrinterIdState) || printers[0];
 
   const [isScanningPrinters, setIsScanningPrinters] = useState(false);
+  const [isResettingBle, setIsResettingBle] = useState(false);
 
-  // ⭐️ 블루투스 바코드 스캐너 원클릭 빠른 연결 / 연결 해제
-  const handleToggleBluetoothScanner = async () => {
-    if (bleStatus.connected) {
-      disconnectBluetoothScanner();
-      setBleStatus({ connected: false, deviceName: null });
-      setStatusMessage({ type: 'info', text: '블루투스 스캐너 연결이 해제되었습니다.' });
-      return;
-    }
-
-    setIsConnectingBle(true);
+  // ⭐️ [핵심] 윈도우 블루투스 1초 고속 리셋 & 슬립 스캐너 즉시 재연결
+  const handleQuickReconnectBluetooth = async () => {
+    setIsResettingBle(true);
+    setStatusMessage({ type: 'info', text: 'Windows 블루투스 스택 리셋 중... (고스트 세션 정리)' });
     try {
-      const res = await connectBluetoothScanner((code) => {
-        setScanInput(code);
-        handleExecuteScanAndPrint(code);
-      });
-      setBleStatus({ connected: true, deviceName: res.deviceName, batteryLevel: res.batteryLevel });
-      setStatusMessage({ type: 'success', text: `[${res.deviceName}] 블루투스 바코드 스캐너가 연결되었습니다!` });
+      const res = await reconnectWindowsBluetoothViaAgent();
+      if (res.success) {
+        setStatusMessage({
+          type: 'success',
+          text: '✅ ' + res.message
+        });
+      } else {
+        setStatusMessage({
+          type: 'error',
+          text: res.message
+        });
+      }
     } catch (err) {
-      setStatusMessage({ type: 'error', text: err.message });
+      setStatusMessage({ type: 'error', text: `블루투스 리셋 실패: ${err.message}` });
     } finally {
-      setIsConnectingBle(false);
+      setIsResettingBle(false);
       inputRef.current?.focus();
     }
+  };
+
+  // ⭐️ Windows 블루투스 설정창 열기
+  const handleOpenBluetoothSettings = async () => {
+    await openWindowsBluetoothSettingsViaAgent();
   };
 
   // ⭐️ 마운트 시 실제 연결된 프린터 및 온라인 DB 전체 서식 목록 동기화
@@ -613,30 +613,49 @@ export default function DirectPrintTab({ onError, onOpenPrintModal }) {
               </label>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                {/* 📡 블루투스 스캐너 원클릭 빠른 연결 버튼 */}
+                {/* ⚡ 윈도우 블루투스 1초 고속 리셋 & 슬립 스캐너 재연결 버튼 */}
                 <button
-                  onClick={handleToggleBluetoothScanner}
-                  disabled={isConnectingBle}
+                  onClick={handleQuickReconnectBluetooth}
+                  disabled={isResettingBle}
                   className="btn btn-outline"
                   style={{
                     fontSize: '0.7rem',
-                    padding: '2px 8px',
-                    borderColor: bleStatus.connected ? '#4ade80' : '#38bdf8',
-                    color: bleStatus.connected ? '#86efac' : '#38bdf8',
-                    backgroundColor: bleStatus.connected ? 'rgba(74, 222, 128, 0.15)' : 'transparent',
+                    padding: '3px 9px',
+                    borderColor: '#f59e0b',
+                    color: '#fbbf24',
+                    backgroundColor: 'rgba(245, 158, 11, 0.15)',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '4px',
-                    fontWeight: 600
+                    fontWeight: 700
                   }}
-                  title="블루투스 바코드 스캐너 원클릭 빠른 연결"
+                  title="슬립 모드로 끊어진 블루투스 스캐너를 윈도우에서 1초 만에 강제 재연결합니다"
                 >
-                  <Bluetooth size={12} />
-                  {isConnectingBle ? '블루투스 페어링중...' : (bleStatus.connected ? `🟢 ${bleStatus.deviceName}` : '📡 블루투스 스캐너 빠른 연결')}
+                  <RefreshCw size={11} className={isResettingBle ? 'spin' : ''} />
+                  {isResettingBle ? '블루투스 리셋중...' : '⚡ 스캐너 1초 재연결'}
+                </button>
+
+                {/* ⚙️ 윈도우 블루투스 설정 바로 열기 */}
+                <button
+                  onClick={handleOpenBluetoothSettings}
+                  className="btn btn-outline"
+                  style={{
+                    fontSize: '0.7rem',
+                    padding: '3px 8px',
+                    borderColor: '#475569',
+                    color: '#94a3b8',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '3px'
+                  }}
+                  title="Windows 블루투스 설정 창을 엽니다 (제조번호 페어링)"
+                >
+                  <Bluetooth size={11} />
+                  설정
                 </button>
 
                 <span style={{ fontSize: '0.68rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '3px' }}>
-                  <Zap size={11} color="#facc15" /> Zero-Focus 무인 감지 활성
+                  <Zap size={11} color="#facc15" /> Zero-Focus 활성
                 </span>
               </div>
             </div>

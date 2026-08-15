@@ -138,13 +138,32 @@ export function getActiveBluetoothScanner() {
 }
 
 /**
- * 블루투스 스캐너 연결 해제
+ * ⭐️ 로컬 PC 에이전트를 통한 Windows 블루투스 스택 1초 강제 리셋 (고스트 세션 정리 & 스캐너 즉시 재연결)
  */
-export function disconnectBluetoothScanner() {
-  if (activeBleDevice && activeBleDevice.gatt && activeBleDevice.gatt.connected) {
-    activeBleDevice.gatt.disconnect();
+export async function reconnectWindowsBluetoothViaAgent(port = 9988) {
+  try {
+    const res = await fetch(`http://127.0.0.1:${port}/api/bluetooth/reconnect`, {
+      method: 'POST'
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return { success: true, message: data.message || '블루투스 스택이 리셋되었습니다. 스캐너를 1회 누르세요!' };
+    }
+  } catch (err) {
+    // 에이전트 미실행 시
   }
-  activeBleDevice = null;
-  activeBleServer = null;
-  return { success: true };
+  return { success: false, message: '로컬 에이전트(UBUS_DragonRPA_Agent)가 실행 중인지 확인하세요.' };
+}
+
+/**
+ * ⭐️ Windows 블루투스 설정창 즉시 열기
+ */
+export async function openWindowsBluetoothSettingsViaAgent(port = 9988) {
+  try {
+    const res = await fetch(`http://127.0.0.1:${port}/api/bluetooth/open-settings`, {
+      method: 'POST'
+    });
+    if (res.ok) return { success: true };
+  } catch (err) {}
+  return { success: false };
 }
