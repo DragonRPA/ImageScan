@@ -20,7 +20,11 @@ export const FIELD_SYNONYMS = {
   },
   serial_no: {
     label: '제조번호(시리얼)',
-    aliases: ['제조번호', '제조 번호', '시리얼', '시리얼넘버', '시리얼 번호', 'serial_no', 'serialno', 's/n', 'serial', 'imei', '일련번호', '시리얼_번호']
+    aliases: ['제조번호', '제조 번호', '시리얼', '시리얼넘버', '시리얼 번호', 'serial_no', 'serialno', 's/n', 'serial', '일련번호', '시리얼_번호']
+  },
+  imei: {
+    label: 'IMEI',
+    aliases: ['imei', '단말식별번호', '단말기식별번호', '단말식별', 'imei_no', 'imeino', '단말기식별', 'imei번호']
   },
   shelf_no: {
     label: '선반번호',

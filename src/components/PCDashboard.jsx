@@ -374,6 +374,7 @@ export default function PCDashboard({
                 <th style={{ padding: '6px 8px', textAlign: 'left', whiteSpace: 'nowrap' }}>제품명</th>
                 <th style={{ padding: '6px 8px', textAlign: 'left', whiteSpace: 'nowrap' }}>모델명</th>
                 <th style={{ padding: '6px 8px', textAlign: 'left', whiteSpace: 'nowrap' }}>제조번호(시리얼)</th>
+                <th style={{ padding: '6px 8px', textAlign: 'left', whiteSpace: 'nowrap' }}>IMEI</th>
                 <th style={{ padding: '6px 8px', textAlign: 'left', whiteSpace: 'nowrap' }}>선반번호</th>
                 <th style={{ padding: '6px 8px', textAlign: 'center', whiteSpace: 'nowrap' }}>자산상태</th>
                 <th style={{ padding: '6px 8px', textAlign: 'left', whiteSpace: 'nowrap' }}>옵션</th>
@@ -388,13 +389,13 @@ export default function PCDashboard({
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={14} style={{ padding: '32px', textAlign: 'center', color: '#64748b' }}>
+                  <td colSpan={15} style={{ padding: '32px', textAlign: 'center', color: '#64748b' }}>
                     자산 데이터를 불러오는 중입니다...
                   </td>
                 </tr>
               ) : filteredItems.length === 0 ? (
                 <tr>
-                  <td colSpan={14} style={{ padding: '32px', textAlign: 'center', color: '#64748b' }}>
+                  <td colSpan={15} style={{ padding: '32px', textAlign: 'center', color: '#64748b' }}>
                     등록된 자산 데이터가 없습니다. [엑셀 업로드]를 통해 데이터를 등록하세요.
                   </td>
                 </tr>
@@ -404,7 +405,8 @@ export default function PCDashboard({
                   const assetNo = row.asset_no || row.key_value || row.data?.asset_no || '-';
                   const productName = row.product_name || row.data?.product_name || '-';
                   const modelName = row.model_name || row.data?.model_name || '-';
-                  const serialNo = row.serial_no || row.data?.serial_no || row.imei || '-';
+                  const serialNo = row.serial_no || row.data?.serial_no || '-';
+                  const imei = row.imei || row.data?.imei || '-';
                   const shelfNo = row.shelf_no || row.data?.shelf_no || '-';
                   const status = row.asset_status || row.data?.asset_status || row.status || 'AVAILABLE';
                   const option = row.asset_option || row.data?.asset_option || '-';
@@ -443,6 +445,9 @@ export default function PCDashboard({
                       </td>
                       <td style={{ padding: '6px 8px', color: '#cbd5e1', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
                         {serialNo}
+                      </td>
+                      <td style={{ padding: '6px 8px', color: '#a78bfa', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
+                        {imei}
                       </td>
                       <td style={{ padding: '6px 8px', color: '#94a3b8', whiteSpace: 'nowrap' }}>
                         {shelfNo}

@@ -82,7 +82,7 @@ export async function testSupabaseConnection(url, anonKey) {
   }
 }
 
-// Fetch scans from Supabase or LocalStorage
+// Fetch scans from Supabase (Primary: scan_records, Fallback: imei_scans)
 export async function fetchScansFromSupabase() {
   const client = getSupabaseClient();
   if (!client) {
@@ -94,6 +94,38 @@ export async function fetchScansFromSupabase() {
     }
   }
 
+  // 1. scan_records 마스터 테이블 우선 조회
+  try {
+    const { data, error } = await client
+      .from('scan_records')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (!error && data && data.length > 0) {
+      return data.map(r => ({
+        ...r,
+        ...r.data,
+        id: r.id,
+        asset_no: r.asset_no || r.key_value || r.data?.asset_no,
+        product_name: r.product_name || r.data?.product_name,
+        model_name: r.model_name || r.data?.model_name,
+        serial_no: r.serial_no || r.data?.serial_no,
+        imei: r.imei || r.data?.imei,
+        shelf_no: r.shelf_no || r.data?.shelf_no,
+        asset_status: r.asset_status || r.data?.asset_status || 'AVAILABLE',
+        asset_option: r.asset_option || r.data?.asset_option,
+        calibration_date: r.calibration_date || r.data?.calibration_date,
+        remark: r.remark || r.data?.remark,
+        mac_wlan: r.mac_wlan || r.data?.mac_wlan,
+        mac_lan: r.mac_lan || r.data?.mac_lan,
+        components: r.components || r.data?.components
+      }));
+    }
+  } catch (err) {
+    console.warn('scan_records 조회 실패, imei_scans 폴백:', err.message);
+  }
+
+  // 2. 레거시 imei_scans 폴백
   const { data, error } = await client
     .from('imei_scans')
     .select('*')
@@ -113,9 +145,10 @@ export async function saveScansToSupabaseBatch(scans, onProgressCallback, import
     const assetNo = item.asset_no || item.assetNo || item['자산번호'] || `TEST${String(idx + 1).padStart(4, '0')}`;
     const prodName = item.product_name || item.productName || item['제품명'] || '';
     const modelName = item.model_name || item.modelName || item['모델명'] || '';
-    const serialNo = item.serial_no || item.serialNo || item['제조번호'] || item['시리얼'] || item.imei || '';
+    const serialNo = item.serial_no || item.serialNo || item['제조번호'] || item['시리얼'] || '';
+    const imeiVal = item.imei || item.imeiVal || item['IMEI'] || item['단말식별번호'] || '';
     const shelfNo = item.shelf_no || item['선반번호'] || '';
-    const assetStatus = item.asset_status || item['자산상태'] || '';
+    const assetStatus = item.asset_status || item['자산상태'] || 'AVAILABLE';
     const assetOption = item.asset_option || item['옵션'] || '';
     const calibrationDate = item.calibration_date || item['교정일자'] || '';
     const remark = item.remark || item['비고'] || '';
@@ -128,6 +161,7 @@ export async function saveScansToSupabaseBatch(scans, onProgressCallback, import
       product_name: prodName,
       model_name: modelName,
       serial_no: serialNo,
+      imei: imeiVal,
       shelf_no: shelfNo,
       asset_status: assetStatus,
       asset_option: assetOption,
@@ -158,15 +192,27 @@ export async function saveScansToSupabaseBatch(scans, onProgressCallback, import
     for (let i = 0; i < totalCount; i += CHUNK_SIZE) {
       const chunk = formattedPayload.slice(i, i + CHUNK_SIZE);
       
-      // 1. scan_records 테이블에 upsert (자산 및 RPA 필드 전체 JSONB data 저장)
+      // 1. scan_records 테이블에 직접 정규 컬럼 및 data JSONB 동시 저장
       const scanRecordsChunk = chunk.map(item => ({
-        schema_id: 'main_schema',
-        key_value: String(item.asset_no),
+        asset_no: String(item.asset_no),
+        product_name: item.product_name,
+        model_name: item.model_name,
+        serial_no: item.serial_no,
+        imei: item.imei,
+        shelf_no: item.shelf_no,
+        asset_status: item.asset_status,
+        asset_option: item.asset_option,
+        calibration_date: item.calibration_date,
+        remark: item.remark,
+        mac_wlan: item.mac_wlan,
+        mac_lan: item.mac_lan,
+        components: item.components,
         data: {
           asset_no: item.asset_no,
           product_name: item.product_name,
           model_name: item.model_name,
           serial_no: item.serial_no,
+          imei: item.imei,
           shelf_no: item.shelf_no,
           asset_status: item.asset_status,
           asset_option: item.asset_option,
@@ -180,9 +226,9 @@ export async function saveScansToSupabaseBatch(scans, onProgressCallback, import
       }));
 
       try {
-        await client.from('scan_records').upsert(scanRecordsChunk, { onConflict: 'key_value' });
+        await client.from('scan_records').upsert(scanRecordsChunk, { onConflict: 'asset_no' });
       } catch (err) {
-        console.warn('scan_records upsert 건너뜀:', err.message);
+        console.warn('scan_records upsert 경고:', err.message);
       }
 
       // 2. imei_scans 레거시 테이블 호환성 동기화

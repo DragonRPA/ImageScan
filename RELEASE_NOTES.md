@@ -1,5 +1,21 @@
 # 릴리즈 노트 (RELEASE_NOTES.md)
 
+## [v1.3.0.Build.8] - 2026-08-15 16:17:00 (KST)
+
+### 🏷️ scan_records 테이블 & 스키마 & UI에 IMEI 헤더 및 엑셀 파서 정식 통합
+
+1. **`scan_records` 마스터 테이블 1순위 조회 및 IMEI 헤더 정식 탑재 (`supabaseClient.js`)**
+   - `fetchScansFromSupabase`가 `scan_records` 마스터 테이블을 우선적으로 정밀 조회하도록 바인딩
+   - `saveScansToSupabaseBatch`에 `imei` 컬럼 및 정규 필드 직접 적재 보강
+2. **자산목록 데이터 그리드 및 필터에 IMEI 정식 반영 (`PCDashboard.jsx`)**
+   - 테이블 헤더/데이터 셀에 `IMEI` 컬럼 추가 및 보라색 강조 렌더링
+   - 제조번호/IMEI 검색 필터 및 통합 검색에 `imei` 연동
+3. **위치 독립형 엑셀 파서 (`excelParserEngine.js`) IMEI 별칭 사전 분리 등록**
+   - `IMEI`, `단말식별번호`, `단말기식별번호` 등 엑셀 헤더 자동 감지 지원
+4. **동적 스키마 정의 (`dynamicSchema.js`)에 `imei` 필드 정식 등록**
+
+---
+
 ## [v1.3.0.Build.7] - 2026-08-15 16:08:00 (KST)
 
 ### 🐛 PCDashboardView getStoredOffsetConfig 잔여 참조 완전 제거 핫픽스
