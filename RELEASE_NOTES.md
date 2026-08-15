@@ -1,5 +1,18 @@
 # 릴리즈 노트 (RELEASE_NOTES.md)
 
+## [v1.6.0.Build.3] - 2026-08-15 19:35:00 (KST)
+
+### 🔒 [DB 연결] Supabase 핵심 연결 정보 2종 소스 내장 영구 기억 및 자동 치유 완비
+
+1. **DB 핵심 정보 2종 빌트인 내장 및 영구 기억 (`supabaseClient.js`, `.env`)**
+   - `URL`: `https://tfgbpgutxxlhqbzewkyt.supabase.co`
+   - `Anon Key`: `sb_publishable_wruJQfp3Op-ISvVwb4ZdmA_2OqMUJeQ`
+   - 브라우저 캐시 삭제, 시크릿 모드, 다른 PC 최초 접속 시에도 수동 입력 없이 **100% 자동 DB 연결됨 상태로 시작**
+2. **URL 오타 자동 치유 (Auto-Healing) 엔진 탑재**
+   - 구 오타 URL(`tfgbpgutxxlhqbzewky.supabase.co`)이 남아있더라도 올바른 정규 URL로 실시간 자동 교정
+
+---
+
 ## [v1.6.0.Build.2] - 2026-08-15 19:26:00 (KST)
 
 ### 🐛 [라벨 즉시 출력] DB 실시간 단건 조회 대상 테이블 정합성 수정 (`asset` / `temp_asset` 직통 쿼리)

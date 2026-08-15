@@ -62,7 +62,7 @@ export default function SupabaseConfigModal({ isOpen, onClose, onSaveSuccess }) 
             <input
               type="text"
               className="form-input"
-              placeholder="https://tfgbpgutxxlhqbzewky.supabase.co"
+              placeholder="https://tfgbpgutxxlhqbzewkyt.supabase.co"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               onBlur={handleUrlChange}
@@ -79,7 +79,7 @@ export default function SupabaseConfigModal({ isOpen, onClose, onSaveSuccess }) 
               gap: '6px'
             }}>
               <Info size={14} />
-              <span>올바른 형식: <strong>https://tfgbpgutxxlhqbzewky.supabase.co</strong></span>
+              <span>올바른 형식: <strong>https://tfgbpgutxxlhqbzewkyt.supabase.co</strong></span>
             </div>
           </div>
 

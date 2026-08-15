@@ -15,36 +15,47 @@ const HARDCODED_SUPABASE_KEY = 'sb_publishable_wruJQfp3Op-ISvVwb4ZdmA_2OqMUJeQ';
  * into API URL: https://tfgbpgutxxlhqbzewky.supabase.co)
  */
 export function normalizeSupabaseUrl(inputUrl) {
-  if (!inputUrl) return '';
-  const trimmed = inputUrl.trim();
+  if (!inputUrl) return HARDCODED_SUPABASE_URL;
+  let trimmed = inputUrl.trim();
 
-  // If user pasted dashboard URL: https://supabase.com/dashboard/project/tfgbpgutxxlhqbzewky
+  // If user pasted dashboard URL: https://supabase.com/dashboard/project/tfgbpgutxxlhqbzewkyt
   const dashboardMatch = trimmed.match(/project\/([a-zA-Z0-9]+)/i);
   if (dashboardMatch && dashboardMatch[1]) {
-    return `https://${dashboardMatch[1]}.supabase.co`;
+    trimmed = `https://${dashboardMatch[1]}.supabase.co`;
   }
 
   // Ensure https:// prefix if missing
   if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
-    return `https://${trimmed}`;
+    trimmed = `https://${trimmed}`;
+  }
+
+  // Auto-heal missing trailing 't' typo for dragonrpa project
+  if (trimmed.includes('tfgbpgutxxlhqbzewky.supabase.co')) {
+    trimmed = trimmed.replace('tfgbpgutxxlhqbzewky.supabase.co', 'tfgbpgutxxlhqbzewkyt.supabase.co');
   }
 
   return trimmed;
 }
 
 export function getStoredConfig() {
-  const rawUrl = localStorage.getItem(LOCAL_KEY_URL)
-    || import.meta.env.VITE_SUPABASE_URL
-    || HARDCODED_SUPABASE_URL;
-  const anonKey = localStorage.getItem(LOCAL_KEY_ANON)
-    || import.meta.env.VITE_SUPABASE_ANON_KEY
-    || HARDCODED_SUPABASE_KEY;
+  let rawUrl = localStorage.getItem(LOCAL_KEY_URL);
+  let anonKey = localStorage.getItem(LOCAL_KEY_ANON);
+
+  if (!rawUrl || rawUrl.includes('your-supabase-project') || rawUrl.includes('tfgbpgutxxlhqbzewky.supabase.co')) {
+    rawUrl = HARDCODED_SUPABASE_URL;
+    localStorage.setItem(LOCAL_KEY_URL, HARDCODED_SUPABASE_URL);
+  }
+  if (!anonKey || anonKey.length < 10) {
+    anonKey = HARDCODED_SUPABASE_KEY;
+    localStorage.setItem(LOCAL_KEY_ANON, HARDCODED_SUPABASE_KEY);
+  }
+
   return { url: normalizeSupabaseUrl(rawUrl), anonKey: anonKey.trim() };
 }
 
 export function saveStoredConfig(url, anonKey) {
   const cleanUrl = normalizeSupabaseUrl(url);
-  const cleanKey = anonKey ? anonKey.trim() : '';
+  const cleanKey = anonKey ? anonKey.trim() : HARDCODED_SUPABASE_KEY;
   if (cleanUrl) localStorage.setItem(LOCAL_KEY_URL, cleanUrl);
   if (cleanKey) localStorage.setItem(LOCAL_KEY_ANON, cleanKey);
 }
