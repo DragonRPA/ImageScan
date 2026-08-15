@@ -12,6 +12,7 @@ import {
   Unlock,
   FileText
 } from 'lucide-react';
+import DirectPrintTab from './DirectPrintTab';
 import PCDashboard from '../components/PCDashboard';
 import LabelDesignerTab from './LabelDesignerTab';
 import SchemaBuilderTab from './SchemaBuilderTab';
@@ -223,7 +224,7 @@ export default function PCDashboardView({
   onOpenPrintModal,
   onOpenImportModal
 }) {
-  const [activeTab, setActiveTab] = useState('data'); // 'data' | 'rpa-run' | 'designer' | 'queue' | 'rpa-builder' | 'schema'
+  const [activeTab, setActiveTab] = useState('direct-print'); // 'direct-print' | 'data' | 'rpa-run' | 'designer' | 'queue' | 'rpa-builder' | 'schema'
   const [isAdmin, setIsAdmin] = useState(isAdminAuthenticated);
   const [docViewerOpen, setDocViewerOpen] = useState(false);
 
@@ -256,7 +257,7 @@ export default function PCDashboardView({
     lockAdminSession();
     setIsAdmin(false);
     if (activeTab === 'schema' || activeTab === 'rpa-builder') {
-      setActiveTab('data');
+      setActiveTab('direct-print');
     }
   };
 
@@ -276,6 +277,15 @@ export default function PCDashboardView({
       }}>
         {/* Left Sub Tabs */}
         <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center' }}>
+          {/* ⭐️ [첫 번째 메인 랜딩 탭] 라벨 즉시 출력 */}
+          <button
+            onClick={() => handleTabClick('direct-print', '라벨 즉시 출력', false)}
+            className={`btn ${activeTab === 'direct-print' ? 'btn-primary' : 'btn-outline'}`}
+            style={{ fontSize: '0.75rem', padding: '4px 12px', fontWeight: 700, border: activeTab === 'direct-print' ? 'none' : '1px solid #38bdf8', color: activeTab === 'direct-print' ? '#fff' : '#38bdf8' }}
+          >
+            <Printer size={13} /> 라벨 즉시 출력
+          </button>
+
           {/* 일반 실무 탭 */}
           <button
             onClick={() => handleTabClick('data', '데이터 목록', false)}
@@ -366,6 +376,14 @@ export default function PCDashboardView({
       </div>
 
       {/* ── 탭별 본문 렌더링 ──────────────────────────────────────── */}
+
+      {/* Tab 0: 라벨 즉시 출력 (메인 랜딩 탭) */}
+      {activeTab === 'direct-print' && (
+        <DirectPrintTab
+          onError={onError}
+          onOpenPrintModal={onOpenPrintModal}
+        />
+      )}
 
       {/* Tab 1: 데이터 목록 */}
       {activeTab === 'data' && (
