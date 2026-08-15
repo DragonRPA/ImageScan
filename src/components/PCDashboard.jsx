@@ -123,8 +123,7 @@ export default function PCDashboard({
   }, [items]);
 
   useEffect(() => {
-    loadData();
-
+    // ⭐️ 창이 처음 열릴 때 자동 조회하지 않음 (명시적 [조회] 버튼 클릭 시 조회)
     // Supabase 실시간 동기화
     const channel = subscribeRealtimeScans((newRecord) => {
       setItems((prev) => {
@@ -141,8 +140,8 @@ export default function PCDashboard({
     };
   }, []);
 
-  // 필터 초기화
-  const handleResetFilters = async () => {
+  // 필터 초기화 (조회하면서 시작하지 않고 필터만 리셋 및 결과 초기화)
+  const handleResetFilters = () => {
     setFilterCategory('IT');
     setFilterModel('');
     setFilterSerial('');
@@ -150,16 +149,7 @@ export default function PCDashboard({
     setSearchGeneral('');
     setSelectedIds([]);
     setCellSelection(null); // 초기화 시 셀 선택 영역 초기화
-    setLoading(true);
-    try {
-      const data = await fetchScansFromSupabase({ category_major: 'IT' });
-      setItems(data || []);
-    } catch (err) {
-      console.warn('데이터 초기화 로드 경고:', err);
-      setItems([]);
-    } finally {
-      setLoading(false);
-    }
+    setItems([]); // 결과 목록 초기화 (조회 버튼을 눌러야 다시 조회)
   };
 
   // ⭐️ [핵심] 클립보드 다중 키워드 파싱 및 복사 순서 100% 보존 필터링/정렬 엔진
@@ -829,8 +819,8 @@ export default function PCDashboard({
                 </tr>
               ) : filteredItems.length === 0 ? (
                 <tr>
-                  <td colSpan={16} style={{ padding: '32px', textAlign: 'center', color: '#64748b' }}>
-                    등록된 자산 데이터가 없습니다. [엑셀 업로드]를 통해 데이터를 등록하세요.
+                  <td colSpan={16} style={{ padding: '32px', textAlign: 'center', color: '#64748b', fontSize: '0.78rem' }}>
+                    조회 조건 입력 후 [조회] 버튼을 클릭하세요.
                   </td>
                 </tr>
               ) : (
