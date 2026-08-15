@@ -38,6 +38,7 @@ import {
   TEMP_ASSET_SCHEMA_DEF,
   SUPPORTED_TABLES,
   getTableSchema,
+  fetchTableSchema,
   fetchActiveSchema,
   getLocalSchemaDef
 } from '../utils/dynamicSchema';

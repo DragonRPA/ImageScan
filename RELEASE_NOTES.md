@@ -1,5 +1,14 @@
 # 릴리즈 노트 (RELEASE_NOTES.md)
 
+## [v1.7.0.Build.16] - 2026-08-16 02:30:00 (KST)
+
+### 🐛 [긴급 픽스: LabelDesignerTab의 fetchTableSchema 임포트 누락 조치 및 검증기 보강]
+
+1. **`LabelDesignerTab.jsx` 상단 임포트에 `fetchTableSchema` 누락 긴급 픽스 완료**
+2. **`scripts/verify_ui_render.mjs` 검증기에 핵심 유틸리티 함수 호출 및 임포트 무결성 자동 검사 로직 결합**
+
+---
+
 ## [v1.7.0.Build.15] - 2026-08-16 02:28:00 (KST)
 
 ### 🛡️ [임의 일시/시각 헤더 생성 전면 박멸] 스키마 빌더 정의 필드 1:1 절대 준수

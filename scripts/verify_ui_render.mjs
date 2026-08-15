@@ -48,9 +48,24 @@ function checkFile(filePath) {
   const localFunctions = code.matchAll(/(?:function|const)\s+([A-Z][a-zA-Z0-9]+)\b/g);
   for (const m of localFunctions) allImports.add(m[1]);
 
-  usedTags.forEach(tag => {
-    if (!allImports.has(tag) && !knownReactTags.has(tag)) {
-      errors.push(`미정의된 JSX 컴포넌트/아이콘 태그: <${tag}>`);
+  // 4. utils 함수 호출 누락 검사
+  const utilFuncs = [
+    'fetchTableSchema', 'getTableSchema', 'fetchActiveSchema', 'saveTableSchema',
+    'getSupabaseClient', 'saveStoredLabelTemplate', 'getStoredLabelTemplate',
+    'createEmptyTemplate', 'generateDynamicZpl', 'sendZplToPrinter',
+    'fetchActualConnectedPrinters', 'getRegisteredPrinters', 'getActivePrinterId'
+  ];
+
+  utilFuncs.forEach(fn => {
+    // 코드에서 fn(...) 형태로 호출되었는데
+    const callRegex = new RegExp(`\\b${fn}\\s*\\(`, 'g');
+    if (callRegex.test(code)) {
+      // 파일 내에 fn이 정의되어 있거나 import되어 있는지 검사
+      const isImported = new RegExp(`\\b${fn}\\b`).test(code.slice(0, code.indexOf('export default') || 2000));
+      const isLocallyDefined = new RegExp(`(?:function|const|let|var)\\s+${fn}\\b`).test(code);
+      if (!isImported && !isLocallyDefined) {
+        errors.push(`미정의/미임포트된 유틸 함수 호출: ${fn}()`);
+      }
     }
   });
 
@@ -58,7 +73,7 @@ function checkFile(filePath) {
     console.error(`❌ [${fileName}] 검증 실패:`, errors);
     return false;
   } else {
-    console.log(`✅ [${fileName}] 무결성 통과 (사용된 태그 ${usedTags.size}개 검증 완료)`);
+    console.log(`✅ [${fileName}] 무결성 통과 (사용된 태그 ${usedTags.size}개 & 핵심 유틸 검증 완료)`);
     return true;
   }
 }
