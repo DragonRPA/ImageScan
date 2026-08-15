@@ -132,16 +132,12 @@ export default function TempDataTab({ onError, onOpenPrintModal }) {
           return;
         }
       }
-      // 로컬 스토리지 캐시 로드 (이전 더미 시드 자동 정리 및 순수 실제 데이터만 유지)
+      // 오프라인/DB 미연결 시에만 로컬 캐시 폴백
       const localData = localStorage.getItem(LOCAL_KEY_TEMP_ASSETS);
       if (localData) {
         try {
           const parsed = JSON.parse(localData);
-          const cleaned = (Array.isArray(parsed) ? parsed : []).filter(
-            it => it.id !== 'temp_001' && it.id !== 'temp_002' && it.asset_no !== 'TEMP-2026-001' && it.asset_no !== 'TEMP-2026-002'
-          );
-          setItems(cleaned);
-          localStorage.setItem(LOCAL_KEY_TEMP_ASSETS, JSON.stringify(cleaned));
+          setItems(Array.isArray(parsed) ? parsed : []);
         } catch (e) {
           setItems([]);
         }
@@ -419,10 +415,6 @@ export default function TempDataTab({ onError, onOpenPrintModal }) {
             const matchedFieldId = nameToIdMap.get(trimmedCol) || trimmedCol;
             item[matchedFieldId] = String(val).trim();
           });
-
-          if (!item[keyField]) {
-            item[keyField] = `TEMP-${Date.now().toString().slice(-4)}-${idx + 1}`;
-          }
 
           return item;
         });
