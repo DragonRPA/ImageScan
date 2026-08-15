@@ -46,7 +46,8 @@ import {
 // ⭐️ 순수 스키마 필드 기반 동적 샘플 데이터 매핑 (임의 일시/상태 헤더 생성 금지)
 
 export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
-  const [template, setTemplate] = useState(getStoredLabelTemplate);
+  // ⭐️ 진입 시 자동 로드하지 않고 null 상태로 시작 (사용자가 명시적으로 선택 시에만 로드)
+  const [template, setTemplate] = useState(null);
   const [selectedElemId, setSelectedElemId] = useState('elem_asset_no');
   const [isSaved, setIsSaved] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
@@ -79,11 +80,11 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
 
   // 캔버스 화면 픽셀 배율 (1mm당 9.0px로 실제 용지 크기 정밀 비례)
   const PX_PER_MM = 9.0;
-  const canvasWidthPx = (template.paper?.widthMm || 72) * PX_PER_MM;
-  const canvasHeightPx = (template.paper?.heightMm || 40) * PX_PER_MM;
+  const canvasWidthPx = template ? (template.paper?.widthMm || 72) * PX_PER_MM : 72 * PX_PER_MM;
+  const canvasHeightPx = template ? (template.paper?.heightMm || 40) * PX_PER_MM : 40 * PX_PER_MM;
 
   // 현재 서식의 대상 테이블 및 스키마 (Supabase 실제 스키마 1:1 실시간 동기화)
-  const currentTargetTable = template.targetTable || template.paper?.targetTable || 'asset';
+  const currentTargetTable = template ? (template.targetTable || template.paper?.targetTable || 'asset') : 'asset';
   const [currentTableSchema, setCurrentTableSchema] = useState(() => getTableSchema(currentTargetTable) || DEFAULT_SCHEMA_DEF);
 
   // ⭐️ 타겟 테이블 변경 시 Supabase 실제 스키마 실시간 비동기 로드
@@ -100,9 +101,9 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
   }, [currentTargetTable]);
 
   const tableFields = useMemo(() => currentTableSchema.fields || [], [currentTableSchema]);
-  const selectedElem = (template.elements || []).find(e => e.id === selectedElemId) || null;
+  const selectedElem = template ? ((template.elements || []).find(e => e.id === selectedElemId) || null) : null;
 
-  // ⭐️ 초기 로드: 백엔드 전체 라벨 서식 목록 & 로컬 프린터 하드웨어 동기화
+  // ⭐️ 초기 로드: 백엔드 전체 라벨 서식 목록 & 로컬 프린터 하드웨어 동기화 (자동 템플릿 로드는 수행하지 않음)
   useEffect(() => {
     fetchActualConnectedPrinters().then(detected => {
       if (detected && detected.length > 0) {
@@ -113,10 +114,6 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
     syncTemplatesWithBackend().then(syncedPresets => {
       if (syncedPresets && syncedPresets.length > 0) {
         setPresets(syncedPresets);
-        const active = getStoredLabelTemplate();
-        if (active) {
-          setTemplate(active);
-        }
       }
     });
   }, []);
@@ -574,8 +571,11 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
 
           {/* ⭐️ 서식 즉시 전환 셀렉트 박스 */}
           <select
-            value={template.templateId}
-            onChange={e => handleLoadDesign(e.target.value)}
+            value={template?.templateId || ''}
+            onChange={e => {
+              if (e.target.value) handleLoadDesign(e.target.value);
+              else setTemplate(null);
+            }}
             style={{
               backgroundColor: '#0f172a',
               border: '1px solid #0284c7',
@@ -588,6 +588,7 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
               cursor: 'pointer'
             }}
           >
+            <option value="">-- 서식 선택 (목록에서 선택 또는 추가) --</option>
             {presets.map(p => (
               <option key={p.templateId} value={p.templateId}>
                 {p.name} ({p.paper?.widthMm}×{p.paper?.heightMm}mm) {p.targetPrinterName ? `➔ [${p.targetPrinterName}]` : ''}
@@ -634,71 +635,152 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
           </button>
 
           {/* 대상 테이블 뱃지 */}
-          <span style={{
-            fontSize: '0.68rem',
-            padding: '2px 6px',
-            borderRadius: '4px',
-            backgroundColor: currentTargetTable === 'temp_asset' ? '#3b0764' : '#1e3a8a',
-            color: currentTargetTable === 'temp_asset' ? '#d8b4fe' : '#93c5fd',
-            border: `1px solid ${currentTargetTable === 'temp_asset' ? '#a855f7' : '#3b82f6'}`,
-            fontWeight: 600
-          }}>
-            {currentTargetTable === 'temp_asset' ? 'temp_asset (임시자산)' : 'asset (자산관리)'}
-          </span>
+          {template && (
+            <span style={{
+              fontSize: '0.68rem',
+              padding: '2px 6px',
+              borderRadius: '4px',
+              backgroundColor: currentTargetTable === 'temp_asset' ? '#3b0764' : '#1e3a8a',
+              color: currentTargetTable === 'temp_asset' ? '#d8b4fe' : '#93c5fd',
+              border: `1px solid ${currentTargetTable === 'temp_asset' ? '#a855f7' : '#3b82f6'}`,
+              fontWeight: 600
+            }}>
+              {currentTargetTable === 'temp_asset' ? 'temp_asset (임시자산)' : 'asset (자산관리)'}
+            </span>
+          )}
         </div>
 
         {/* Right: Save & Delete & Test Print Actions */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <button
-            onClick={handleReset}
-            className="btn btn-outline"
-            style={{ fontSize: '0.72rem', padding: '4px 8px' }}
-            title="서식 초기화"
-          >
-            <RotateCcw size={12} /> 초기화
-          </button>
-          <button
-            onClick={handleDeleteCurrentDesign}
-            className="btn btn-outline"
-            style={{ fontSize: '0.72rem', padding: '4px 8px', borderColor: '#ef4444', color: '#fca5a5' }}
-            title="현재 서식 삭제"
-          >
-            <Trash2 size={12} /> 디자인 삭제
-          </button>
-          <button
-            onClick={handleSave}
-            className={`btn ${isSaved ? 'btn-success' : 'btn-primary'}`}
-            style={{ fontSize: '0.72rem', padding: '4px 12px' }}
-            title="현재 서식 수정 저장"
-          >
-            <Save size={12} /> {isSaved ? '저장됨' : '수정 저장'}
-          </button>
-          <button
-            onClick={handleTestPrint}
-            disabled={isPrinting}
-            className="btn"
-            style={{
-              backgroundColor: '#10b981',
-              color: '#fff',
-              border: 'none',
-              fontSize: '0.72rem',
-              padding: '4px 12px'
-            }}
-          >
-            <Printer size={12} /> {isPrinting ? '전송중' : '테스트 인쇄'}
-          </button>
-        </div>
+        {template && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <button
+              onClick={handleReset}
+              className="btn btn-outline"
+              style={{ fontSize: '0.72rem', padding: '4px 8px' }}
+              title="서식 초기화"
+            >
+              <RotateCcw size={12} /> 초기화
+            </button>
+            <button
+              onClick={handleDeleteCurrentDesign}
+              className="btn btn-outline"
+              style={{ fontSize: '0.72rem', padding: '4px 8px', borderColor: '#ef4444', color: '#fca5a5' }}
+              title="현재 서식 삭제"
+            >
+              <Trash2 size={12} /> 디자인 삭제
+            </button>
+            <button
+              onClick={handleSave}
+              className={`btn ${isSaved ? 'btn-success' : 'btn-primary'}`}
+              style={{ fontSize: '0.72rem', padding: '4px 12px' }}
+              title="현재 서식 수정 저장"
+            >
+              <Save size={12} /> {isSaved ? '저장됨' : '수정 저장'}
+            </button>
+            <button
+              onClick={handleTestPrint}
+              disabled={isPrinting}
+              className="btn"
+              style={{
+                backgroundColor: '#10b981',
+                color: '#fff',
+                border: 'none',
+                fontSize: '0.72rem',
+                padding: '4px 12px'
+              }}
+            >
+              <Printer size={12} /> {isPrinting ? '전송중' : '테스트 인쇄'}
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* ── 2-Column Wide Workspace (좌측: 340px 설정 패널 | 우측: 1fr 라벨 캔버스) ── */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: '340px minmax(500px, 1fr)',
-        gap: '8px',
-        alignItems: 'stretch',
-        width: '100%',
-        minHeight: '620px'
-      }}>
+      {/* ── 본문 영역: 서식 미선택 시 대기 안내 / 서식 선택 시 2-Column 워크스페이스 ── */}
+      {!template ? (
+        <div style={{
+          width: '100%',
+          minHeight: '520px',
+          backgroundColor: '#0f172a',
+          border: '1px dashed #334155',
+          borderRadius: '12px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '40px 20px',
+          boxSizing: 'border-box',
+          gap: '16px',
+          textAlign: 'center'
+        }}>
+          <div style={{
+            width: '64px',
+            height: '64px',
+            borderRadius: '50%',
+            backgroundColor: 'rgba(56, 189, 248, 0.1)',
+            border: '1px solid #38bdf8',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#38bdf8'
+          }}>
+            <Sliders size={32} />
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxWidth: '480px' }}>
+            <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#f8fafc', margin: 0 }}>
+              선택된 라벨 디자인 서식이 없습니다
+            </h3>
+            <p style={{ fontSize: '0.78rem', color: '#94a3b8', margin: 0, lineHeight: 1.5 }}>
+              상단의 <strong style={{ color: '#38bdf8' }}>서식 선택 드롭다운</strong> 또는 <strong style={{ color: '#7dd3fc' }}>[디자인 목록]</strong>에서 편집할 서식을 로드하거나, <strong style={{ color: '#0284c7' }}>[+ 디자인 추가]</strong>로 새 서식을 시작하세요.
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '8px' }}>
+            <button
+              onClick={handleOpenCreateModal}
+              className="btn btn-primary"
+              style={{
+                fontSize: '0.78rem',
+                padding: '8px 18px',
+                backgroundColor: '#0284c7',
+                borderColor: '#38bdf8',
+                color: '#ffffff',
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
+              <Plus size={14} /> 새 디자인 추가
+            </button>
+
+            <button
+              onClick={() => setIsLoadModalOpen(true)}
+              className="btn btn-outline"
+              style={{
+                fontSize: '0.78rem',
+                padding: '8px 18px',
+                borderColor: '#38bdf8',
+                color: '#7dd3fc',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
+              <FolderOpen size={14} /> 디자인 목록 열기
+            </button>
+          </div>
+        </div>
+      ) : (
+        /* ── 2-Column Wide Workspace (좌측: 340px 설정 패널 | 우측: 1fr 라벨 캔버스) ── */
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '340px minmax(500px, 1fr)',
+          gap: '8px',
+          alignItems: 'stretch',
+          width: '100%',
+          minHeight: '620px'
+        }}>
         {/* ── [1/2] Left Panel: 설정 및 속성 편집기 ───────────────────── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', minWidth: 0 }}>
           {/* 0. 디자인 명칭 & 대상 테이블 */}
@@ -2430,6 +2512,7 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
           )}
         </div>
       </div>
+      )}
 
       {/* ── [모달 1] 디자인 추가 모달 ─────────────────────────────── */}
       {isCreateModalOpen && (
