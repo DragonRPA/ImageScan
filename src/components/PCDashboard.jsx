@@ -29,6 +29,7 @@ export default function PCDashboard({
   const [loading, setLoading] = useState(false);
 
   // 조회 필터 상태
+  const [filterCategory, setFilterCategory] = useState('ALL');
   const [filterModel, setFilterModel] = useState('');
   const [filterSerial, setFilterSerial] = useState('');
   const [filterStatus, setFilterStatus] = useState('ALL');
@@ -72,6 +73,7 @@ export default function PCDashboard({
 
   // 필터 초기화
   const handleResetFilters = () => {
+    setFilterCategory('ALL');
     setFilterModel('');
     setFilterSerial('');
     setFilterStatus('ALL');
@@ -81,6 +83,12 @@ export default function PCDashboard({
 
   // 필터링 적용된 목록 계산
   const filteredItems = items.filter((item) => {
+    // 0. 대분류 필터 (IT, 측정기, DSLR 카메라)
+    if (filterCategory !== 'ALL') {
+      const targetCat = (item.category_major || '').trim().toLowerCase();
+      if (targetCat !== filterCategory.toLowerCase()) return false;
+    }
+
     // 1. 모델명 필터
     if (filterModel.trim()) {
       const targetModel = (item.model_name || item.data?.model_name || '').toLowerCase();
@@ -200,10 +208,35 @@ export default function PCDashboard({
         {/* 필터 입력 필드 (상하 세로 스택 표준) */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
           gap: '8px',
           alignItems: 'flex-end'
         }}>
+          {/* 대분류 필터 (3대 대분류) */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+            <label style={{ fontSize: '0.68rem', color: '#94a3b8', fontWeight: 600, whiteSpace: 'nowrap' }}>
+              대분류 구분
+            </label>
+            <select
+              value={filterCategory}
+              onChange={(e) => setFilterCategory(e.target.value)}
+              style={{
+                backgroundColor: '#0f172a',
+                border: '1px solid #475569',
+                borderRadius: '4px',
+                padding: '5px 8px',
+                color: '#93c5fd',
+                fontSize: '0.75rem',
+                fontWeight: 700
+              }}
+            >
+              <option value="ALL">전체 대분류</option>
+              <option value="IT">IT</option>
+              <option value="측정기">측정기</option>
+              <option value="DSLR 카메라">DSLR 카메라</option>
+            </select>
+          </div>
+
           {/* 모델명 필터 */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
             <label style={{ fontSize: '0.68rem', color: '#94a3b8', fontWeight: 600, whiteSpace: 'nowrap' }}>
