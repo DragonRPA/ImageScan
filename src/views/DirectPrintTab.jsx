@@ -671,7 +671,14 @@ export default function DirectPrintTab({ onError, onOpenPrintModal }) {
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '6px' }}>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const val = (inputRef.current?.value || scanInput).trim();
+                if (val) handleExecuteScanAndPrint(val);
+              }}
+              style={{ display: 'flex', gap: '6px' }}
+            >
               <input
                 ref={inputRef}
                 type="text"
@@ -680,8 +687,8 @@ export default function DirectPrintTab({ onError, onOpenPrintModal }) {
                 onKeyDown={e => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
-                    const val = e.currentTarget.value;
-                    handleExecuteScanAndPrint(val);
+                    const val = e.currentTarget.value.trim();
+                    if (val) handleExecuteScanAndPrint(val);
                   }
                 }}
                 placeholder={targetTable === 'temp_asset' ? "임시자산번호 또는 PK(ID) 스캔 / 입력" : "자산번호 또는 제조번호(S/N) 스캔 / 입력"}
@@ -699,14 +706,14 @@ export default function DirectPrintTab({ onError, onOpenPrintModal }) {
                 }}
               />
               <button
-                onClick={() => handleExecuteScanAndPrint()}
+                type="submit"
                 disabled={isProcessing || !scanInput.trim()}
                 className="btn btn-primary"
                 style={{ fontSize: '0.82rem', padding: '0 16px', fontWeight: 700 }}
               >
                 <Search size={14} /> 조회 및 즉시 출력
               </button>
-            </div>
+            </form>
           </div>
 
           {/* 상태 알림 메시지 */}

@@ -19,9 +19,13 @@ export function initHardwareScannerListener({ onScanResult, onAutoPrintSuccess, 
   isInitialized = true;
 
   window.addEventListener('keydown', async (e) => {
-    // 텍스트박스 내부의 일반 타이핑 방해 최소화
+    // ⭐️ 텍스트박스 내부(DirectPrintTab 등)에 포커스가 있을 때는 입력창 자체 이벤트(onKeyDown/onSubmit)가 100% 정상 작동하도록 일체 간섭하지 않음!
     const targetTag = (e.target?.tagName || '').toLowerCase();
     const isTextInput = targetTag === 'input' || targetTag === 'textarea';
+    if (isTextInput) {
+      buffer = '';
+      return;
+    }
 
     const currentTime = Date.now();
     const timeDiff = currentTime - lastKeyTime;
@@ -33,12 +37,7 @@ export function initHardwareScannerListener({ onScanResult, onAutoPrintSuccess, 
         const scannedCode = buffer.trim();
         buffer = '';
 
-        if (isTextInput && timeDiff > 120) {
-          // 사람이 수기로 엔터 친 경우 통과
-          return;
-        }
-
-        // 스캐너 고속 입력 인터셉트 (이벤트 전파 중단)
+        // 스캐너 고속 입력 인터셉트 (입력창 외부에서 찍었을 때만)
         e.preventDefault();
         e.stopPropagation();
 
