@@ -29,7 +29,7 @@ export default function PCDashboard({
   const [loading, setLoading] = useState(false);
 
   // 조회 필터 상태
-  const [filterCategory, setFilterCategory] = useState('IT');
+  const [filterCategory, setFilterCategory] = useState('ALL');
   const [filterModel, setFilterModel] = useState('');
   const [filterSerial, setFilterSerial] = useState('');
   const [filterStatus, setFilterStatus] = useState('ALL');
@@ -52,6 +52,17 @@ export default function PCDashboard({
     }
   };
 
+  // 존재하는 대분류 목록 자동 추출 (IT, 측정기, DSLR 카메라 + DB 실제 데이터)
+  const availableCategories = useMemo(() => {
+    const catSet = new Set(['IT', '측정기', 'DSLR 카메라']);
+    items.forEach((item) => {
+      if (item.category_major && String(item.category_major).trim()) {
+        catSet.add(String(item.category_major).trim());
+      }
+    });
+    return Array.from(catSet);
+  }, [items]);
+
   useEffect(() => {
     loadData();
 
@@ -73,7 +84,7 @@ export default function PCDashboard({
 
   // 필터 초기화
   const handleResetFilters = () => {
-    setFilterCategory('IT');
+    setFilterCategory('ALL');
     setFilterModel('');
     setFilterSerial('');
     setFilterStatus('ALL');
@@ -231,9 +242,11 @@ export default function PCDashboard({
               }}
             >
               <option value="ALL">전체 대분류</option>
-              <option value="IT">IT</option>
-              <option value="측정기">측정기</option>
-              <option value="DSLR 카메라">DSLR 카메라</option>
+              {availableCategories.map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
+              ))}
             </select>
           </div>
 

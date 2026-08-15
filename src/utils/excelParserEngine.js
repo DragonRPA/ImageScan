@@ -5,26 +5,19 @@
 import * as XLSX from 'xlsx';
 
 // ── 표준 필드별 별칭/유사어 사전 (Synonym Alias Dictionary) ───────────────
-export const ALLOWED_CATEGORIES = ['IT', '측정기', 'DSLR 카메라'];
+export const ALLOWED_CATEGORIES = ['IT', '측정기', 'DSLR 카메라', 'AWP'];
 
 export function normalizeCategory(categoryStr) {
-  if (!categoryStr) return null;
+  if (!categoryStr) return '';
   const s = String(categoryStr).trim();
   const lower = s.toLowerCase();
   
-  if (lower === 'it' || lower === 'i.t' || lower.includes('컴퓨터') || lower.includes('노트북') || lower.includes('스마트폰') || lower.includes('모바일') || lower.includes('태블릿') || lower.includes('it기기')) {
-    return 'IT';
-  }
-  if (s.includes('측정') || s.includes('계측') || s.includes('오실로') || s.includes('멀티미터') || s.includes('스펙트럼')) {
-    return '측정기';
-  }
-  if (lower.includes('dslr') || s.includes('카메라') || lower.includes('camera') || s.includes('렌즈') || s.includes('캠코더')) {
-    return 'DSLR 카메라';
-  }
-  if (ALLOWED_CATEGORIES.includes(s)) {
-    return s;
-  }
-  return null; // 3대 대분류 외 항목
+  if (lower === 'it' || lower === 'i.t') return 'IT';
+  if (s.includes('측정기') || s.includes('계측기')) return '측정기';
+  if (lower.includes('dslr') || s.includes('카메라')) return 'DSLR 카메라';
+  
+  // 엑셀에 기재된 모든 대분류 텍스트(예: AWP, 중장비 등)를 20자 이내로 그대로 보존
+  return s.substring(0, 20);
 }
 
 export const FIELD_SYNONYMS = {
@@ -202,17 +195,12 @@ export function parseAndValidateExcel(fileData, requiredFieldKeys = ['asset_no']
         }
       }
 
-      // 대분류 정규화 및 3대 허용 대분류(IT, 측정기, DSLR 카메라) 필터링
+      // 대분류 정규화
       const rawCategory = rowObj.category_major || '';
-      const matchedCat = normalizeCategory(rawCategory);
-      if (!matchedCat) {
-        // IT, 측정기, DSLR 카메라 3대 대분류가 아닌 경우 업로드 대상에서 자동 제외
-        continue;
-      }
-      rowObj.category_major = matchedCat;
+      rowObj.category_major = normalizeCategory(rawCategory);
 
-      // 식별 키 유효성 확인
-      if (rowObj.asset_no || rowObj.serial_no) {
+      // 식별 키 유효성 확인 (자산번호, 모델명, 시리얼 중 하나라도 있으면 유효 행)
+      if (rowObj.asset_no || rowObj.serial_no || rowObj.model_name) {
         normalizedRows.push(rowObj);
       }
     }
@@ -220,7 +208,7 @@ export function parseAndValidateExcel(fileData, requiredFieldKeys = ['asset_no']
     if (normalizedRows.length === 0) {
       return {
         isValid: false,
-        error: '파일에 IT, 측정기, DSLR 카메라 대분류에 해당하는 유효 데이터 행이 없습니다.',
+        error: '파일에 처리 가능한 유효 데이터 행이 없습니다.',
         headersFound,
         rows: []
       };
