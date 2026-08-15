@@ -175,16 +175,18 @@ export default function DirectPrintTab({ onError, onOpenPrintModal }) {
     const found = presets.find(p => p.templateId === presetId);
     if (found) {
       setSelectedTemplate(found);
-      setTargetTable(found.targetTable || 'asset');
+      setTargetTable(found.targetTable || found.paper?.targetTable || 'asset');
       saveStoredLabelTemplate(found);
 
       // ⭐️ 해당 서식에 지정된 전용 프린터가 있으면 자동 활성화 & 에이전트 동기화!
-      const targetPrnId = found.targetPrinterId;
-      const targetPrnName = found.targetPrinterName;
+      const targetPrnId = found.targetPrinterId || found.paper?.targetPrinterId;
+      const targetPrnName = found.targetPrinterName || found.paper?.targetPrinterName;
       if (targetPrnId || targetPrnName) {
         const targetPrn = printers.find(p =>
           (targetPrnId && p.id === targetPrnId) ||
-          (targetPrnName && (p.name === targetPrnName || p.rawName === targetPrnName))
+          (targetPrnName && (p.name === targetPrnName || p.rawName === targetPrnName)) ||
+          (targetPrnName && p.name.toLowerCase().includes(targetPrnName.toLowerCase())) ||
+          (targetPrnId && p.rawName && targetPrnId.includes(p.rawName))
         );
         if (targetPrn) {
           handleSelectPrinter(targetPrn.id);
@@ -200,12 +202,14 @@ export default function DirectPrintTab({ onError, onOpenPrintModal }) {
     if (matched) {
       setSelectedTemplate(matched);
       saveStoredLabelTemplate(matched);
-      const targetPrnId = matched.targetPrinterId;
-      const targetPrnName = matched.targetPrinterName;
+      const targetPrnId = matched.targetPrinterId || matched.paper?.targetPrinterId;
+      const targetPrnName = matched.targetPrinterName || matched.paper?.targetPrinterName;
       if (targetPrnId || targetPrnName) {
         const targetPrn = printers.find(p =>
           (targetPrnId && p.id === targetPrnId) ||
-          (targetPrnName && (p.name === targetPrnName || p.rawName === targetPrnName))
+          (targetPrnName && (p.name === targetPrnName || p.rawName === targetPrnName)) ||
+          (targetPrnName && p.name.toLowerCase().includes(targetPrnName.toLowerCase())) ||
+          (targetPrnId && p.rawName && targetPrnId.includes(p.rawName))
         );
         if (targetPrn) {
           handleSelectPrinter(targetPrn.id);
@@ -537,7 +541,7 @@ export default function DirectPrintTab({ onError, onOpenPrintModal }) {
             justifyContent: 'space-between'
           }}>
             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {activePrinter?.name || '기본 라벨 프린터 (자동)'}
+              {selectedTemplate.targetPrinterName || selectedTemplate.paper?.targetPrinterName || activePrinter?.name || '기본 라벨 프린터 (자동)'}
             </span>
             <span style={{ fontSize: '0.65rem', color: '#94a3b8', padding: '1px 6px', backgroundColor: '#1e293b', borderRadius: '3px', flexShrink: 0 }}>
               {activePrinter?.portName || activePrinter?.type || '연결됨'}

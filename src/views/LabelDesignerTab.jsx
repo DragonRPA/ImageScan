@@ -475,9 +475,21 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
   const handleLoadDesign = (presetId) => {
     const found = presets.find(p => p.templateId === presetId);
     if (found) {
-      setTemplate(found);
-      saveStoredLabelTemplate(found);
-      setSelectedElemId(found.elements[0]?.id || 'elem_asset_no');
+      const prnId = found.targetPrinterId || found.paper?.targetPrinterId || '';
+      const prnName = found.targetPrinterName || found.paper?.targetPrinterName || '';
+      const normalized = {
+        ...found,
+        targetPrinterId: prnId,
+        targetPrinterName: prnName,
+        paper: {
+          ...(found.paper || {}),
+          targetPrinterId: prnId,
+          targetPrinterName: prnName
+        }
+      };
+      setTemplate(normalized);
+      saveStoredLabelTemplate(normalized);
+      setSelectedElemId(normalized.elements[0]?.id || 'elem_asset_no');
       setIsLoadModalOpen(false);
     }
   };
@@ -522,23 +534,33 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
         flexWrap: 'wrap',
         gap: '6px'
       }}>
-        {/* Left: Title & Actions & Active Template Badge */}
+        {/* Left: Title & Actions & Active Template Selector */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           <Sliders size={16} style={{ color: '#38bdf8' }} />
           <span style={{ fontSize: '0.85rem', fontWeight: 700 }}>라벨 서식 디자인</span>
 
-          {/* 현재 서식명 표기 */}
-          <span style={{
-            fontSize: '0.75rem',
-            fontWeight: 700,
-            color: '#38bdf8',
-            backgroundColor: '#0f172a',
-            padding: '3px 8px',
-            borderRadius: '4px',
-            border: '1px solid #0284c7'
-          }}>
-            {template.name} ({template.paper?.widthMm}×{template.paper?.heightMm}mm)
-          </span>
+          {/* ⭐️ 서식 즉시 전환 셀렉트 박스 */}
+          <select
+            value={template.templateId}
+            onChange={e => handleLoadDesign(e.target.value)}
+            style={{
+              backgroundColor: '#0f172a',
+              border: '1px solid #0284c7',
+              borderRadius: '4px',
+              padding: '4px 8px',
+              color: '#38bdf8',
+              fontSize: '0.75rem',
+              fontWeight: 700,
+              outline: 'none',
+              cursor: 'pointer'
+            }}
+          >
+            {presets.map(p => (
+              <option key={p.templateId} value={p.templateId}>
+                {p.name} ({p.paper?.widthMm}×{p.paper?.heightMm}mm) {p.targetPrinterName ? `➔ [${p.targetPrinterName}]` : ''}
+              </option>
+            ))}
+          </select>
 
           {/* [디자인 추가] 버튼 */}
           <button
@@ -575,7 +597,7 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
             }}
             title="저장된 라벨 서식 목록 불러오기"
           >
-            <FolderOpen size={12} /> 디자인 불러오기
+            <FolderOpen size={12} /> 디자인 목록
           </button>
 
           {/* 대상 테이블 뱃지 */}
@@ -705,14 +727,20 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
               </span>
             </div>
             <select
-              value={template.targetPrinterId || ''}
+              value={template.targetPrinterId || template.paper?.targetPrinterId || ''}
               onChange={e => {
                 const pId = e.target.value;
                 const found = printers.find(p => p.id === pId);
+                const pName = found?.name || '';
                 setTemplate(prev => ({
                   ...prev,
                   targetPrinterId: pId,
-                  targetPrinterName: found?.name || ''
+                  targetPrinterName: pName,
+                  paper: {
+                    ...(prev.paper || {}),
+                    targetPrinterId: pId,
+                    targetPrinterName: pName
+                  }
                 }));
                 setIsSaved(false);
               }}

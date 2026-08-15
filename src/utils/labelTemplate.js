@@ -405,17 +405,29 @@ export async function syncTemplatesWithBackend() {
 
     if (!error && data) {
       // 백엔드 데이터를 템플릿 포맷으로 매핑
-      const backendPresets = data.map(row => ({
-        templateId: row.id,
-        targetTable: row.paper?.targetTable || row.target_table || (row.name?.includes('임시') ? 'temp_asset' : 'asset'),
-        schemaId: row.schema_id || 'main_schema',
-        name: row.name,
-        targetPrinterId: row.paper?.targetPrinterId || row.target_printer_id || '',
-        targetPrinterName: row.paper?.targetPrinterName || row.target_printer_name || '',
-        isDefault: Boolean(row.is_default),
-        paper: row.paper || { widthMm: 72, heightMm: 40, dpi: 203, dotsWidth: 576, dotsHeight: 320 },
-        elements: Array.isArray(row.elements) ? row.elements : []
-      }));
+      const backendPresets = data.map(row => {
+        const prnId = row.paper?.targetPrinterId || row.target_printer_id || '';
+        const prnName = row.paper?.targetPrinterName || row.target_printer_name || '';
+        const targetTbl = row.paper?.targetTable || row.target_table || (row.name?.includes('임시') ? 'temp_asset' : 'asset');
+        const paperObj = {
+          ...(row.paper || { widthMm: 72, heightMm: 40, dpi: 203, dotsWidth: 576, dotsHeight: 320 }),
+          targetTable: targetTbl,
+          targetPrinterId: prnId,
+          targetPrinterName: prnName
+        };
+
+        return {
+          templateId: row.id,
+          targetTable: targetTbl,
+          schemaId: row.schema_id || 'main_schema',
+          name: row.name,
+          targetPrinterId: prnId,
+          targetPrinterName: prnName,
+          isDefault: Boolean(row.is_default),
+          paper: paperObj,
+          elements: Array.isArray(row.elements) ? row.elements : []
+        };
+      });
 
       // ⭐️ 100% 서버 DB에서 조회된 레코드만 로컬 스토리지에 동기화
       localStorage.setItem(LOCAL_KEY_TEMPLATE_PRESETS, JSON.stringify(backendPresets));
@@ -443,14 +455,23 @@ export async function fetchBackendLabelTemplate() {
       .maybeSingle();
 
     if (!error && data && data.paper && Array.isArray(data.elements)) {
+      const prnId = data.paper?.targetPrinterId || data.target_printer_id || '';
+      const prnName = data.paper?.targetPrinterName || data.target_printer_name || '';
+      const targetTbl = data.paper?.targetTable || data.target_table || 'asset';
+
       const tpl = {
         templateId: data.id,
-        targetTable: data.paper?.targetTable || data.target_table || 'asset',
+        targetTable: targetTbl,
         schemaId: data.schema_id || 'main_schema',
         name: data.name,
-        targetPrinterId: data.paper?.targetPrinterId || data.target_printer_id || '',
-        targetPrinterName: data.paper?.targetPrinterName || data.target_printer_name || '',
-        paper: data.paper,
+        targetPrinterId: prnId,
+        targetPrinterName: prnName,
+        paper: {
+          ...data.paper,
+          targetTable: targetTbl,
+          targetPrinterId: prnId,
+          targetPrinterName: prnName
+        },
         elements: data.elements,
         isDefault: data.is_default
       };
@@ -467,26 +488,35 @@ export async function fetchBackendLabelTemplate() {
  * ⭐️ Supabase 백엔드에 라벨 서식 저장 (온라인 DB + 로컬 동시 보존)
  */
 export async function saveBackendLabelTemplate(template) {
-  saveStoredLabelTemplate(template);
+  const targetPrinterId = template.targetPrinterId || template.paper?.targetPrinterId || '';
+  const targetPrinterName = template.targetPrinterName || template.paper?.targetPrinterName || '';
+  const targetTable = template.targetTable || template.paper?.targetTable || 'asset';
+
+  const normalized = {
+    ...template,
+    targetTable,
+    targetPrinterId,
+    targetPrinterName,
+    paper: {
+      ...(template.paper || { widthMm: 72, heightMm: 40, dpi: 203, dotsWidth: 576, dotsHeight: 320 }),
+      targetTable,
+      targetPrinterId,
+      targetPrinterName
+    }
+  };
+
+  saveStoredLabelTemplate(normalized);
   const client = getSupabaseClient();
   if (!client) return { success: true, message: '로컬 서식 저장 완료 (DB 클라이언트 없음)' };
 
   try {
-    const targetTable = template.targetTable || template.paper?.targetTable || 'asset';
-    const paperObj = {
-      ...(template.paper || { widthMm: 72, heightMm: 40, dpi: 203, dotsWidth: 576, dotsHeight: 320 }),
-      targetTable: targetTable,
-      targetPrinterId: template.targetPrinterId || '',
-      targetPrinterName: template.targetPrinterName || ''
-    };
-
     const payload = {
-      id: template.templateId || `tpl_custom_${Date.now()}`,
+      id: normalized.templateId || `tpl_custom_${Date.now()}`,
       schema_id: null,
-      name: template.name || '자산 대형 72×40mm',
-      paper: paperObj,
-      elements: Array.isArray(template.elements) ? template.elements : [],
-      is_default: Boolean(template.isDefault),
+      name: normalized.name || '라벨 서식',
+      paper: normalized.paper,
+      elements: Array.isArray(normalized.elements) ? normalized.elements : [],
+      is_default: Boolean(normalized.isDefault),
       updated_at: new Date().toISOString()
     };
 
