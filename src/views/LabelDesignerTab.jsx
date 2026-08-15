@@ -30,8 +30,7 @@ import {
   createEmptyTemplate
 } from '../utils/labelTemplate';
 import { generateCode39DataUrl, RealBarcodeSvg } from '../utils/barcode39';
-import { insertPrintQueue } from '../utils/supabaseClient';
-import { getRegisteredPrinters, getActivePrinterId, sendZplToPrinter } from '../utils/printerManager';
+import { getRegisteredPrinters, getActivePrinterId, sendZplToPrinter, fetchActualConnectedPrinters } from '../utils/printerManager';
 
 import {
   DEFAULT_SCHEMA_DEF,
@@ -89,12 +88,16 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
   const [presets, setPresets] = useState(getAllPresets);
   const [showZplCode, setShowZplCode] = useState(false);
 
+  // ⭐️ 로컬 실제 감지 프린터 목록 state
+  const [printers, setPrinters] = useState(() => getRegisteredPrinters());
+
   // ⭐️ [디자인 추가] 모달 상태
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newDesignName, setNewDesignName] = useState('');
   const [newDesignTable, setNewDesignTable] = useState('asset');
   const [newDesignWidth, setNewDesignWidth] = useState(72);
   const [newDesignHeight, setNewDesignHeight] = useState(40);
+  const [newDesignPrinterId, setNewDesignPrinterId] = useState('');
 
   // ⭐️ [디자인 불러오기] 관리 모달 상태
   const [isLoadModalOpen, setIsLoadModalOpen] = useState(false);
@@ -117,8 +120,14 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
 
   const selectedElem = (template.elements || []).find(e => e.id === selectedElemId) || null;
 
-  // ⭐️ 초기 로드: 백엔드 전체 라벨 서식 목록 동기화 (온라인 DB 우선)
+  // ⭐️ 초기 로드: 백엔드 전체 라벨 서식 목록 & 로컬 프린터 하드웨어 동기화
   useEffect(() => {
+    fetchActualConnectedPrinters().then(detected => {
+      if (detected && detected.length > 0) {
+        setPrinters(detected);
+      }
+    }).catch(() => {});
+
     syncTemplatesWithBackend().then(syncedPresets => {
       if (syncedPresets && syncedPresets.length > 0) {
         setPresets(syncedPresets);
@@ -407,16 +416,16 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
   const handleTestPrint = async () => {
     setIsPrinting(true);
     try {
-      // 1. ⭐️ 캔버스 100% WYSIWYG 비트맵 ZPL 생성
-      const zpl = await generateWysiwygZpl(SAMPLE_ITEM, template);
+      // 1. ⭐️ ZPL 생성
+      const zpl = generateDynamicZpl(SAMPLE_ITEM, template);
 
-      // 2. 활성 프린터 조회 및 직통 전송
+      // 2. 서식 지정 프린터 조회 및 직통 전송
       const registered = getRegisteredPrinters();
-      const activeId = getActivePrinterId();
-      const activePrinter = registered.find(p => p.id === activeId) || registered[0] || { type: 'agent_auto', name: '기본 라벨 프린터' };
+      const targetId = template.targetPrinterId || getActivePrinterId();
+      const targetPrinter = registered.find(p => p.id === targetId) || registered[0] || { type: 'agent_auto', name: '기본 라벨 프린터' };
 
-      const res = await sendZplToPrinter(zpl, activePrinter);
-      alert(`[테스트 인쇄 완료] ${res?.message || '라벨이 출력되었습니다.'}`);
+      const res = await sendZplToPrinter(zpl, targetPrinter);
+      alert(`[테스트 인쇄 완료 - ${targetPrinter.name}] ${res?.message || '라벨이 출력되었습니다.'}`);
     } catch (err) {
       if (onOpenPrintModal) {
         onOpenPrintModal([SAMPLE_ITEM]);
@@ -445,11 +454,14 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
       alert('서식 명칭을 입력하세요.');
       return;
     }
+    const foundPrn = printers.find(p => p.id === newDesignPrinterId);
     const newPreset = createEmptyTemplate(
       newDesignName.trim(),
       newDesignTable,
       Number(newDesignWidth) || 72,
-      Number(newDesignHeight) || 40
+      Number(newDesignHeight) || 40,
+      newDesignPrinterId || '',
+      foundPrn?.name || ''
     );
     saveStoredLabelTemplate(newPreset);
     const updated = getAllPresets();
@@ -670,6 +682,58 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                 fontWeight: 600
               }}
             />
+          </div>
+
+          {/* 0-1. ⭐️ 출력 대상 프린터 지정 (서식-프린터 1:1 고정) */}
+          <div style={{
+            backgroundColor: '#1e293b',
+            border: '1px solid #334155',
+            borderRadius: '8px',
+            padding: '10px',
+            boxSizing: 'border-box',
+            width: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '4px'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#38bdf8' }}>
+                출력 대상 프린터 지정
+              </label>
+              <span style={{ fontSize: '0.62rem', color: '#10b981', fontWeight: 700 }}>
+                ● 실시간 출력 시 자동 고정
+              </span>
+            </div>
+            <select
+              value={template.targetPrinterId || ''}
+              onChange={e => {
+                const pId = e.target.value;
+                const found = printers.find(p => p.id === pId);
+                setTemplate(prev => ({
+                  ...prev,
+                  targetPrinterId: pId,
+                  targetPrinterName: found?.name || ''
+                }));
+                setIsSaved(false);
+              }}
+              style={{
+                width: '100%',
+                backgroundColor: '#0f172a',
+                border: '1px solid #475569',
+                borderRadius: '4px',
+                padding: '5px 8px',
+                color: '#f8fafc',
+                fontSize: '0.75rem',
+                fontWeight: 600
+              }}
+            >
+              <option value="">-- 기본 라벨 프린터 (자동) --</option>
+              {printers.map(p => (
+                <option key={p.id} value={p.id}>
+                  {p.isHardwareDetected ? `🟢 ${p.name}` : p.name}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* 1. 용지 규격 */}
@@ -1680,6 +1744,29 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                 >
                   <option value="asset">asset (자산 관리 - 15대 정규 헤더)</option>
                   <option value="temp_asset">temp_asset (임시 자산 - 입고 검수 헤더)</option>
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <label style={{ fontSize: '0.72rem', color: '#cbd5e1', fontWeight: 600 }}>출력 대상 프린터 지정</label>
+                <select
+                  value={newDesignPrinterId}
+                  onChange={(e) => setNewDesignPrinterId(e.target.value)}
+                  style={{
+                    backgroundColor: '#0f172a',
+                    border: '1px solid #475569',
+                    borderRadius: '4px',
+                    padding: '6px 8px',
+                    color: '#f8fafc',
+                    fontSize: '0.78rem'
+                  }}
+                >
+                  <option value="">-- 기본 라벨 프린터 (자동) --</option>
+                  {printers.map(p => (
+                    <option key={p.id} value={p.id}>
+                      {p.isHardwareDetected ? `🟢 ${p.name}` : p.name}
+                    </option>
+                  ))}
                 </select>
               </div>
 

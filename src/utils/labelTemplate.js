@@ -12,6 +12,8 @@ export const DEFAULT_LABEL_TEMPLATE = {
   targetTable: 'asset',
   schemaId: 'main_schema',
   name: '기본 라벨 서식 (72×40mm)',
+  targetPrinterId: '',
+  targetPrinterName: '',
   isDefault: true,
   paper: {
     widthMm: 72,
@@ -26,7 +28,7 @@ export const DEFAULT_LABEL_TEMPLATE = {
 /**
  * ⭐️ 새 템플릿 생성 팩토리 (모든 아이템이 깨끗한 빈 서식으로 시작)
  */
-export function createEmptyTemplate(name = '새 라벨 서식', targetTable = 'asset', widthMm = 72, heightMm = 40) {
+export function createEmptyTemplate(name = '새 라벨 서식', targetTable = 'asset', widthMm = 72, heightMm = 40, targetPrinterId = '', targetPrinterName = '') {
   const dotsWidth = Math.round(widthMm * 8);
   const dotsHeight = Math.round(heightMm * 8);
   const id = `tpl_custom_${Date.now()}`;
@@ -36,6 +38,8 @@ export function createEmptyTemplate(name = '새 라벨 서식', targetTable = 'a
     targetTable: targetTable || 'asset',
     schemaId: targetTable === 'temp_asset' ? 'temp_asset_schema' : 'asset_schema',
     name: name,
+    targetPrinterId: targetPrinterId || '',
+    targetPrinterName: targetPrinterName || '',
     isDefault: false,
     paper: {
       widthMm: Number(widthMm) || 72,

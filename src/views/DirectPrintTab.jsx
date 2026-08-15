@@ -162,13 +162,21 @@ export default function DirectPrintTab({ onError, onOpenPrintModal }) {
     inputRef.current?.focus();
   }, [isProcessing, lastScannedItem]);
 
-  // 서식 변경 시 타겟 테이블 및 로컬 저장 동기화
+  // 서식 변경 시 타겟 테이블, 프린터 자동 바인딩 및 동기화
   const handleSelectTemplate = (presetId) => {
     const found = presets.find(p => p.templateId === presetId);
     if (found) {
       setSelectedTemplate(found);
       setTargetTable(found.targetTable || 'asset');
       saveStoredLabelTemplate(found);
+
+      // ⭐️ 해당 서식에 지정된 전용 프린터가 있으면 자동 활성화 & 에이전트 동기화!
+      if (found.targetPrinterId) {
+        const targetPrn = printers.find(p => p.id === found.targetPrinterId);
+        if (targetPrn) {
+          handleSelectPrinter(targetPrn.id);
+        }
+      }
     }
   };
 
@@ -179,6 +187,12 @@ export default function DirectPrintTab({ onError, onOpenPrintModal }) {
     if (matched) {
       setSelectedTemplate(matched);
       saveStoredLabelTemplate(matched);
+      if (matched.targetPrinterId) {
+        const targetPrn = printers.find(p => p.id === matched.targetPrinterId);
+        if (targetPrn) {
+          handleSelectPrinter(targetPrn.id);
+        }
+      }
     }
   };
 
@@ -480,52 +494,37 @@ export default function DirectPrintTab({ onError, onOpenPrintModal }) {
         gap: '12px',
         alignItems: 'center'
       }}>
-        {/* 1) 프린터 선택 & 등록 */}
+        {/* 1) 서식 지정 출력 프린터 (자동 바인딩 & 고정) */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <Printer size={13} /> 프린터 선택 및 연결
+              <Printer size={13} /> 서식 지정 출력 프린터
             </label>
-            <div style={{ display: 'flex', gap: '4px' }}>
-              <button
-                onClick={handleDiscoverPrinters}
-                disabled={isScanningPrinters}
-                className="btn btn-outline"
-                style={{ fontSize: '0.65rem', padding: '1px 6px', borderColor: '#4ade80', color: '#4ade80', display: 'flex', alignItems: 'center', gap: '3px' }}
-                title="내 컴퓨터에 연결된 실제 프린터 실시간 검색"
-              >
-                <RefreshCw size={10} className={isScanningPrinters ? 'spin' : ''} />
-                {isScanningPrinters ? '검색중...' : '실제 프린터 검색'}
-              </button>
-              <button
-                onClick={() => setIsPrinterModalOpen(true)}
-                className="btn btn-outline"
-                style={{ fontSize: '0.65rem', padding: '1px 6px', borderColor: '#38bdf8', color: '#38bdf8' }}
-              >
-                <Plus size={10} /> 등록
-              </button>
-            </div>
+            <span style={{ fontSize: '0.62rem', color: '#10b981', fontWeight: 700 }}>
+              ● 서식 자동 바인딩됨
+            </span>
           </div>
-          <select
-            value={activePrinterIdState}
-            onChange={e => handleSelectPrinter(e.target.value)}
-            style={{
-              width: '100%',
-              backgroundColor: '#0f172a',
-              border: '1px solid #475569',
-              borderRadius: '4px',
-              padding: '6px 8px',
-              color: '#f8fafc',
-              fontSize: '0.78rem',
-              fontWeight: 600
-            }}
-          >
-            {printers.map(p => (
-              <option key={p.id} value={p.id}>
-                {p.isHardwareDetected ? `🟢 ${p.name}` : p.name}
-              </option>
-            ))}
-          </select>
+          <div style={{
+            width: '100%',
+            boxSizing: 'border-box',
+            backgroundColor: '#0f172a',
+            border: '1px solid #334155',
+            borderRadius: '4px',
+            padding: '7px 10px',
+            color: '#38bdf8',
+            fontSize: '0.78rem',
+            fontWeight: 700,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}>
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {activePrinter?.name || '기본 라벨 프린터 (자동)'}
+            </span>
+            <span style={{ fontSize: '0.65rem', color: '#94a3b8', padding: '1px 6px', backgroundColor: '#1e293b', borderRadius: '3px', flexShrink: 0 }}>
+              {activePrinter?.portName || activePrinter?.type || '연결됨'}
+            </span>
+          </div>
         </div>
 
         {/* 2) 라벨 디자인 서식 선택 */}
