@@ -35,6 +35,12 @@ namespace DragonRPA
         [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
         static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
 
+        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        static extern int GetClassName(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
+
+        [DllImport("user32.dll")]
+        static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+
         [DllImport("user32.dll")]
         static extern short GetAsyncKeyState(int vKey);
 
@@ -44,19 +50,29 @@ namespace DragonRPA
         [DllImport("kernel32.dll")]
         static extern IntPtr GetConsoleWindow();
 
-        static volatile HoverState CurrentHover = new HoverState();
-        static volatile HoverState LastLocked = null;
+        static volatile DetailedTargetInfo CurrentHover = new DetailedTargetInfo();
+        static volatile DetailedTargetInfo LastLocked = null;
         static bool IsScanningActive = true;
 
-        class HoverState
+        public class DetailedTargetInfo
         {
+            public string ProcessName = "";
+            public uint ProcessId = 0;
             public string WindowTitle = "";
+            public string WindowClassName = "";
             public string TagName = "ELEMENT";
             public string ControlType = "";
             public string Id = "";
             public string Name = "";
             public string ClassName = "";
             public string XPath = "";
+            public string CssSelector = "";
+            public string UiaPath = "";
+            public string FrameInfo = "Top-level Frame";
+            public string ParentHierarchy = "";
+            public bool IsEnabled = true;
+            public bool IsOffscreen = false;
+            public bool IsPassword = false;
             public int X = 0;
             public int Y = 0;
             public int Width = 0;
@@ -137,7 +153,7 @@ namespace DragonRPA
                                 {
                                     lastCtrlState = true;
                                     LastLocked = CurrentHover;
-                                    Console.WriteLine("[LOCK-ON] 타겟 확정됨: " + CurrentHover.TagName + "#" + CurrentHover.Id + " (" + CurrentHover.XPath + ")");
+                                    Console.WriteLine("[LOCK-ON] " + CurrentHover.ProcessName + " | " + CurrentHover.TagName + "#" + CurrentHover.Id + " (" + CurrentHover.XPath + ")");
                                 }
                             }
                             else
@@ -155,7 +171,7 @@ namespace DragonRPA
             thread.IsBackground = true;
             thread.SetApartmentState(ApartmentState.STA);
             thread.Start();
-            Console.WriteLine("[OK] Windows OS 전역 UIA 마우스 스캐너 가동 완료");
+            Console.WriteLine("[OK] Windows OS 전역 UIA 정밀 텔레메트리 스캐너 가동");
         }
 
         static void ScanElementAtPoint(POINT pt)
@@ -164,11 +180,30 @@ namespace DragonRPA
             {
                 IntPtr hWnd = WindowFromPoint(pt);
                 string winTitle = "";
+                string winClass = "";
+                string procName = "Desktop";
+                uint pid = 0;
+
                 if (hWnd != IntPtr.Zero)
                 {
-                    StringBuilder sb = new StringBuilder(256);
-                    GetWindowText(hWnd, sb, 256);
-                    winTitle = sb.ToString();
+                    StringBuilder sbTitle = new StringBuilder(256);
+                    GetWindowText(hWnd, sbTitle, 256);
+                    winTitle = sbTitle.ToString();
+
+                    StringBuilder sbClass = new StringBuilder(256);
+                    GetClassName(hWnd, sbClass, 256);
+                    winClass = sbClass.ToString();
+
+                    GetWindowThreadProcessId(hWnd, out pid);
+                    if (pid > 0)
+                    {
+                        try
+                        {
+                            Process p = Process.GetProcessById((int)pid);
+                            procName = p.ProcessName;
+                        }
+                        catch { }
+                    }
                 }
 
                 System.Windows.Point uiaPoint = new System.Windows.Point(pt.X, pt.Y);
@@ -182,6 +217,29 @@ namespace DragonRPA
                     string name = cur.Name ?? "";
                     string className = cur.ClassName ?? "";
                     System.Windows.Rect rect = cur.BoundingRectangle;
+                    bool isEnabled = cur.IsEnabled;
+                    bool isOffscreen = cur.IsOffscreen;
+                    bool isPassword = cur.IsPassword;
+
+                    // 프레임 및 상위 계층 탐색
+                    string frameInfo = "Main Frame";
+                    string hierarchy = "";
+                    try
+                    {
+                        AutomationElement parent = TreeWalker.RawViewWalker.GetParent(elem);
+                        if (parent != null)
+                        {
+                            hierarchy = parent.Current.ControlType != null ? parent.Current.ControlType.ProgrammaticName.Replace("ControlType.", "") : "Parent";
+                            if (!string.IsNullOrEmpty(parent.Current.AutomationId)) hierarchy += "#" + parent.Current.AutomationId;
+                            else if (!string.IsNullOrEmpty(parent.Current.Name)) hierarchy += "[" + parent.Current.Name + "]";
+
+                            if (parent.Current.ClassName != null && parent.Current.ClassName.ToLower().Contains("frame"))
+                            {
+                                frameInfo = "IFrame / SubFrame (" + parent.Current.ClassName + ")";
+                            }
+                        }
+                    }
+                    catch { }
 
                     string tag = "INPUT";
                     if (ctrlType.Equals("Button", StringComparison.OrdinalIgnoreCase)) tag = "BUTTON";
@@ -192,33 +250,54 @@ namespace DragonRPA
                     else tag = ctrlType.ToUpper();
 
                     string xpath = "";
+                    string css = "";
+                    string uiaPath = ctrlType;
+
                     if (!string.IsNullOrEmpty(id))
                     {
                         xpath = "//*[@id='" + id + "']";
+                        css = "#" + id;
+                        uiaPath += "[@AutomationId='" + id + "']";
                     }
                     else if (!string.IsNullOrEmpty(name))
                     {
-                        xpath = "//" + tag + "[@name='" + name + "']";
+                        xpath = "//" + tag + "[@name='" + name + "' or @aria-label='" + name + "']";
+                        css = tag.ToLower() + "[name='" + name + "']";
+                        uiaPath += "[@Name='" + name + "']";
                     }
                     else if (!string.IsNullOrEmpty(className))
                     {
-                        xpath = "//" + tag + "[contains(@class, '" + className.Split(' ')[0] + "')]";
+                        string firstCls = className.Split(' ')[0];
+                        xpath = "//" + tag + "[contains(@class, '" + firstCls + "')]";
+                        css = tag.ToLower() + "." + firstCls;
+                        uiaPath += "[@ClassName='" + firstCls + "']";
                     }
                     else
                     {
                         xpath = "//" + tag + "[@type='" + ctrlType + "']";
+                        css = tag.ToLower();
                     }
 
                     long nowMs = (long)(DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1))).TotalMilliseconds;
-                    CurrentHover = new HoverState
+                    CurrentHover = new DetailedTargetInfo
                     {
+                        ProcessName = procName,
+                        ProcessId = pid,
                         WindowTitle = winTitle,
+                        WindowClassName = winClass,
                         TagName = tag,
                         ControlType = ctrlType,
                         Id = id,
                         Name = name,
                         ClassName = className,
                         XPath = xpath,
+                        CssSelector = css,
+                        UiaPath = uiaPath,
+                        FrameInfo = frameInfo,
+                        ParentHierarchy = hierarchy,
+                        IsEnabled = isEnabled,
+                        IsOffscreen = isOffscreen,
+                        IsPassword = isPassword,
                         X = (int)rect.X,
                         Y = (int)rect.Y,
                         Width = (int)rect.Width,
@@ -288,17 +367,16 @@ namespace DragonRPA
                 }
                 else if (rawUrl == "/api/rpa/current-hover")
                 {
-                    HoverState h = CurrentHover;
-                    HoverState locked = LastLocked;
-                    string lockedJson = locked != null
-                        ? "{\"tagName\":\"" + EscapeJson(locked.TagName) + "\",\"id\":\"" + EscapeJson(locked.Id) + "\",\"name\":\"" + EscapeJson(locked.Name) + "\",\"className\":\"" + EscapeJson(locked.ClassName) + "\",\"xpath\":\"" + EscapeJson(locked.XPath) + "\",\"rect\":{\"width\":" + locked.Width + ",\"height\":" + locked.Height + "}}"
-                        : "null";
+                    DetailedTargetInfo h = CurrentHover;
+                    DetailedTargetInfo locked = LastLocked;
+                    string lockedJson = locked != null ? SerializeTargetJson(locked) : "null";
+                    string currentJson = SerializeTargetJson(h);
 
-                    responseString = "{\"online\":true,\"windowTitle\":\"" + EscapeJson(h.WindowTitle) + "\",\"tagName\":\"" + EscapeJson(h.TagName) + "\",\"controlType\":\"" + EscapeJson(h.ControlType) + "\",\"id\":\"" + EscapeJson(h.Id) + "\",\"name\":\"" + EscapeJson(h.Name) + "\",\"className\":\"" + EscapeJson(h.ClassName) + "\",\"xpath\":\"" + EscapeJson(h.XPath) + "\",\"rect\":{\"x\":" + h.X + ",\"y\":" + h.Y + ",\"width\":" + h.Width + ",\"height\":" + h.Height + "},\"timestamp\":" + h.Timestamp + ",\"lastLocked\":" + lockedJson + "}";
+                    responseString = "{\"online\":true,\"current\":" + currentJson + ",\"lastLocked\":" + lockedJson + "}";
                 }
                 else if (rawUrl == "/api/rpa/inspect-object" && req.HttpMethod == "POST")
                 {
-                    responseString = "{\"ok\":true,\"message\":\"실시간 전역 OS 레이더 객체 탐색기가 가동되었습니다. 어떤 창이든 마우스를 올리고 Ctrl+클릭을 누르면 락온됩니다.\"}";
+                    responseString = "{\"ok\":true,\"message\":\"실시간 전역 OS 레이더 객체 탐색기가 가동되었습니다.\"}";
                 }
                 else if (rawUrl == "/api/print-direct" && req.HttpMethod == "POST")
                 {
@@ -328,6 +406,30 @@ namespace DragonRPA
             res.ContentLength64 = buffer.Length;
             res.OutputStream.Write(buffer, 0, buffer.Length);
             res.OutputStream.Close();
+        }
+
+        static string SerializeTargetJson(DetailedTargetInfo t)
+        {
+            if (t == null) return "null";
+            return "{\"processName\":\"" + EscapeJson(t.ProcessName) + "\"," +
+                   "\"processId\":" + t.ProcessId + "," +
+                   "\"windowTitle\":\"" + EscapeJson(t.WindowTitle) + "\"," +
+                   "\"windowClassName\":\"" + EscapeJson(t.WindowClassName) + "\"," +
+                   "\"tagName\":\"" + EscapeJson(t.TagName) + "\"," +
+                   "\"controlType\":\"" + EscapeJson(t.ControlType) + "\"," +
+                   "\"id\":\"" + EscapeJson(t.Id) + "\"," +
+                   "\"name\":\"" + EscapeJson(t.Name) + "\"," +
+                   "\"className\":\"" + EscapeJson(t.ClassName) + "\"," +
+                   "\"xpath\":\"" + EscapeJson(t.XPath) + "\"," +
+                   "\"cssSelector\":\"" + EscapeJson(t.CssSelector) + "\"," +
+                   "\"uiaPath\":\"" + EscapeJson(t.UiaPath) + "\"," +
+                   "\"frameInfo\":\"" + EscapeJson(t.FrameInfo) + "\"," +
+                   "\"parentHierarchy\":\"" + EscapeJson(t.ParentHierarchy) + "\"," +
+                   "\"isEnabled\":" + (t.IsEnabled ? "true" : "false") + "," +
+                   "\"isOffscreen\":" + (t.IsOffscreen ? "true" : "false") + "," +
+                   "\"isPassword\":" + (t.IsPassword ? "true" : "false") + "," +
+                   "\"rect\":{\"x\":" + t.X + ",\"y\":" + t.Y + ",\"width\":" + t.Width + ",\"height\":" + t.Height + "}," +
+                   "\"timestamp\":" + t.Timestamp + "}";
         }
 
         static string EscapeJson(string s)

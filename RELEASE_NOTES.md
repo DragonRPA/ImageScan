@@ -1,5 +1,25 @@
 # 릴리즈 노트 (RELEASE_NOTES.md)
 
+## [v1.7.0.Build.46] - 2026-08-16 20:50:00 (KST)
+
+### 📐 [레이아웃 시프트 전면 제거 & 건조한 명사 단일 표준 & 8대 정밀 텔레메트리 데이터 확장]
+
+1. **레이아웃 시프트(덜컹거림) 100% 제거**:
+   - 모달 상단 플래시 알림 배너를 전면 삭제하여 높이 변동 및 덜컹거림 완벽 차단
+   - 타겟팅 상태를 고정된 건조한 명사 뱃지(`[타겟 락온됨]`, `[스캔 대기중]`)로 정적 표기
+2. **전사 표준 헌장 3.1 & 3.4 전면 적용**:
+   - 무수식어 건조한 명사·동사 단일 체계 및 상하 세로 스택(`flex-direction: column`, `gap: 4px`) 배치 엄격 준수
+3. **8대 엔지니어링 텔레메트리 데이터 정밀 기록**:
+   - ① 실행 프로세스 & PID (`msedge.exe`, `chrome.exe`, `ERPApp.exe`)
+   - ② 윈도우 창 제목 및 클래스 (`Window Title`, `ClassName`)
+   - ③ 프레임/IFrame 구조 (`Main Frame`, `IFrame / SubFrame`)
+   - ④ 상위 계층 트리 (`Parent Hierarchy`)
+   - ⑤ 3중 복구 선택자 세트 (1순위 XPath, 2순위 CSS Selector, 3순위 UIA Path)
+   - ⑥ 컨트롤 속성 및 상태 플래그 (`IsEnabled`, `IsPassword`, `IsOffscreen`)
+   - ⑦ 절대 좌표 및 크기 (`X, Y, Width, Height`)
+
+---
+
 ## [v1.7.0.Build.45] - 2026-08-16 20:15:00 (KST)
 
 ### 🪟 [Windows OS 전역 실시간 UIA 마우스 스캐너 엔진 탑재 & 다른 창 Ctrl+클릭 락온 완성]

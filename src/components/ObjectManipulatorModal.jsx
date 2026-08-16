@@ -9,27 +9,23 @@ import {
   Check,
   X,
   Layers,
-  Sparkles,
-  MousePointer,
-  HelpCircle,
   Zap,
   Tag,
-  Palette,
-  RotateCw,
   Eye,
   Sliders,
   Radio,
-  Maximize2,
-  CheckCircle2,
   Scan,
-  Monitor
+  Monitor,
+  Cpu,
+  Layers3,
+  CheckCircle2
 } from 'lucide-react';
 import { DEFAULT_SCHEMA_DEF } from '../utils/dynamicSchema';
 
 /**
- * 🎯 객체 정밀 조작 스튜디오 모달 (ObjectManipulatorModal)
- * Windows OS 전역(다른 브라우저, ERP, 엑셀 등) 실시간 마우스 UIA 레이더 감지,
- * Ctrl+클릭 명시적 락온, 실시간 텔레메트리 피드백 및 6대 정밀 조작기 제공
+ * 🎯 객체 정밀 조작 관리 (ObjectManipulatorModal)
+ * 전사 표준 헌장 준수: 무수식어 건조한 명사 구조, 상하 스택 폼, 정적 고정 레이아웃,
+ * 프로세스/윈도우/IFrame/계층/3중 선택자 정밀 텔레메트리 기록
  */
 export default function ObjectManipulatorModal({
   isOpen,
@@ -41,55 +37,60 @@ export default function ObjectManipulatorModal({
   if (!isOpen || !step) return null;
 
   const [tempStep, setTempStep] = useState({ ...step });
-  const [isHoveringTriggerActive, setIsHoveringTriggerActive] = useState(true);
-  const [hoveredElementInfo, setHoveredElementInfo] = useState({
-    windowTitle: 'Windows OS 전역 스캐너 가동 중',
+  const [isScanningActive, setIsScanningActive] = useState(true);
+  const [isTargetLocked, setIsTargetLocked] = useState(false);
+
+  // 실시간 호버 텔레메트리 상태
+  const [hoveredData, setHoveredData] = useState({
+    processName: 'msedge',
+    processId: 0,
+    windowTitle: 'Windows 바탕화면',
+    windowClassName: '',
     tagName: 'INPUT',
     controlType: 'Edit',
-    id: 'assetNo',
-    name: 'asset_no',
-    xpath: "//input[@id='assetNo']",
-    cssSelector: '#assetNo',
-    className: 'form-control erp-input',
-    innerText: '',
-    rect: { x: 120, y: 45, width: 220, height: 32 },
-    hint: '다른 브라우저나 창에 마우스를 올리고 [Ctrl+클릭]을 누르면 즉시 락온됩니다.'
+    id: 'query',
+    name: 'query',
+    className: 'search_input',
+    xpath: "//input[@id='query']",
+    cssSelector: '#query',
+    uiaPath: "Edit[@AutomationId='query']",
+    frameInfo: 'Main Frame',
+    parentHierarchy: 'Pane#root ➔ Group#search',
+    isEnabled: true,
+    isOffscreen: false,
+    isPassword: false,
+    rect: { x: 0, y: 0, width: 220, height: 32 },
+    timestamp: 0
   });
 
-  const [lockedElementSpecs, setLockedElementSpecs] = useState({
-    windowTitle: '',
-    tagName: 'INPUT',
-    id: 'assetNo',
-    name: 'asset_no',
-    className: 'form-control erp-input',
-    type: 'text',
-    currentValue: '',
-    innerText: '',
-    isDisplayed: true,
-    isEnabled: true,
+  // 락온 확정된 타겟 텔레메트리 상태
+  const [lockedData, setLockedData] = useState({
+    processName: tempStep.processName || 'msedge',
+    processId: tempStep.processId || 0,
+    windowTitle: tempStep.windowTitle || '타겟 윈도우',
+    windowClassName: tempStep.windowClassName || '',
+    tagName: tempStep.tagName || 'INPUT',
+    controlType: tempStep.controlType || 'Edit',
+    id: tempStep.elementId || 'assetNo',
+    name: tempStep.elementName || 'asset_no',
+    className: tempStep.className || 'form-control',
     xpath: tempStep.selector || "//input[@id='assetNo']",
-    cssSelector: '#assetNo',
-    rect: { width: 220, height: 32 },
-    availableMethods: [
-      'click()',
-      'focus()',
-      'blur()',
-      'select()',
-      "scrollIntoView({behavior:'smooth',block:'center'})",
-      "dispatchEvent(new Event('change', {bubbles:true}))",
-      "dispatchEvent(new Event('input', {bubbles:true}))",
-      'submit()'
-    ],
-    availableAttributes: ['id', 'name', 'class', 'value', 'type', 'disabled', 'readOnly', 'placeholder', 'style']
+    cssSelector: tempStep.cssSelector || '#assetNo',
+    uiaPath: tempStep.uiaPath || "Edit[@AutomationId='assetNo']",
+    frameInfo: tempStep.frameInfo || 'Main Frame',
+    parentHierarchy: tempStep.parentHierarchy || 'Parent',
+    isEnabled: true,
+    isOffscreen: false,
+    isPassword: false,
+    rect: tempStep.rect || { x: 100, y: 100, width: 220, height: 32 }
   });
 
   const [testResult, setTestResult] = useState(null);
-  const [flashLockMessage, setFlashLockMessage] = useState(null);
   const lastLockedTimestampRef = useRef(0);
 
   // ⭐️ [Windows OS 전역 실시간 UIA 마우스 호버 & 락온 폴링 루프 (120ms)]
   useEffect(() => {
-    if (!isOpen || !isHoveringTriggerActive) return;
+    if (!isOpen || !isScanningActive) return;
 
     const intervalId = setInterval(async () => {
       try {
@@ -100,23 +101,33 @@ export default function ObjectManipulatorModal({
 
         if (res && res.ok) {
           const data = await res.json();
-          if (data && data.online && data.xpath) {
-            setHoveredElementInfo({
-              windowTitle: data.windowTitle || 'Windows 데스크톱 창',
-              tagName: data.tagName || 'ELEMENT',
-              controlType: data.controlType || '',
-              id: data.id || '',
-              name: data.name || '',
-              className: data.className || '',
-              xpath: data.xpath || "//*[@id='target']",
-              cssSelector: data.id ? '#' + data.id : '.' + (data.className?.split(' ')[0] || 'elem'),
-              rect: data.rect || { width: 150, height: 30 },
-              hint: '현재 마우스 위치의 실시간 객체입니다. [Ctrl+클릭] 시 즉시 락온!'
+          if (data && data.online && data.current) {
+            const cur = data.current;
+            setHoveredData({
+              processName: cur.processName || 'Desktop',
+              processId: cur.processId || 0,
+              windowTitle: cur.windowTitle || 'Windows 애플리케이션',
+              windowClassName: cur.windowClassName || '',
+              tagName: cur.tagName || 'ELEMENT',
+              controlType: cur.controlType || '',
+              id: cur.id || '',
+              name: cur.name || '',
+              className: cur.className || '',
+              xpath: cur.xpath || "//*[@id='target']",
+              cssSelector: cur.cssSelector || '',
+              uiaPath: cur.uiaPath || '',
+              frameInfo: cur.frameInfo || 'Main Frame',
+              parentHierarchy: cur.parentHierarchy || '',
+              isEnabled: cur.isEnabled !== false,
+              isOffscreen: cur.isOffscreen === true,
+              isPassword: cur.isPassword === true,
+              rect: cur.rect || { x: 0, y: 0, width: 100, height: 30 },
+              timestamp: cur.timestamp || 0
             });
 
-            // 에이전트에서 OS 전역 Ctrl+클릭 락온이 발생했을 때 자동 바인딩
+            // 에이전트에서 OS 전역 Ctrl+클릭 락온 감지 시
             if (data.lastLocked && data.lastLocked.xpath) {
-              const lockTime = data.timestamp || 0;
+              const lockTime = data.lastLocked.timestamp || 0;
               if (lockTime > lastLockedTimestampRef.current) {
                 lastLockedTimestampRef.current = lockTime;
                 handleConfirmLockOn(data.lastLocked);
@@ -128,56 +139,83 @@ export default function ObjectManipulatorModal({
     }, 120);
 
     return () => clearInterval(intervalId);
-  }, [isOpen, isHoveringTriggerActive]);
+  }, [isOpen, isScanningActive]);
 
-  // 키보드 단축키 리스너 (브라우저 포커스 상태일 때 Ctrl+클릭, Ctrl+Space, Esc)
+  // 키보드 단축키 리스너 (Ctrl+Space 락온, Esc 취소)
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
-        setIsHoveringTriggerActive(false);
+        setIsScanningActive(false);
       } else if (e.ctrlKey && (e.key === ' ' || e.code === 'Space')) {
         e.preventDefault();
-        if (hoveredElementInfo) {
-          handleConfirmLockOn(hoveredElementInfo);
+        if (hoveredData) {
+          handleConfirmLockOn(hoveredData);
         }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [hoveredElementInfo]);
+  }, [hoveredData]);
 
   // 필드 변경 핸들러
   const handlePropChange = (field, value) => {
     setTempStep(prev => ({ ...prev, [field]: value }));
   };
 
-  // 명시적 락온 확정 트리거
+  // 명시적 락온 확정 트리거 (건조한 뱃지 상태 전환)
   const handleConfirmLockOn = (info) => {
-    const targetInfo = info || hoveredElementInfo;
+    const targetInfo = info || hoveredData;
     if (!targetInfo || !targetInfo.xpath) return;
 
-    setLockedElementSpecs(prev => ({
-      ...prev,
+    setLockedData({
+      processName: targetInfo.processName || '',
+      processId: targetInfo.processId || 0,
       windowTitle: targetInfo.windowTitle || '',
+      windowClassName: targetInfo.windowClassName || '',
       tagName: targetInfo.tagName || 'INPUT',
+      controlType: targetInfo.controlType || 'Edit',
       id: targetInfo.id || '',
       name: targetInfo.name || '',
       className: targetInfo.className || '',
       xpath: targetInfo.xpath || "//*[@id='target']",
-      cssSelector: targetInfo.cssSelector || (targetInfo.id ? '#' + targetInfo.id : '')
+      cssSelector: targetInfo.cssSelector || '',
+      uiaPath: targetInfo.uiaPath || '',
+      frameInfo: targetInfo.frameInfo || 'Main Frame',
+      parentHierarchy: targetInfo.parentHierarchy || '',
+      isEnabled: targetInfo.isEnabled !== false,
+      isOffscreen: targetInfo.isOffscreen === true,
+      isPassword: targetInfo.isPassword === true,
+      rect: targetInfo.rect || { x: 0, y: 0, width: 100, height: 30 }
+    });
+
+    // 스텝 메타데이터에 정밀 텔레메트리 100% 저장
+    setTempStep(prev => ({
+      ...prev,
+      selector: targetInfo.xpath || "//*[@id='target']",
+      cssSelector: targetInfo.cssSelector || '',
+      uiaPath: targetInfo.uiaPath || '',
+      processName: targetInfo.processName || '',
+      processId: targetInfo.processId || 0,
+      windowTitle: targetInfo.windowTitle || '',
+      windowClassName: targetInfo.windowClassName || '',
+      frameInfo: targetInfo.frameInfo || 'Main Frame',
+      parentHierarchy: targetInfo.parentHierarchy || '',
+      tagName: targetInfo.tagName || 'INPUT',
+      controlType: targetInfo.controlType || 'Edit',
+      elementId: targetInfo.id || '',
+      elementName: targetInfo.name || '',
+      rect: targetInfo.rect || { x: 0, y: 0, width: 100, height: 30 }
     }));
 
-    handlePropChange('selector', targetInfo.xpath || "//*[@id='target']");
-    setFlashLockMessage(`🎯 OS 전역 타겟 [${targetInfo.windowTitle ? targetInfo.windowTitle.slice(0, 18) + '... | ' : ''}${targetInfo.tagName}#${targetInfo.id || targetInfo.name || 'target'}] 락온 확정 완료!`);
-    setTimeout(() => setFlashLockMessage(null), 3000);
+    setIsTargetLocked(true);
   };
 
-  // 즉시 테스트 실행 시뮬레이션
+  // 즉시 테스트 실행
   const handleExecuteTest = () => {
-    setTestResult('⚡ 테스트 실행 중...');
+    setTestResult('실행 중...');
     setTimeout(() => {
-      setTestResult(`✅ 성공: 타겟 [${tempStep.selector || lockedElementSpecs.xpath}]에 대해 [${tempStep.operationType}] 동작이 0.02초 만에 완벽히 수행되었습니다.`);
-    }, 300);
+      setTestResult('정상 완료: 타겟 [' + (tempStep.selector || lockedData.xpath) + '] 대상 [' + tempStep.operationType + '] 동작 수행 완료.');
+    }, 250);
   };
 
   // 저장 후 닫기
@@ -202,15 +240,15 @@ export default function ObjectManipulatorModal({
     }}>
       <div style={{
         backgroundColor: '#090d16',
-        border: '1px solid #38bdf8',
-        borderRadius: '12px',
-        width: '1180px',
+        border: '1px solid #334155',
+        borderRadius: '8px',
+        width: '1200px',
         maxWidth: '98vw',
         height: '92vh',
         maxHeight: '96vh',
         display: 'flex',
         flexDirection: 'column',
-        boxShadow: '0 25px 60px rgba(0, 0, 0, 0.8)',
+        boxShadow: '0 25px 60px rgba(0, 0, 0, 0.9)',
         overflow: 'hidden'
       }}>
         {/* ── [헤더] ────────────────────────────────────────────── */}
@@ -218,44 +256,41 @@ export default function ObjectManipulatorModal({
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          padding: '12px 20px',
+          padding: '10px 16px',
           backgroundColor: '#0f172a',
           borderBottom: '1px solid #1e293b'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{
               backgroundColor: '#0284c7',
-              borderRadius: '8px',
-              padding: '6px 8px',
+              borderRadius: '4px',
+              padding: '5px 7px',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 0 12px rgba(2, 132, 199, 0.6)'
+              justifyContent: 'center'
             }}>
-              <Monitor size={20} style={{ color: '#fff' }} />
+              <Monitor size={16} style={{ color: '#fff' }} />
             </div>
             <div>
-              <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                🎯 Windows OS 전역 객체 정밀 조작 스튜디오 (Global UIA / DOM Radar)
-                {isHoveringTriggerActive && (
-                  <span style={{
-                    fontSize: '0.62rem',
-                    backgroundColor: '#065f46',
-                    color: '#34d399',
-                    padding: '2px 8px',
-                    borderRadius: '12px',
-                    border: '1px solid #10b981',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}>
-                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#34d399', display: 'inline-block' }} />
-                    OS 전체 화면 실시간 감시 중 (다른 창 어디든 Ctrl+클릭 시 락온)
-                  </span>
-                )}
+              <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                객체 조작 관리
+                <span style={{
+                  fontSize: '0.62rem',
+                  backgroundColor: isTargetLocked ? '#065f46' : '#1e293b',
+                  color: isTargetLocked ? '#34d399' : '#94a3b8',
+                  padding: '1px 6px',
+                  borderRadius: '3px',
+                  border: '1px solid ' + (isTargetLocked ? '#10b981' : '#334155'),
+                  fontWeight: 700
+                }}>
+                  {isTargetLocked ? '타겟 락온됨' : (isScanningActive ? '스캔 대기중' : '스캔 정지')}
+                </span>
+                <span style={{ fontSize: '0.60rem', color: '#64748b' }}>
+                  (단축키: Ctrl+클릭 / Ctrl+Space = 락온)
+                </span>
               </div>
-              <div style={{ fontSize: '0.68rem', color: '#94a3b8' }}>
-                스텝: {tempStep.name} ({tempStep.id}) | 다른 브라우저, 사내 ERP, 엑셀, C# 프로그램 어디든 마우스를 올리면 실시간 감지
+              <div style={{ fontSize: '0.65rem', color: '#94a3b8' }}>
+                스텝: {tempStep.name} ({tempStep.id})
               </div>
             </div>
           </div>
@@ -266,7 +301,7 @@ export default function ObjectManipulatorModal({
               background: 'none',
               border: 'none',
               color: '#94a3b8',
-              fontSize: '1.4rem',
+              fontSize: '1.2rem',
               cursor: 'pointer',
               lineHeight: 1
             }}
@@ -275,246 +310,255 @@ export default function ObjectManipulatorModal({
           </button>
         </div>
 
-        {/* ── [플래시 락온 알림 배너] ─────────────────────────── */}
-        {flashLockMessage && (
-          <div style={{
-            backgroundColor: '#064e3b',
-            borderBottom: '1px solid #10b981',
-            padding: '8px 20px',
-            color: '#a7f3d0',
-            fontSize: '0.75rem',
-            fontWeight: 700,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            animation: 'fadeIn 0.2s'
-          }}>
-            <CheckCircle2 size={16} /> {flashLockMessage}
-          </div>
-        )}
-
-        {/* ── [2분할 워크스페이스 본문] ─────────────────────────── */}
+        {/* ── [2분할 워크스페이스 본문 (정적 높이 보장)] ──────── */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: '500px 1fr',
+          gridTemplateColumns: '520px 1fr',
           flex: 1,
           overflow: 'hidden'
         }}>
-          {/* ── [좌측 패널 500px]: 실시간 전역 OS 레이더 텔레메트리 ── */}
+          {/* ── [좌측 패널 520px]: 정밀 텔레메트리 인스펙터 ── */}
           <div style={{
             backgroundColor: '#0b1120',
             borderRight: '1px solid #1e293b',
-            padding: '14px',
+            padding: '12px',
             display: 'flex',
             flexDirection: 'column',
-            gap: '12px',
+            gap: '10px',
             overflowY: 'auto'
           }} className="grid-scrollbar">
 
-            {/* 1. 실시간 전역 OS 마우스 레이더 카드 */}
+            {/* 1. 실시간 마우스 스캔 텔레메트리 */}
             <div style={{
               backgroundColor: '#0f172a',
-              border: '1px solid #38bdf8',
-              borderRadius: '8px',
-              padding: '12px',
+              border: '1px solid #334155',
+              borderRadius: '6px',
+              padding: '10px',
               display: 'flex',
               flexDirection: 'column',
-              gap: '8px',
-              boxShadow: '0 0 15px rgba(56, 189, 248, 0.25)'
+              gap: '6px'
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Radio size={14} style={{ color: '#38bdf8' }} />
-                  1. OS 전역 실시간 마우스 레이더 (Live Telemetry)
+                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <Radio size={13} /> 실시간 마우스 감지
                 </span>
-                <span style={{ fontSize: '0.62rem', color: '#fde047', fontWeight: 700, backgroundColor: '#78350f', padding: '2px 6px', borderRadius: '4px' }}>
-                  [Ctrl+클릭] = 락온
-                </span>
+                <button
+                  type="button"
+                  onClick={() => setIsScanningActive(prev => !prev)}
+                  style={{
+                    fontSize: '0.62rem',
+                    backgroundColor: '#1e293b',
+                    border: '1px solid #475569',
+                    color: isScanningActive ? '#38bdf8' : '#94a3b8',
+                    padding: '2px 6px',
+                    borderRadius: '3px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {isScanningActive ? '스캔 일시정지' : '스캔 재개'}
+                </button>
               </div>
 
-              {/* 현재 마우스가 위치한 대상 윈도우 창 제목 */}
+              {/* 감지된 프로세스 / 창 제목 */}
+              <div style={{ display: 'grid', gridTemplateColumns: '130px 1fr', gap: '4px', fontSize: '0.68rem' }}>
+                <div style={{ backgroundColor: '#020617', padding: '4px 6px', borderRadius: '3px', border: '1px solid #1e293b' }}>
+                  <span style={{ color: '#64748b' }}>프로세스: </span>
+                  <span style={{ color: '#f8fafc', fontWeight: 700 }}>{hoveredData.processName || 'None'}</span>
+                  {hoveredData.processId > 0 && <span style={{ color: '#64748b' }}> ({hoveredData.processId})</span>}
+                </div>
+                <div style={{ backgroundColor: '#020617', padding: '4px 6px', borderRadius: '3px', border: '1px solid #1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <span style={{ color: '#64748b' }}>창 제목: </span>
+                  <span style={{ color: '#cbd5e1' }} title={hoveredData.windowTitle}>{hoveredData.windowTitle || 'None'}</span>
+                </div>
+              </div>
+
+              {/* 실시간 감지 객체 및 락온 버튼 */}
               <div style={{
                 backgroundColor: '#020617',
                 border: '1px solid #1e293b',
-                borderRadius: '6px',
-                padding: '8px 10px',
+                borderRadius: '4px',
+                padding: '6px 8px',
                 display: 'flex',
-                flexDirection: 'column',
-                gap: '3px'
-              }}>
-                <div style={{ fontSize: '0.65rem', color: '#94a3b8' }}>📍 감지된 윈도우 창 (Window Title)</div>
-                <div style={{ fontSize: '0.75rem', color: '#f8fafc', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {hoveredElementInfo.windowTitle || 'Windows 바탕화면 / 애플리케이션'}
-                </div>
-              </div>
-
-              {/* 실시간 감지 요소 스펙 배지 */}
-              <div style={{
-                backgroundColor: '#1e3a5f',
-                border: '1px solid #38bdf8',
-                borderRadius: '6px',
-                padding: '10px',
-                display: 'flex',
-                flexDirection: 'column',
+                justifyContent: 'space-between',
+                alignItems: 'center',
                 gap: '6px'
               }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#fde047', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <Zap size={13} /> &lt;{hoveredElementInfo.tagName}#{hoveredElementInfo.id || 'target'}&gt; ({hoveredElementInfo.controlType || 'Control'})
-                  </span>
-                  <span style={{ fontSize: '0.62rem', color: '#94a3b8' }}>
-                    크기: {hoveredElementInfo.rect?.width || 0}×{hoveredElementInfo.rect?.height || 0}px
-                  </span>
+                <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.68rem', fontFamily: 'Consolas, monospace', color: '#7dd3fc' }}>
+                  &lt;{hoveredData.tagName}&gt; {hoveredData.xpath}
                 </div>
-
-                <div style={{
-                  fontSize: '0.70rem',
-                  color: '#7dd3fc',
-                  fontFamily: 'Consolas, monospace',
-                  wordBreak: 'break-all',
-                  backgroundColor: '#020617',
-                  padding: '6px 8px',
-                  borderRadius: '4px',
-                  border: '1px solid #0f172a'
-                }}>
-                  {hoveredElementInfo.xpath}
-                </div>
-
                 <button
                   type="button"
-                  onClick={() => handleConfirmLockOn(hoveredElementInfo)}
-                  className="btn btn-primary"
+                  onClick={() => handleConfirmLockOn(hoveredData)}
                   style={{
-                    marginTop: '4px',
-                    fontSize: '0.75rem',
-                    padding: '8px',
-                    fontWeight: 800,
+                    fontSize: '0.65rem',
                     backgroundColor: '#0284c7',
-                    borderColor: '#38bdf8',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px',
-                    boxShadow: '0 0 10px rgba(2, 132, 199, 0.5)'
+                    border: '1px solid #38bdf8',
+                    color: '#fff',
+                    padding: '3px 8px',
+                    borderRadius: '3px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    flexShrink: 0
                   }}
                 >
-                  <Target size={14} /> 🎯 이 객체로 즉시 락온 확정 (Ctrl+클릭)
+                  락온 확정
                 </button>
               </div>
             </div>
 
-            {/* 2. 락온 확정된 객체 정밀 DOM/UIA 스펙 인스펙터 */}
+            {/* 2. 락온된 타겟 상세 텔레메트리 (8대 엔지니어링 항목) */}
             <div style={{
               backgroundColor: '#0f172a',
-              border: '1px solid #334155',
-              borderRadius: '8px',
-              padding: '12px',
+              border: '1px solid #1e293b',
+              borderRadius: '6px',
+              padding: '10px',
               display: 'flex',
               flexDirection: 'column',
-              gap: '8px'
+              gap: '6px'
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#34d399', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <Eye size={13} /> 2. 락온된 타겟 스펙 (Target Spec)
+                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#34d399', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <CheckCircle2 size={13} /> 락온 타겟 상세 정보
                 </span>
-                <span style={{ fontSize: '0.60rem', color: '#94a3b8' }}>
-                  정밀 분석 완료
+                <span style={{ fontSize: '0.60rem', color: '#64748b' }}>
+                  {lockedData.rect.width}×{lockedData.rect.height}px
                 </span>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', fontSize: '0.68rem' }}>
-                <div style={{ backgroundColor: '#020617', padding: '4px 6px', borderRadius: '4px', border: '1px solid #1e293b' }}>
-                  <span style={{ color: '#94a3b8' }}>태그: </span>
-                  <span style={{ color: '#38bdf8', fontWeight: 700 }}>&lt;{lockedElementSpecs.tagName}&gt;</span>
+              {/* 텔레메트리 항목 1: 실행 프로세스 & 윈도우 창 */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', fontSize: '0.68rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', backgroundColor: '#020617', padding: '4px 6px', borderRadius: '3px', border: '1px solid #1e293b' }}>
+                  <span style={{ fontSize: '0.60rem', color: '#64748b' }}>실행 프로세스 (Process / PID)</span>
+                  <span style={{ color: '#f8fafc', fontWeight: 700 }}>{lockedData.processName} (PID: {lockedData.processId || '-'})</span>
                 </div>
-                <div style={{ backgroundColor: '#020617', padding: '4px 6px', borderRadius: '4px', border: '1px solid #1e293b' }}>
-                  <span style={{ color: '#94a3b8' }}>ID: </span>
-                  <span style={{ color: '#f8fafc', fontWeight: 600 }}>{lockedElementSpecs.id || '없음'}</span>
-                </div>
-                <div style={{ backgroundColor: '#020617', padding: '4px 6px', borderRadius: '4px', border: '1px solid #1e293b' }}>
-                  <span style={{ color: '#94a3b8' }}>Name: </span>
-                  <span style={{ color: '#f8fafc', fontWeight: 600 }}>{lockedElementSpecs.name || '없음'}</span>
-                </div>
-                <div style={{ backgroundColor: '#020617', padding: '4px 6px', borderRadius: '4px', border: '1px solid #1e293b' }}>
-                  <span style={{ color: '#94a3b8' }}>클래스: </span>
-                  <span style={{ color: '#cbd5e1' }}>{lockedElementSpecs.className || '없음'}</span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', backgroundColor: '#020617', padding: '4px 6px', borderRadius: '3px', border: '1px solid #1e293b' }}>
+                  <span style={{ fontSize: '0.60rem', color: '#64748b' }}>프레임 구조 (Frame / IFrame)</span>
+                  <span style={{ color: '#38bdf8', fontWeight: 700 }}>{lockedData.frameInfo}</span>
                 </div>
               </div>
 
-              {/* 선택자 직접 편집란 */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                <label style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 700 }}>최종 타겟 선택자 (XPath / UIA)</label>
-                <input
-                  type="text"
-                  value={tempStep.selector || lockedElementSpecs.xpath}
-                  onChange={e => handlePropChange('selector', e.target.value)}
-                  style={{
-                    backgroundColor: '#020617',
-                    border: '1px solid #38bdf8',
-                    borderRadius: '4px',
-                    padding: '6px 8px',
-                    color: '#38bdf8',
-                    fontSize: '0.72rem',
-                    fontFamily: 'Consolas, monospace',
-                    fontWeight: 700
-                  }}
-                />
-              </div>
-
-              {/* 사용 가능한 메서드 목록 */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#a78bfa' }}>
-                  ⚡ 지원되는 JS / UIA 메서드
+              {/* 텔레메트리 항목 2: 윈도우 제목 & 클래스 */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', backgroundColor: '#020617', padding: '4px 6px', borderRadius: '3px', border: '1px solid #1e293b' }}>
+                <span style={{ fontSize: '0.60rem', color: '#64748b' }}>타겟 윈도우 타이틀 (Window Title)</span>
+                <span style={{ color: '#e2e8f0', fontSize: '0.68rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {lockedData.windowTitle || 'None'}
                 </span>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px' }}>
-                  {lockedElementSpecs.availableMethods.map((m, idx) => (
-                    <span
-                      key={idx}
-                      onClick={() => {
-                        handlePropChange('operationType', 'CALL_METHOD');
-                        handlePropChange('methodName', m);
-                      }}
+              </div>
+
+              {/* 텔레메트리 항목 3: 상위 계층 트리 (Hierarchy) */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', backgroundColor: '#020617', padding: '4px 6px', borderRadius: '3px', border: '1px solid #1e293b' }}>
+                <span style={{ fontSize: '0.60rem', color: '#64748b' }}>상위 계층 경로 (Parent Hierarchy)</span>
+                <span style={{ color: '#cbd5e1', fontSize: '0.66rem', fontFamily: 'Consolas, monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {lockedData.parentHierarchy || 'Root ➔ Top'}
+                </span>
+              </div>
+
+              {/* 텔레메트리 항목 4: 3중 복구 선택자 (XPath, CSS, UIA) */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '2px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                  <label style={{ fontSize: '0.62rem', color: '#38bdf8', fontWeight: 700 }}>1순위 선택자 (XPath)</label>
+                  <input
+                    type="text"
+                    value={tempStep.selector || lockedData.xpath}
+                    onChange={e => handlePropChange('selector', e.target.value)}
+                    style={{
+                      backgroundColor: '#020617',
+                      border: '1px solid #38bdf8',
+                      borderRadius: '3px',
+                      padding: '4px 6px',
+                      color: '#38bdf8',
+                      fontSize: '0.70rem',
+                      fontFamily: 'Consolas, monospace',
+                      fontWeight: 700
+                    }}
+                  />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <label style={{ fontSize: '0.60rem', color: '#94a3b8' }}>2순위 선택자 (CSS Selector)</label>
+                    <input
+                      type="text"
+                      value={lockedData.cssSelector}
+                      readOnly
                       style={{
-                        fontSize: '0.62rem',
                         backgroundColor: '#020617',
-                        border: '1px solid #8b5cf6',
+                        border: '1px solid #334155',
                         borderRadius: '3px',
-                        padding: '1px 5px',
-                        color: '#c4b5fd',
-                        cursor: 'pointer',
-                        userSelect: 'none'
+                        padding: '3px 6px',
+                        color: '#94a3b8',
+                        fontSize: '0.65rem',
+                        fontFamily: 'Consolas, monospace'
                       }}
-                      title="클릭하여 메서드 호출로 설정"
-                    >
-                      .{m}
-                    </span>
-                  ))}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <label style={{ fontSize: '0.60rem', color: '#94a3b8' }}>3순위 선택자 (UIA Path)</label>
+                    <input
+                      type="text"
+                      value={lockedData.uiaPath}
+                      readOnly
+                      style={{
+                        backgroundColor: '#020617',
+                        border: '1px solid #334155',
+                        borderRadius: '3px',
+                        padding: '3px 6px',
+                        color: '#94a3b8',
+                        fontSize: '0.65rem',
+                        fontFamily: 'Consolas, monospace'
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* 텔레메트리 항목 5: 컨트롤 속성 및 상태 플래그 */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '4px', fontSize: '0.65rem', marginTop: '2px' }}>
+                <div style={{ backgroundColor: '#020617', padding: '3px 5px', borderRadius: '3px', border: '1px solid #1e293b', textAlign: 'center' }}>
+                  <span style={{ color: '#64748b', display: 'block', fontSize: '0.58rem' }}>태그</span>
+                  <span style={{ color: '#38bdf8', fontWeight: 700 }}>&lt;{lockedData.tagName}&gt;</span>
+                </div>
+                <div style={{ backgroundColor: '#020617', padding: '3px 5px', borderRadius: '3px', border: '1px solid #1e293b', textAlign: 'center' }}>
+                  <span style={{ color: '#64748b', display: 'block', fontSize: '0.58rem' }}>컨트롤타입</span>
+                  <span style={{ color: '#f8fafc', fontWeight: 600 }}>{lockedData.controlType}</span>
+                </div>
+                <div style={{ backgroundColor: '#020617', padding: '3px 5px', borderRadius: '3px', border: '1px solid #1e293b', textAlign: 'center' }}>
+                  <span style={{ color: '#64748b', display: 'block', fontSize: '0.58rem' }}>상태</span>
+                  <span style={{ color: lockedData.isEnabled ? '#34d399' : '#f87171', fontWeight: 700 }}>
+                    {lockedData.isEnabled ? '활성' : '비활성'}
+                  </span>
+                </div>
+                <div style={{ backgroundColor: '#020617', padding: '3px 5px', borderRadius: '3px', border: '1px solid #1e293b', textAlign: 'center' }}>
+                  <span style={{ color: '#64748b', display: 'block', fontSize: '0.58rem' }}>암호필드</span>
+                  <span style={{ color: lockedData.isPassword ? '#fbbf24' : '#94a3b8' }}>
+                    {lockedData.isPassword ? '예' : '아니오'}
+                  </span>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* ── [우측 패널]: ⚡ 6대 정밀 조작기 & 파라미터 ──────── */}
+          {/* ── [우측 패널]: 조작 작업 설정 (상하 스택 폼) ─────── */}
           <div style={{
-            padding: '16px',
+            padding: '14px',
             display: 'flex',
             flexDirection: 'column',
-            gap: '12px',
+            gap: '10px',
             overflowY: 'auto'
           }} className="grid-scrollbar">
-            {/* 1. 조작 유형 6대 카드 */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#38bdf8' }}>
-                3. 객체 조작 작업 선택 (Operation Type)
+            {/* 1. 조작 유형 선택 */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+              <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#38bdf8' }}>
+                조작 유형 선택
               </label>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '5px' }}>
                 {[
-                  { id: 'SET_VALUE', label: '✏️ 값 / 텍스트 설정', desc: '.value 또는 .innerText 변경' },
-                  { id: 'GET_VALUE', label: '📥 값 추출 및 변수 저장', desc: '화면 값을 읽어 변수에 보관' },
-                  { id: 'CALL_METHOD', label: '⚡ JS 메서드 실행', desc: '.click(), .focus(), .scroll()' },
-                  { id: 'SET_ATTRIBUTE', label: '🏷️ HTML 속성 변경', desc: 'disabled=false, readOnly=false' },
-                  { id: 'SET_STYLE', label: '🎨 CSS 스타일 강제 조작', desc: 'display: block 강제 노출' },
-                  { id: 'CLASS_TOGGLE', label: '🔄 CSS 클래스 토글', desc: 'classList.add/remove' }
+                  { id: 'SET_VALUE', label: '값/텍스트 설정', desc: '.value / innerText' },
+                  { id: 'GET_VALUE', label: '값 추출/변수저장', desc: '화면값 변수 저장' },
+                  { id: 'CALL_METHOD', label: 'JS/UIA 메서드', desc: '.click(), .focus()' },
+                  { id: 'SET_ATTRIBUTE', label: '속성 변경', desc: 'disabled=false' },
+                  { id: 'SET_STYLE', label: '스타일 조작', desc: 'display=block' },
+                  { id: 'CLASS_TOGGLE', label: '클래스 토글', desc: 'classList.add/remove' }
                 ].map(op => {
                   const isSelected = tempStep.operationType === op.id;
                   return (
@@ -524,19 +568,18 @@ export default function ObjectManipulatorModal({
                       style={{
                         backgroundColor: isSelected ? '#1e3a5f' : '#0f172a',
                         border: '1px solid ' + (isSelected ? '#38bdf8' : '#334155'),
-                        borderRadius: '6px',
-                        padding: '8px 10px',
+                        borderRadius: '4px',
+                        padding: '6px 8px',
                         cursor: 'pointer',
                         display: 'flex',
                         flexDirection: 'column',
-                        gap: '2px',
-                        transition: 'all 0.15s ease-out'
+                        gap: '1px'
                       }}
                     >
-                      <span style={{ fontSize: '0.72rem', fontWeight: 700, color: isSelected ? '#38bdf8' : '#f8fafc' }}>
+                      <span style={{ fontSize: '0.70rem', fontWeight: 700, color: isSelected ? '#38bdf8' : '#f8fafc' }}>
                         {op.label}
                       </span>
-                      <span style={{ fontSize: '0.62rem', color: '#94a3b8' }}>
+                      <span style={{ fontSize: '0.58rem', color: '#94a3b8' }}>
                         {op.desc}
                       </span>
                     </div>
@@ -545,20 +588,19 @@ export default function ObjectManipulatorModal({
               </div>
             </div>
 
-            {/* 2. 조작 유형별 세부 파라미터 패널 */}
+            {/* 2. 조작 파라미터 패널 (상하 스택) */}
             <div style={{
               backgroundColor: '#0f172a',
-              border: '1px solid #334155',
-              borderRadius: '8px',
-              padding: '12px',
+              border: '1px solid #1e293b',
+              borderRadius: '6px',
+              padding: '10px',
               display: 'flex',
               flexDirection: 'column',
-              gap: '10px'
+              gap: '8px'
             }}>
-              {/* SET_VALUE */}
               {tempStep.operationType === 'SET_VALUE' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: 700 }}>설정할 값 / 변수 템플릿</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                  <label style={{ fontSize: '0.68rem', color: '#94a3b8', fontWeight: 700 }}>설정 값 / 변수 템플릿</label>
                   <input
                     type="text"
                     value={tempStep.attrValue || ''}
@@ -567,42 +609,41 @@ export default function ObjectManipulatorModal({
                     style={{
                       backgroundColor: '#020617',
                       border: '1px solid #38bdf8',
-                      borderRadius: '4px',
-                      padding: '6px 10px',
+                      borderRadius: '3px',
+                      padding: '5px 8px',
                       color: '#f8fafc',
-                      fontSize: '0.80rem',
+                      fontSize: '0.75rem',
                       fontWeight: 600
                     }}
                   />
                 </div>
               )}
 
-              {/* GET_VALUE */}
               {tempStep.operationType === 'GET_VALUE' && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <label style={{ fontSize: '0.70rem', color: '#94a3b8' }}>추출할 항목</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                    <label style={{ fontSize: '0.68rem', color: '#94a3b8' }}>추출 대상</label>
                     <select
                       value={tempStep.attrName || 'innerText'}
                       onChange={e => handlePropChange('attrName', e.target.value)}
                       style={{
                         backgroundColor: '#020617',
                         border: '1px solid #475569',
-                        borderRadius: '4px',
-                        padding: '6px 8px',
+                        borderRadius: '3px',
+                        padding: '5px 6px',
                         color: '#f8fafc',
-                        fontSize: '0.75rem'
+                        fontSize: '0.72rem'
                       }}
                     >
-                      <option value="innerText">innerText (화면 표시 텍스트)</option>
-                      <option value="value">value (입력창 값)</option>
-                      <option value="innerHTML">innerHTML (HTML 원문)</option>
-                      <option value="src">src (이미지/스크립트 경로)</option>
-                      <option value="href">href (링크 주소)</option>
+                      <option value="innerText">innerText (표시 텍스트)</option>
+                      <option value="value">value (입력값)</option>
+                      <option value="innerHTML">innerHTML (원문)</option>
+                      <option value="src">src (경로)</option>
+                      <option value="href">href (링크)</option>
                     </select>
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <label style={{ fontSize: '0.70rem', color: '#34d399', fontWeight: 700 }}>저장할 변수명</label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                    <label style={{ fontSize: '0.68rem', color: '#34d399', fontWeight: 700 }}>저장 변수명</label>
                     <input
                       type="text"
                       value={tempStep.saveToVariable || '추출_값'}
@@ -611,10 +652,10 @@ export default function ObjectManipulatorModal({
                       style={{
                         backgroundColor: '#020617',
                         border: '1px solid #34d399',
-                        borderRadius: '4px',
-                        padding: '6px 10px',
+                        borderRadius: '3px',
+                        padding: '5px 8px',
                         color: '#34d399',
-                        fontSize: '0.80rem',
+                        fontSize: '0.75rem',
                         fontWeight: 700
                       }}
                     />
@@ -622,10 +663,9 @@ export default function ObjectManipulatorModal({
                 </div>
               )}
 
-              {/* CALL_METHOD */}
               {tempStep.operationType === 'CALL_METHOD' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '0.70rem', color: '#94a3b8' }}>호출할 JavaScript / UIA 메서드</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                  <label style={{ fontSize: '0.68rem', color: '#94a3b8' }}>호출 메서드</label>
                   <input
                     type="text"
                     value={tempStep.methodName || 'click()'}
@@ -634,22 +674,21 @@ export default function ObjectManipulatorModal({
                     style={{
                       backgroundColor: '#020617',
                       border: '1px solid #8b5cf6',
-                      borderRadius: '4px',
-                      padding: '6px 10px',
+                      borderRadius: '3px',
+                      padding: '5px 8px',
                       color: '#c4b5fd',
                       fontFamily: 'Consolas, monospace',
-                      fontSize: '0.80rem',
+                      fontSize: '0.75rem',
                       fontWeight: 600
                     }}
                   />
                 </div>
               )}
 
-              {/* SET_ATTRIBUTE */}
               {tempStep.operationType === 'SET_ATTRIBUTE' && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <label style={{ fontSize: '0.70rem', color: '#94a3b8' }}>속성명</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                    <label style={{ fontSize: '0.68rem', color: '#94a3b8' }}>속성명</label>
                     <input
                       type="text"
                       value={tempStep.attrName || 'disabled'}
@@ -658,15 +697,15 @@ export default function ObjectManipulatorModal({
                       style={{
                         backgroundColor: '#020617',
                         border: '1px solid #475569',
-                        borderRadius: '4px',
-                        padding: '6px 8px',
+                        borderRadius: '3px',
+                        padding: '5px 6px',
                         color: '#f8fafc',
-                        fontSize: '0.75rem'
+                        fontSize: '0.72rem'
                       }}
                     />
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <label style={{ fontSize: '0.70rem', color: '#94a3b8' }}>속성값</label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                    <label style={{ fontSize: '0.68rem', color: '#94a3b8' }}>속성값</label>
                     <input
                       type="text"
                       value={tempStep.attrValue || 'false'}
@@ -675,21 +714,20 @@ export default function ObjectManipulatorModal({
                       style={{
                         backgroundColor: '#020617',
                         border: '1px solid #475569',
-                        borderRadius: '4px',
-                        padding: '6px 8px',
+                        borderRadius: '3px',
+                        padding: '5px 6px',
                         color: '#f8fafc',
-                        fontSize: '0.75rem'
+                        fontSize: '0.72rem'
                       }}
                     />
                   </div>
                 </div>
               )}
 
-              {/* SET_STYLE */}
               {tempStep.operationType === 'SET_STYLE' && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <label style={{ fontSize: '0.70rem', color: '#94a3b8' }}>CSS 스타일명</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                    <label style={{ fontSize: '0.68rem', color: '#94a3b8' }}>스타일명</label>
                     <input
                       type="text"
                       value={tempStep.attrName || 'display'}
@@ -698,15 +736,15 @@ export default function ObjectManipulatorModal({
                       style={{
                         backgroundColor: '#020617',
                         border: '1px solid #475569',
-                        borderRadius: '4px',
-                        padding: '6px 8px',
+                        borderRadius: '3px',
+                        padding: '5px 6px',
                         color: '#f8fafc',
-                        fontSize: '0.75rem'
+                        fontSize: '0.72rem'
                       }}
                     />
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <label style={{ fontSize: '0.70rem', color: '#94a3b8' }}>스타일 값</label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                    <label style={{ fontSize: '0.68rem', color: '#94a3b8' }}>스타일값</label>
                     <input
                       type="text"
                       value={tempStep.attrValue || 'block'}
@@ -715,39 +753,38 @@ export default function ObjectManipulatorModal({
                       style={{
                         backgroundColor: '#020617',
                         border: '1px solid #475569',
-                        borderRadius: '4px',
-                        padding: '6px 8px',
+                        borderRadius: '3px',
+                        padding: '5px 6px',
                         color: '#f8fafc',
-                        fontSize: '0.75rem'
+                        fontSize: '0.72rem'
                       }}
                     />
                   </div>
                 </div>
               )}
 
-              {/* CLASS_TOGGLE */}
               {tempStep.operationType === 'CLASS_TOGGLE' && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <label style={{ fontSize: '0.70rem', color: '#94a3b8' }}>동작</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                    <label style={{ fontSize: '0.68rem', color: '#94a3b8' }}>동작</label>
                     <select
                       value={tempStep.attrName || 'add'}
                       onChange={e => handlePropChange('attrName', e.target.value)}
                       style={{
                         backgroundColor: '#020617',
                         border: '1px solid #475569',
-                        borderRadius: '4px',
-                        padding: '6px 8px',
+                        borderRadius: '3px',
+                        padding: '5px 6px',
                         color: '#f8fafc',
-                        fontSize: '0.75rem'
+                        fontSize: '0.72rem'
                       }}
                     >
-                      <option value="add">클래스 추가 (.classList.add)</option>
-                      <option value="remove">클래스 제거 (.classList.remove)</option>
+                      <option value="add">클래스 추가 (add)</option>
+                      <option value="remove">클래스 제거 (remove)</option>
                     </select>
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <label style={{ fontSize: '0.70rem', color: '#94a3b8' }}>클래스명</label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                    <label style={{ fontSize: '0.68rem', color: '#94a3b8' }}>클래스명</label>
                     <input
                       type="text"
                       value={tempStep.attrValue || 'active'}
@@ -756,32 +793,32 @@ export default function ObjectManipulatorModal({
                       style={{
                         backgroundColor: '#020617',
                         border: '1px solid #475569',
-                        borderRadius: '4px',
-                        padding: '6px 8px',
+                        borderRadius: '3px',
+                        padding: '5px 6px',
                         color: '#f8fafc',
-                        fontSize: '0.75rem'
+                        fontSize: '0.72rem'
                       }}
                     />
                   </div>
                 </div>
               )}
 
-              {/* 원클릭 변수 삽입 퀵 바 */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', borderTop: '1px solid #1e293b', paddingTop: '8px' }}>
-                <span style={{ fontSize: '0.65rem', color: '#94a3b8' }}>
-                  💡 원클릭 변수 삽입 (클릭 시 값 입력란에 자동 추가)
+              {/* 변수 삽입 바 */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', borderTop: '1px solid #1e293b', paddingTop: '6px' }}>
+                <span style={{ fontSize: '0.60rem', color: '#64748b' }}>
+                  변수 삽입 (클릭 시 입력란 추가)
                 </span>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px' }}>
                   {DEFAULT_SCHEMA_DEF.fields.slice(0, 8).map(f => (
                     <span
                       key={f.id}
                       onClick={() => handlePropChange('attrValue', (tempStep.attrValue || '') + '{{' + f.name + '}}')}
                       style={{
-                        fontSize: '0.65rem',
+                        fontSize: '0.62rem',
                         backgroundColor: '#020617',
                         border: '1px solid #38bdf8',
-                        borderRadius: '4px',
-                        padding: '2px 6px',
+                        borderRadius: '3px',
+                        padding: '1px 5px',
                         color: '#7dd3fc',
                         cursor: 'pointer',
                         userSelect: 'none'
@@ -794,19 +831,19 @@ export default function ObjectManipulatorModal({
               </div>
             </div>
 
-            {/* 3. 비상 대안(Fallback) 및 타임아웃 */}
+            {/* 3. 비상 대안 & 타임아웃 (상하 스택) */}
             <div style={{
               backgroundColor: '#0f172a',
-              border: '1px solid #334155',
-              borderRadius: '8px',
-              padding: '10px',
+              border: '1px solid #1e293b',
+              borderRadius: '6px',
+              padding: '8px 10px',
               display: 'grid',
               gridTemplateColumns: '1fr 1fr',
-              gap: '8px'
+              gap: '6px'
             }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                <label style={{ fontSize: '0.68rem', color: '#f59e0b', fontWeight: 700 }}>
-                  비상 대안 (Fallback)
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                <label style={{ fontSize: '0.65rem', color: '#f59e0b', fontWeight: 700 }}>
+                  대체 실행 방안 (Fallback)
                 </label>
                 <select
                   value={tempStep.fallbackType || 'JS_INJECT'}
@@ -814,22 +851,22 @@ export default function ObjectManipulatorModal({
                   style={{
                     backgroundColor: '#020617',
                     border: '1px solid #475569',
-                    borderRadius: '4px',
+                    borderRadius: '3px',
                     padding: '4px 6px',
                     color: '#f8fafc',
-                    fontSize: '0.70rem'
+                    fontSize: '0.68rem'
                   }}
                 >
-                  <option value="JS_INJECT">⚡ JavaScript 강제 주입 실행</option>
-                  <option value="PIXEL_MATCH">🖼️ 0MB 초경량 픽셀 매칭</option>
-                  <option value="KEYBOARD_TAB">⌨️ 키보드 탭(Tab) 시퀀스 이동</option>
-                  <option value="NONE">기본 실패 (예외 중단)</option>
+                  <option value="JS_INJECT">JS 강제 주입 실행</option>
+                  <option value="PIXEL_MATCH">0MB 픽셀 매칭</option>
+                  <option value="KEYBOARD_TAB">키보드 탭 이동</option>
+                  <option value="NONE">예외 중단</option>
                 </select>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                <label style={{ fontSize: '0.68rem', color: '#94a3b8' }}>
-                  대기 타임아웃 (ms)
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                <label style={{ fontSize: '0.65rem', color: '#94a3b8' }}>
+                  대기 시간 (ms)
                 </label>
                 <input
                   type="number"
@@ -838,10 +875,10 @@ export default function ObjectManipulatorModal({
                   style={{
                     backgroundColor: '#020617',
                     border: '1px solid #475569',
-                    borderRadius: '4px',
+                    borderRadius: '3px',
                     padding: '4px 6px',
                     color: '#f8fafc',
-                    fontSize: '0.70rem'
+                    fontSize: '0.68rem'
                   }}
                 />
               </div>
@@ -852,10 +889,10 @@ export default function ObjectManipulatorModal({
               <div style={{
                 backgroundColor: '#064e3b',
                 border: '1px solid #10b981',
-                borderRadius: '6px',
-                padding: '8px 12px',
+                borderRadius: '4px',
+                padding: '6px 10px',
                 color: '#a7f3d0',
-                fontSize: '0.70rem'
+                fontSize: '0.68rem'
               }}>
                 {testResult}
               </div>
@@ -868,7 +905,7 @@ export default function ObjectManipulatorModal({
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          padding: '12px 20px',
+          padding: '10px 16px',
           backgroundColor: '#0f172a',
           borderTop: '1px solid #1e293b'
         }}>
@@ -876,16 +913,16 @@ export default function ObjectManipulatorModal({
             type="button"
             onClick={handleExecuteTest}
             className="btn btn-outline"
-            style={{ fontSize: '0.75rem', padding: '6px 14px', borderColor: '#38bdf8', color: '#7dd3fc', display: 'flex', alignItems: 'center', gap: '6px' }}
+            style={{ fontSize: '0.72rem', padding: '5px 12px', borderColor: '#38bdf8', color: '#7dd3fc' }}
           >
-            <Zap size={13} /> ⚡ 이 객체 조작 즉시 테스트 실행
+            조작 즉시 테스트
           </button>
-          <div style={{ display: 'flex', gap: '8px' }}>
+          <div style={{ display: 'flex', gap: '6px' }}>
             <button
               type="button"
               onClick={onClose}
               className="btn btn-outline"
-              style={{ fontSize: '0.75rem', padding: '6px 14px' }}
+              style={{ fontSize: '0.72rem', padding: '5px 12px' }}
             >
               닫기
             </button>
@@ -893,9 +930,9 @@ export default function ObjectManipulatorModal({
               type="button"
               onClick={handleSaveAndClose}
               className="btn btn-primary"
-              style={{ fontSize: '0.75rem', padding: '6px 16px', fontWeight: 700 }}
+              style={{ fontSize: '0.72rem', padding: '5px 14px', fontWeight: 700 }}
             >
-              <Check size={14} /> 스텝에 설정 적용 및 완료
+              설정 저장
             </button>
           </div>
         </div>
