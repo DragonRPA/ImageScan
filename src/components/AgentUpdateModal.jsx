@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Bot, RefreshCw, CheckCircle, AlertTriangle, X, Download, ExternalLink, Sparkles } from 'lucide-react';
+import { Bot, RefreshCw, CheckCircle, AlertTriangle, X, Download, ExternalLink, Sparkles, ShieldCheck } from 'lucide-react';
 import { triggerAgentSelfUpdate, DEFAULT_UPDATE_EXE_URL } from '../utils/agentUpdateManager';
 
 export default function AgentUpdateModal({ isOpen, onClose, agentStatus, onUpdateSuccess }) {
@@ -36,7 +36,7 @@ export default function AgentUpdateModal({ isOpen, onClose, agentStatus, onUpdat
 
   return (
     <div className="modal-overlay">
-      <div className="modal-content" style={{ maxWidth: '540px', backgroundColor: '#0f172a', border: '1px solid #334155' }}>
+      <div className="modal-content" style={{ maxWidth: '560px', backgroundColor: '#0f172a', border: '1px solid #334155' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#38bdf8' }}>
             <Bot size={22} />
@@ -75,7 +75,7 @@ export default function AgentUpdateModal({ isOpen, onClose, agentStatus, onUpdat
             )}
           </div>
 
-          {/* 업데이트 안내 */}
+          {/* 업데이트 안내 & 전자서명 보안 안내 */}
           <div style={{
             fontSize: '0.8rem',
             color: '#cbd5e1',
@@ -83,12 +83,40 @@ export default function AgentUpdateModal({ isOpen, onClose, agentStatus, onUpdat
             backgroundColor: 'rgba(56, 189, 248, 0.08)',
             border: '1px solid rgba(56, 189, 248, 0.2)',
             padding: '10px 12px',
-            borderRadius: '6px'
+            borderRadius: '6px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '6px'
           }}>
-            ℹ️ <strong>원클릭 업데이트 작동 방식:</strong><br />
-            1. 에이전트가 GitHub에서 최신 <code>UBUS_DragonRPA_Agent.exe</code>를 다운로드합니다.<br />
-            2. 기존 프로세스를 안전하게 교체하고 1초 만에 자동 재실행합니다.<br />
-            3. 기존 프린터 IP 및 DB 설정은 100% 그대로 유지됩니다.
+            <div>
+              ℹ️ <strong>원클릭 업데이트 작동 방식:</strong><br />
+              1. 에이전트가 GitHub에서 최신 <code>UBUS_DragonRPA_Agent.exe</code>를 다운로드합니다.<br />
+              2. 사내 디지털 전자서명이 날인되어 기존 프로세스를 안전하게 1초 만에 교체/재실행합니다.<br />
+              3. 기존 프린터 IP 및 DB 설정은 100% 그대로 유지됩니다.
+            </div>
+            <div style={{
+              marginTop: '4px',
+              paddingTop: '6px',
+              borderTop: '1px solid rgba(56, 189, 248, 0.15)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '6px'
+            }}>
+              <span style={{ fontSize: '0.74rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <ShieldCheck size={14} style={{ color: '#38bdf8' }} />
+                윈도우 스마트스크린/보안 차단 발생 시:
+              </span>
+              <a
+                href="https://dragonrpa.github.io/ImageScan/보안인증서_원클릭설치.bat"
+                download="보안인증서_원클릭설치.bat"
+                className="btn btn-outline"
+                style={{ fontSize: '0.72rem', padding: '2px 8px', color: '#38bdf8', borderColor: '#38bdf8', textDecoration: 'none' }}
+                title="클라이언트 PC에 DragonRPA 보안 인증서를 1초 만에 등록합니다"
+              >
+                보안인증서 원클릭 등록 (.bat)
+              </a>
+            </div>
           </div>
 
           {/* 결과 메시지 */}
@@ -129,7 +157,7 @@ export default function AgentUpdateModal({ isOpen, onClose, agentStatus, onUpdat
             download="UBUS_DragonRPA_Agent.exe"
             className="btn btn-outline"
             style={{ fontSize: '0.78rem', padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '4px', borderColor: '#475569', color: '#94a3b8' }}
-            title="GitHub에서 최신 exe 파일을 직접 다운로드합니다"
+            title="GitHub에서 최신 서명된 exe 파일을 직접 다운로드합니다"
           >
             <Download size={13} /> 최신 exe 직접 다운로드
           </a>

@@ -1279,11 +1279,15 @@ function startUiServer() {
           await downloadBinary(updateUrl, tempExe);
           log('INFO', '다운로드 완료! updater.bat 워치독을 기동하고 에이전트를 자동 교체합니다.');
 
-          // updater.bat 생성 (Windows Defender / SmartScreen 차단 자동 해제 Unblock-File 탑재)
+          // updater.bat 생성 (사내 인증서 자동 신뢰 등록 및 SmartScreen 차단 자동 해제)
           const updaterBat = path.join(process.cwd(), 'updater.bat');
           const batContent = `@echo off
 chcp 65001 > nul
 timeout /t 1 /nobreak > nul
+if exist "DragonRPA_Root.cer" (
+  certutil -addstore -f "Root" "DragonRPA_Root.cer" > nul 2>&1
+  certutil -addstore -f "TrustedPublisher" "DragonRPA_Root.cer" > nul 2>&1
+)
 if exist "temp\\agent-update.exe" (
   powershell -NoProfile -Command "Unblock-File -Path 'temp\\agent-update.exe' -ErrorAction SilentlyContinue" > nul 2>&1
   taskkill /f /im UBUS_DragonRPA_Agent.exe /im zebra-agent.exe > nul 2>&1

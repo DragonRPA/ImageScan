@@ -1,5 +1,21 @@
 # 릴리즈 노트 (RELEASE_NOTES.md)
 
+## [v1.7.0.Build.23] - 2026-08-16 17:31:00 (KST)
+
+### 🔏 [에이전트 전자 코드 서명 및 원터치 보안인증서 등록 파이프라인 전면 통합]
+
+1. **사내 코드 서명 인증서(Self-Signed Code Signing Certificate) 발급 및 전자서명 자동화**:
+   - `CN=DragonRPA Software` 10년 유효기간 코드 서명 인증서 생성 (`DragonRPA_CodeSign.pfx`, `DragonRPA_Root.cer`)
+   - `sign-agent.ps1`을 통한 `UBUS_DragonRPA_Agent.exe` 디지털 서명 및 DigiCert RFC3161 SHA256 공인 타임스탬프 날인 완료
+2. **클라이언트 PC 1클릭 보안인증서 자동 등록 도구 구축 (`보안인증서_원클릭설치.bat`)**:
+   - 관리자 권한 자동 상승을 통해 Windows 신뢰할 수 있는 루트 인증 기관 및 게시자에 1초 만에 등록
+   - 다운로드 파일의 `Zone.Identifier`(Mark-of-the-Web) 차단 플래그 자동 해제
+3. **스마트 자가 업데이트 및 웹 UI 모달 연동**:
+   - `AgentUpdateModal.jsx`에 원클릭 인증서 설치 도구 다운로드 및 서명 안전 실행 안내 탑재
+   - `updater.bat` 및 `에이전트_최신업데이트.bat`에서 인증서 자동 동기화 및 무인 백그라운드 교체 지원
+
+---
+
 ## [v1.7.0.Build.22] - 2026-08-16 03:09:00 (KST)
 
 ### 🛡️ [임시 데이터 엑셀 업로드 실패 원인 정밀 예외처리 & 상세 메시지 안내 완비]
