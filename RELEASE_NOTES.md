@@ -1,5 +1,20 @@
 # 릴리즈 노트 (RELEASE_NOTES.md)
 
+## [v1.7.0.Build.36] - 2026-08-16 19:00:00 (KST)
+
+### 🎭 [차세대 Microsoft Playwright 초고속 직통 엔진 전면 도입 및 C# 코드 자동 컴파일러 탑재]
+
+1. **브라우저 자동화 엔진 전면 세대교체 (Selenium ➔ Microsoft Playwright)**:
+   - 셀레늄의 HTTP 폴링 방식과 드라이버 버전 충돌(`msedgedriver.exe`) 완전 종식
+   - WebSocket 양방향 실시간 통신 및 0ms 지능형 자동 대기(Auto-waiting) 표준 채택
+   - RPA 실행 큐 페이로드 표준 엔진 `Microsoft.Playwright` 전환
+2. **C# Playwright (.NET 8/9) 실시간 코드 자동 컴파일러 탑재**:
+   - `[💻 C# Playwright 코드 보기]` 모달 제공
+   - 화면에서 설계한 시나리오가 즉시 C# Playwright 비동기 코드로 실시간 변환되어 1클릭 클립보드 복사 지원
+3. **상단 액션바 `🎭 Microsoft Playwright 초고속 직통 엔진` 공식 배지 탑재**
+
+---
+
 ## [v1.7.0.Build.35] - 2026-08-16 18:56:00 (KST)
 
 ### 🎯 [변수관리 독립 섹션 구축, 3분할 워크스페이스 너비 최적화 & 객체 조작(MANIPULATE_OBJECT) 액션 신설]

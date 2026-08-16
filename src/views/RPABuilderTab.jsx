@@ -23,9 +23,10 @@ import {
   Target,
   Wrench,
   Code2,
-  Variable
+  Variable,
+  FileCode2
 } from 'lucide-react';
-import { getAllRpaScenarios, getRpaScenarioById, saveRpaScenario, deleteRpaScenario, BUILTIN_RPA_SCENARIOS } from '../utils/rpaEngine';
+import { getAllRpaScenarios, getRpaScenarioById, saveRpaScenario, deleteRpaScenario, generatePlaywrightCSharpCode, BUILTIN_RPA_SCENARIOS } from '../utils/rpaEngine';
 import { DEFAULT_SCHEMA_DEF } from '../utils/dynamicSchema';
 
 export default function RPABuilderTab({ onError }) {
@@ -34,6 +35,7 @@ export default function RPABuilderTab({ onError }) {
   const [selectedStepId, setSelectedStepId] = useState('step_1');
   const [isSaved, setIsSaved] = useState(false);
   const [isInspecting, setIsInspecting] = useState(false);
+  const [showCodeModal, setShowCodeModal] = useState(false);
 
   const scenario = scenarios.find(s => s.id === selectedScenarioId) || scenarios[0];
 
@@ -287,9 +289,33 @@ export default function RPABuilderTab({ onError }) {
           >
             + 새 시나리오
           </button>
+
+          {/* 🎭 Playwright 차세대 엔진 배지 */}
+          <span style={{
+            fontSize: '0.65rem',
+            backgroundColor: '#0f172a',
+            border: '1px solid #10b981',
+            borderRadius: '4px',
+            padding: '2px 8px',
+            color: '#34d399',
+            fontWeight: 700,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px'
+          }}>
+            🎭 Microsoft Playwright 초고속 직통 엔진
+          </span>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <button
+            onClick={() => setShowCodeModal(true)}
+            className="btn btn-outline"
+            style={{ fontSize: '0.70rem', padding: '4px 10px', borderColor: '#38bdf8', color: '#7dd3fc', display: 'flex', alignItems: 'center', gap: '4px' }}
+          >
+            <FileCode2 size={12} /> C# Playwright 코드 보기
+          </button>
+
           <button
             onClick={handleSaveScenario}
             className={`btn ${isSaved ? 'btn-success' : 'btn-primary'}`}
@@ -299,6 +325,115 @@ export default function RPABuilderTab({ onError }) {
           </button>
         </div>
       </div>
+
+      {/* ── C# Playwright 코드 팝업 모달 ────────────────────────────── */}
+      {showCodeModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.7)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 9999,
+          padding: '20px'
+        }}>
+          <div style={{
+            backgroundColor: '#0f172a',
+            border: '1px solid #38bdf8',
+            borderRadius: '10px',
+            width: '800px',
+            maxWidth: '95vw',
+            maxHeight: '85vh',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5)'
+          }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '12px 16px',
+              borderBottom: '1px solid #334155',
+              backgroundColor: '#1e293b'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <FileCode2 size={16} style={{ color: '#38bdf8' }} />
+                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f8fafc' }}>
+                  🎭 Microsoft.Playwright C# (.NET 8/9) 자동 생성 코드
+                </span>
+              </div>
+              <button
+                onClick={() => setShowCodeModal(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#94a3b8',
+                  fontSize: '1.2rem',
+                  cursor: 'pointer',
+                  padding: '0 4px'
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ padding: '12px 16px', flex: 1, overflowY: 'auto' }}>
+              <p style={{ fontSize: '0.70rem', color: '#94a3b8', marginBottom: '8px' }}>
+                이 코드는 현재 설계된 RPA 시나리오를 바탕으로 Playwright C# 코드로 실시간 컴파일된 결과물입니다. 에이전트에 그대로 붙여넣어 실행할 수 있습니다.
+              </p>
+              <textarea
+                readOnly
+                value={generatePlaywrightCSharpCode(scenario)}
+                style={{
+                  width: '100%',
+                  height: '420px',
+                  backgroundColor: '#020617',
+                  border: '1px solid #1e293b',
+                  borderRadius: '6px',
+                  padding: '12px',
+                  color: '#38bdf8',
+                  fontFamily: 'Consolas, monospace',
+                  fontSize: '0.75rem',
+                  lineHeight: '1.4',
+                  resize: 'none'
+                }}
+              />
+            </div>
+
+            <div style={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              gap: '8px',
+              padding: '10px 16px',
+              borderTop: '1px solid #334155',
+              backgroundColor: '#1e293b'
+            }}>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(generatePlaywrightCSharpCode(scenario));
+                  alert('C# Playwright 코드가 클립보드에 복사되었습니다!');
+                }}
+                className="btn btn-primary"
+                style={{ fontSize: '0.72rem', padding: '5px 14px' }}
+              >
+                📋 코드 클립보드 복사
+              </button>
+              <button
+                onClick={() => setShowCodeModal(false)}
+                className="btn btn-outline"
+                style={{ fontSize: '0.72rem', padding: '5px 14px' }}
+              >
+                닫기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── [2] 3분할 워크스페이스 (260px | 1fr | 460px) ─────────────── */}
       <div style={{
