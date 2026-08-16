@@ -481,9 +481,60 @@ export default function RPABuilderTab({ onError }) {
                 />
               </div>
 
-              {/* ── [1] NAVIGATE 액션: URL & 브라우저 기동/세션 옵션 ── */}
+              {/* ── [1] NAVIGATE 액션: URL & 브라우저 기동/세션/UBUS 실전 옵션 ── */}
               {selectedStep.action === 'NAVIGATE' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {/* ⚡ UBUS 퀵 프리셋 버튼 */}
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleStepPropChange('pageLoadStrategy', 'Eager');
+                        handleStepPropChange('blockImages', true);
+                        handleStepPropChange('disableThrottling', true);
+                        handleStepPropChange('disableGpu', true);
+                        handleStepPropChange('autoDownload', true);
+                        handleStepPropChange('disableFirstRun', true);
+                        handleStepPropChange('ignoreCertErrors', true);
+                        handleStepPropChange('disableBlinkFeatures', true);
+                      }}
+                      className="btn btn-outline"
+                      style={{
+                        flex: 1,
+                        fontSize: '0.68rem',
+                        padding: '4px',
+                        borderColor: '#38bdf8',
+                        color: '#38bdf8',
+                        backgroundColor: 'rgba(56, 189, 248, 0.1)',
+                        fontWeight: 700
+                      }}
+                    >
+                      ⚡ UBUS 초고속 ERP 모드
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleStepPropChange('pageLoadStrategy', 'Normal');
+                        handleStepPropChange('blockImages', false);
+                        handleStepPropChange('disableThrottling', false);
+                        handleStepPropChange('disableGpu', false);
+                        handleStepPropChange('autoDownload', false);
+                        handleStepPropChange('disableFirstRun', false);
+                      }}
+                      className="btn btn-outline"
+                      style={{
+                        flex: 1,
+                        fontSize: '0.68rem',
+                        padding: '4px',
+                        borderColor: '#64748b',
+                        color: '#94a3b8'
+                      }}
+                    >
+                      🌐 표준 웹 모드
+                    </button>
+                  </div>
+
+                  {/* URL 입력 */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                     <label style={{ fontSize: '0.68rem', color: '#94a3b8' }}>접속 URL</label>
                     <input
@@ -502,6 +553,7 @@ export default function RPABuilderTab({ onError }) {
                     />
                   </div>
 
+                  {/* 대상 브라우저 & 실행 모드 */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                       <label style={{ fontSize: '0.68rem', color: '#94a3b8' }}>대상 브라우저</label>
@@ -546,6 +598,7 @@ export default function RPABuilderTab({ onError }) {
                     </div>
                   </div>
 
+                  {/* 창 크기 & 창 별칭 */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                       <label style={{ fontSize: '0.68rem', color: '#94a3b8' }}>창 크기 / 화면 배치</label>
@@ -588,6 +641,73 @@ export default function RPABuilderTab({ onError }) {
                     </div>
                   </div>
 
+                  {/* ⚡ UBUS 초고속 가속 & 로딩 전략 */}
+                  <div style={{
+                    backgroundColor: '#0f172a',
+                    border: '1px solid #0284c7',
+                    borderRadius: '6px',
+                    padding: '8px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '6px'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <label style={{ fontSize: '0.68rem', fontWeight: 700, color: '#38bdf8' }}>
+                        ⚡ UBUS 실전 속도 최적화 (Speed Engine)
+                      </label>
+                      <span style={{ fontSize: '0.62rem', color: '#7dd3fc' }}>속도 3~5배 가속</span>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <label style={{ fontSize: '0.65rem', color: '#94a3b8' }}>페이지 로딩 전략 (PageLoadStrategy)</label>
+                      <select
+                        value={selectedStep.pageLoadStrategy || 'Eager'}
+                        onChange={e => handleStepPropChange('pageLoadStrategy', e.target.value)}
+                        style={{
+                          backgroundColor: '#1e293b',
+                          border: '1px solid #38bdf8',
+                          borderRadius: '4px',
+                          padding: '3px 6px',
+                          color: '#38bdf8',
+                          fontSize: '0.70rem',
+                          fontWeight: 700
+                        }}
+                      >
+                        <option value="Eager">⚡ Eager: DOMContentLoaded 즉시 진행 (권장 · 3배 가속)</option>
+                        <option value="None">🚀 None: 리소스 대기 없이 즉시 진행 (최대 속도)</option>
+                        <option value="Normal">🐢 Normal: 모든 무거운 리소스/광고 완료 대기</option>
+                      </select>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.68rem', color: '#cbd5e1' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={selectedStep.blockImages !== false}
+                          onChange={e => handleStepPropChange('blockImages', e.target.checked)}
+                        />
+                        이미지 로드 차단 (images=2) - 대역폭 절감 & 렌더링 5배 가속
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={selectedStep.disableThrottling !== false}
+                          onChange={e => handleStepPropChange('disableThrottling', e.target.checked)}
+                        />
+                        백그라운드 감속 방지 (--disable-background-timer-throttling) - 창 가려져도 풀스피드
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={selectedStep.disableGpu !== false}
+                          onChange={e => handleStepPropChange('disableGpu', e.target.checked)}
+                        />
+                        불필요 GPU 부하 차단 (--disable-gpu, --disable-software-rasterizer)
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* 📥 무인 다운로드 자동화 */}
                   <div style={{
                     backgroundColor: '#0f172a',
                     border: '1px solid #334155',
@@ -598,9 +718,49 @@ export default function RPABuilderTab({ onError }) {
                     gap: '4px'
                   }}>
                     <label style={{ fontSize: '0.68rem', fontWeight: 700, color: '#38bdf8' }}>
-                      브라우저 보안 및 제어 옵션
+                      📥 무인 다운로드 자동화 (Download Preferences)
                     </label>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.70rem', color: '#cbd5e1' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.68rem', color: '#cbd5e1', cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={selectedStep.autoDownload !== false}
+                        onChange={e => handleStepPropChange('autoDownload', e.target.checked)}
+                      />
+                      다운로드 확인창/위치선택 팝업 끄기 (download.prompt_for_download=false)
+                    </label>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '2px' }}>
+                      <label style={{ fontSize: '0.65rem', color: '#94a3b8' }}>기본 다운로드 저장 폴더 (선택)</label>
+                      <input
+                        type="text"
+                        value={selectedStep.downloadPath || ''}
+                        onChange={e => handleStepPropChange('downloadPath', e.target.value)}
+                        placeholder="예: C:\DragonRPA\Downloads"
+                        style={{
+                          backgroundColor: '#1e293b',
+                          border: '1px solid #475569',
+                          borderRadius: '4px',
+                          padding: '3px 6px',
+                          color: '#f8fafc',
+                          fontSize: '0.70rem'
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* 🛡️ 보안 및 방해 UI 차단 */}
+                  <div style={{
+                    backgroundColor: '#0f172a',
+                    border: '1px solid #334155',
+                    borderRadius: '6px',
+                    padding: '8px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '4px'
+                  }}>
+                    <label style={{ fontSize: '0.68rem', fontWeight: 700, color: '#38bdf8' }}>
+                      🛡️ 브라우저 보안 및 방해 UI 차단
+                    </label>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.68rem', color: '#cbd5e1' }}>
                       <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
                         <input
                           type="checkbox"
@@ -616,6 +776,14 @@ export default function RPABuilderTab({ onError }) {
                           onChange={e => handleStepPropChange('disableBlinkFeatures', e.target.checked)}
                         />
                         봇 탐지 방지 플래그 (--disable-blink-features)
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={selectedStep.disableFirstRun !== false}
+                          onChange={e => handleStepPropChange('disableFirstRun', e.target.checked)}
+                        />
+                        첫 실행 마법사 및 모바일 프로모션 차단 (--no-first-run)
                       </label>
                       <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
                         <input

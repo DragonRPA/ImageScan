@@ -1,5 +1,22 @@
 # 릴리즈 노트 (RELEASE_NOTES.md)
 
+## [v1.7.0.Build.34] - 2026-08-16 18:51:00 (KST)
+
+### ⚡ [UBUS 실전 브라우저 5대 초고속 가속 엔진 및 무인 다운로드 자동화 옵션 전면 탑재]
+
+1. **UBUS 5대 초고속 가속 엔진 옵션 전면 연동**:
+   - `PageLoadStrategy` (Eager: DOM 즉시 3배 가속 / None: 즉시 진행 / Normal)
+   - 이미지 로드 차단 (`profile.images=2`, 네트워크 대역폭 절감 및 렌더링 5배 가속)
+   - 백그라운드 감속 방지 (`--disable-background-timer-throttling`, 창 가려져도 풀스피드 가동)
+   - GPU 하드웨어 가속 부하 차단 (`--disable-gpu`, `--disable-software-rasterizer`)
+2. **무인 다운로드 자동화 (Download Preferences)**:
+   - 다운로드 확인/위치선택 팝업 끄기 (`download.prompt_for_download=false`, 원클릭 자동 저장)
+   - 기본 다운로드 저장 폴더 지정
+3. **`[⚡ UBUS 초고속 ERP 모드]` 및 `[🌐 표준 웹 모드]` 원클릭 퀵 프리셋 버튼 제공**
+4. **첫 실행 마법사 및 모바일 프로모션 원천 차단 (`--no-first-run`, `--disable-first-run-ui`)**
+
+---
+
 ## [v1.7.0.Build.33] - 2026-08-16 18:46:00 (KST)
 
 ### 🪟 [RPA 시나리오 편집기 브라우저 기동옵션 정밀세팅 및 창/탭 전환·닫기 액션 신설]
