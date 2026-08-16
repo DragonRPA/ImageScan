@@ -71,9 +71,10 @@ namespace DragonRPA
             try
             {
                 var listener = new HttpListener();
-                listener.Prefixes.Add($"http://localhost:{HTTP_PORT}/");
+                try { listener.Prefixes.Add($"http://localhost:{HTTP_PORT}/"); } catch { }
+                try { listener.Prefixes.Add($"http://127.0.0.1:{HTTP_PORT}/"); } catch { }
                 listener.Start();
-                Console.WriteLine($"[OK] HTTP REST API 가동: http://localhost:{HTTP_PORT}/");
+                Console.WriteLine($"[OK] HTTP REST API 가동: http://localhost:{HTTP_PORT}/ & http://127.0.0.1:{HTTP_PORT}/");
 
                 ThreadPool.QueueUserWorkItem(_ =>
                 {

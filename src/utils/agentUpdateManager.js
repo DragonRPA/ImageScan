@@ -56,13 +56,23 @@ export async function checkAgentLiveStatus(port = DEFAULT_AGENT_PORT) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 2000);
 
-    const res = await fetch(`http://127.0.0.1:${port}/api/status`, {
-      method: 'GET',
-      signal: controller.signal
-    });
+    let res = null;
+    try {
+      res = await fetch(`http://127.0.0.1:${port}/api/status`, {
+        method: 'GET',
+        signal: controller.signal
+      });
+    } catch (e1) {
+      try {
+        res = await fetch(`http://localhost:${port}/api/status`, {
+          method: 'GET',
+          signal: controller.signal
+        });
+      } catch (e2) {}
+    }
     clearTimeout(timeoutId);
 
-    if (res.ok) {
+    if (res && res.ok) {
       const data = await res.json();
       const currentVersion = data.version || 'v1.0';
       const isOutdated = compareVersions(currentVersion, latestRequiredVersion) < 0;

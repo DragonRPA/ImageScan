@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("UBUS_DragonRPA_Agent")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+6a5b7c89488bbcb2c9b6818f69640caa22f6885e")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+edc2beafe7ce4039bcf3e451491add98ea3f3a2a")]
 [assembly: System.Reflection.AssemblyProductAttribute("UBUS_DragonRPA_Agent")]
 [assembly: System.Reflection.AssemblyTitleAttribute("UBUS_DragonRPA_Agent")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
