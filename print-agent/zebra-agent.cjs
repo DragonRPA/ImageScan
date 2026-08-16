@@ -1477,33 +1477,44 @@ const FRONTEND_URL = 'https://dragonrpa.github.io/ImageScan/';
 
 function openFrontendInBrowser() {
   try {
-    const cmd = process.platform === 'win32' ? `start "" "${FRONTEND_URL}"` : `open "${FRONTEND_URL}"`;
-    exec(cmd, (err) => {
-      if (err) log('WARN', `프론트엔드 브라우저 열기 실패: ${err.message}`);
-      else log('INFO', `프론트엔드 웹 화면 자동 실행 완료: ${FRONTEND_URL}`);
-    });
-  } catch (e) {}
+    if (process.platform === 'win32') {
+      // 1순위: explorer.exe를 통한 확실한 기본 브라우저 띄우기
+      exec(`explorer "${FRONTEND_URL}"`, (err) => {
+        if (err) {
+          exec(`cmd /c start "" "${FRONTEND_URL}"`);
+        }
+        log('INFO', `프론트엔드 웹 화면 자동 실행 완료: ${FRONTEND_URL}`);
+      });
+    } else {
+      exec(`open "${FRONTEND_URL}"`);
+    }
+  } catch (e) {
+    log('WARN', `프론트엔드 브라우저 실행 오류: ${e.message}`);
+  }
 }
 
 function hideConsoleWindow() {
   if (process.platform !== 'win32') return;
-  try {
-    const psScript = `
-      Add-Type -Name Win32Utils -Namespace Win32 -MemberDefinition '
-        [DllImport("user32.dll")] public static extern bool ShowWindow(int hWnd, int nCmdShow);
-        [DllImport("kernel32.dll")] public static extern int GetConsoleWindow();
-      ';
-      $hWnd = [Win32.Win32Utils]::GetConsoleWindow();
-      if ($hWnd -ne 0) {
-        [Win32.Win32Utils]::ShowWindow($hWnd, 0)
-      }
-    `;
-    const child = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-WindowStyle', 'Hidden', '-Command', psScript], {
-      detached: true,
-      stdio: 'ignore'
-    });
-    child.unref();
-  } catch (e) {}
+  // 브라우저가 먼저 완벽히 열린 후 1.5초 뒤에 조용히 백그라운드로 전환
+  setTimeout(() => {
+    try {
+      const psScript = `
+        Add-Type -Name Win32Utils -Namespace Win32 -MemberDefinition '
+          [DllImport("user32.dll")] public static extern bool ShowWindow(int hWnd, int nCmdShow);
+          [DllImport("kernel32.dll")] public static extern int GetConsoleWindow();
+        ';
+        $hWnd = [Win32.Win32Utils]::GetConsoleWindow();
+        if ($hWnd -ne 0) {
+          [Win32.Win32Utils]::ShowWindow($hWnd, 0)
+        }
+      `;
+      const child = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-WindowStyle', 'Hidden', '-Command', psScript], {
+        detached: true,
+        stdio: 'ignore'
+      });
+      child.unref();
+    } catch (e) {}
+  }, 1500);
 }
 
 // ── [1] ZPL 파일 드롭 실시간 감시 엔진 (Folder Watcher) ───────────────────
