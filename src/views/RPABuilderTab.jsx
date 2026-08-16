@@ -24,7 +24,8 @@ import {
   Wrench,
   Code2,
   Variable,
-  FileCode2
+  FileCode2,
+  BookOpen
 } from 'lucide-react';
 import { getAllRpaScenarios, getRpaScenarioById, saveRpaScenario, deleteRpaScenario, generatePlaywrightCSharpCode, BUILTIN_RPA_SCENARIOS } from '../utils/rpaEngine';
 import { DEFAULT_SCHEMA_DEF } from '../utils/dynamicSchema';
@@ -36,6 +37,7 @@ export default function RPABuilderTab({ onError }) {
   const [isSaved, setIsSaved] = useState(false);
   const [isInspecting, setIsInspecting] = useState(false);
   const [showCodeModal, setShowCodeModal] = useState(false);
+  const [showDocsModal, setShowDocsModal] = useState(false);
 
   const scenario = scenarios.find(s => s.id === selectedScenarioId) || scenarios[0];
 
@@ -309,6 +311,14 @@ export default function RPABuilderTab({ onError }) {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <button
+            onClick={() => setShowDocsModal(true)}
+            className="btn btn-outline"
+            style={{ fontSize: '0.70rem', padding: '4px 10px', borderColor: '#10b981', color: '#6ee7b7', display: 'flex', alignItems: 'center', gap: '4px' }}
+          >
+            <BookOpen size={12} /> Playwright 공식 기술문서
+          </button>
+
+          <button
             onClick={() => setShowCodeModal(true)}
             className="btn btn-outline"
             style={{ fontSize: '0.70rem', padding: '4px 10px', borderColor: '#38bdf8', color: '#7dd3fc', display: 'flex', alignItems: 'center', gap: '4px' }}
@@ -325,6 +335,216 @@ export default function RPABuilderTab({ onError }) {
           </button>
         </div>
       </div>
+
+      {/* ── Playwright 공식 기술문서 팝업 모달 ───────────────────────── */}
+      {showDocsModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.75)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 9999,
+          padding: '20px'
+        }}>
+          <div style={{
+            backgroundColor: '#0f172a',
+            border: '1px solid #10b981',
+            borderRadius: '10px',
+            width: '860px',
+            maxWidth: '95vw',
+            maxHeight: '88vh',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5)'
+          }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '12px 16px',
+              borderBottom: '1px solid #334155',
+              backgroundColor: '#1e293b'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <BookOpen size={16} style={{ color: '#10b981' }} />
+                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f8fafc' }}>
+                  📖 Microsoft Playwright 공식 기술문서 및 API 가이드
+                </span>
+              </div>
+              <button
+                onClick={() => setShowDocsModal(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#94a3b8',
+                  fontSize: '1.2rem',
+                  cursor: 'pointer',
+                  padding: '0 4px'
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ padding: '16px', flex: 1, overflowY: 'auto' }} className="grid-scrollbar">
+              <p style={{ fontSize: '0.72rem', color: '#94a3b8', marginBottom: '12px' }}>
+                각 링크를 클릭하면 Microsoft 공식 기술 문서 페이지로 즉시 이동합니다.
+              </p>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                {[
+                  {
+                    title: '📘 Playwright .NET (C#) 시작 가이드',
+                    desc: 'C# .NET 환경에서의 Playwright 기본 설치, 브라우저 기동 및 비동기 코드 구조',
+                    url: 'https://playwright.dev/dotnet/docs/intro',
+                    badge: '시작가이드'
+                  },
+                  {
+                    title: '🎯 Locators (요소 탐색 & 스마트 선택자)',
+                    desc: '텍스트, CSS, XPath, 역할(Role) 기반의 스마트 요소 탐색 및 체이닝 기법',
+                    url: 'https://playwright.dev/dotnet/docs/locators',
+                    badge: '객체탐색'
+                  },
+                  {
+                    title: '⚡ Auto-waiting (지능형 0ms 자동 대기)',
+                    desc: 'Thread.Sleep 없이 요소의 가시성, 활성화, 애니메이션 완료를 자동 감지하는 메커니즘',
+                    url: 'https://playwright.dev/dotnet/docs/actionability',
+                    badge: '속도/안정성'
+                  },
+                  {
+                    title: '🪟 Pages & 다중 창/탭/팝업 제어',
+                    desc: '버튼 클릭으로 뜬 신규 팝업 창 추적, 탭 간 포커스 이동 및 창 닫기 API 레퍼런스',
+                    url: 'https://playwright.dev/dotnet/docs/pages',
+                    badge: '창/팝업'
+                  },
+                  {
+                    title: '🌐 BrowserContext (세션/쿠키/브라우저 격리)',
+                    desc: '독립된 다중 브라우저 세션 생성 및 쿠키/로컬스토리지 공유/격리 기법',
+                    url: 'https://playwright.dev/dotnet/docs/browser-contexts',
+                    badge: '세션격리'
+                  },
+                  {
+                    title: '📥 Downloads (파일 무인 다운로드 자동화)',
+                    desc: '확인 팝업 없이 엑셀/PDF 파일을 지정 경로에 비동기 자동 저장하는 방법',
+                    url: 'https://playwright.dev/dotnet/docs/downloads',
+                    badge: '다운로드'
+                  },
+                  {
+                    title: '⌨️ Input Actions (텍스트 입력 및 키보드/마우스)',
+                    desc: 'FillAsync, PressAsync, ClickAsync, DragAndDrop 등 사용자 입력 시뮬레이션',
+                    url: 'https://playwright.dev/dotnet/docs/input',
+                    badge: '입력/클릭'
+                  },
+                  {
+                    title: '🖼️ Frames (iframe 프레임 자동 탐색 및 전환)',
+                    desc: 'FrameLocator를 통한 중첩 iframe 내부 DOM 객체 직접 제어 가이드',
+                    url: 'https://playwright.dev/dotnet/docs/frames',
+                    badge: '프레임'
+                  },
+                  {
+                    title: '🚨 Dialogs (Alert / Confirm / Prompt 자동 수락)',
+                    desc: '웹 브라우저 경고창(Alert)을 감지하고 자동으로 수락/거절하는 이벤트 핸들러',
+                    url: 'https://playwright.dev/dotnet/docs/dialogs',
+                    badge: '알럿제어'
+                  },
+                  {
+                    title: '🕵️ CDPSession (Chrome DevTools Protocol 연동)',
+                    desc: 'WebSocket을 통해 크롬/엣지 브라우저의 내부 CDP 포트에 직통 연결하는 저수준 제어',
+                    url: 'https://playwright.dev/dotnet/docs/api/class-cdpsession',
+                    badge: 'CDP연동'
+                  },
+                  {
+                    title: '📦 NuGet 공식 패키지 (Microsoft.Playwright)',
+                    desc: 'C# .NET 프로젝트에 설치하는 공식 NuGet 패키지 저장소',
+                    url: 'https://www.nuget.org/packages/Microsoft.Playwright',
+                    badge: 'NuGet'
+                  },
+                  {
+                    title: '🐙 Microsoft Playwright .NET GitHub 공식 저장소',
+                    desc: '마이크로소프트 공식 오픈소스 C# Playwright 리포지토리 및 릴리즈 소스코드',
+                    url: 'https://github.com/microsoft/playwright-dotnet',
+                    badge: 'GitHub'
+                  }
+                ].map((doc, idx) => (
+                  <a
+                    key={idx}
+                    href={doc.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '4px',
+                      backgroundColor: '#1e293b',
+                      border: '1px solid #334155',
+                      borderRadius: '8px',
+                      padding: '10px 12px',
+                      textDecoration: 'none',
+                      color: 'inherit',
+                      transition: 'border-color 0.2s, background-color 0.2s',
+                      cursor: 'pointer'
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.borderColor = '#10b981';
+                      e.currentTarget.style.backgroundColor = '#1e3a5f';
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.borderColor = '#334155';
+                      e.currentTarget.style.backgroundColor = '#1e293b';
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#f8fafc' }}>
+                        {doc.title}
+                      </span>
+                      <span style={{
+                        fontSize: '0.60rem',
+                        backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                        border: '1px solid #10b981',
+                        borderRadius: '3px',
+                        padding: '1px 5px',
+                        color: '#34d399',
+                        fontWeight: 600
+                      }}>
+                        {doc.badge}
+                      </span>
+                    </div>
+                    <p style={{ fontSize: '0.68rem', color: '#94a3b8', margin: 0 }}>
+                      {doc.desc}
+                    </p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '3px', marginTop: '2px' }}>
+                      <span style={{ fontSize: '0.62rem', color: '#38bdf8' }}>공식 문서 바로가기</span>
+                      <ExternalLink size={10} style={{ color: '#38bdf8' }} />
+                    </div>
+                  </a>
+                ))}
+              </div>
+            </div>
+
+            <div style={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              padding: '10px 16px',
+              borderTop: '1px solid #334155',
+              backgroundColor: '#1e293b'
+            }}>
+              <button
+                onClick={() => setShowDocsModal(false)}
+                className="btn btn-outline"
+                style={{ fontSize: '0.72rem', padding: '5px 14px' }}
+              >
+                닫기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── C# Playwright 코드 팝업 모달 ────────────────────────────── */}
       {showCodeModal && (

@@ -1,5 +1,26 @@
 # 릴리즈 노트 (RELEASE_NOTES.md)
 
+## [v1.7.0.Build.37] - 2026-08-16 19:02:00 (KST)
+
+### 📖 [Microsoft Playwright 공식 기술문서 12대 핵심 레퍼런스 퀵 메뉴 탑재]
+
+1. **상단 액션바 `[📖 Playwright 공식 기술문서]` 모달 구축**:
+   - 📘 Playwright .NET (C#) 공식 시작 가이드 (`playwright.dev/dotnet/docs/intro`)
+   - 🎯 Locators (스마트 선택자 엔진: CSS, XPath, Text, Role 매칭)
+   - ⚡ Auto-waiting (지능형 0ms 자동 대기 메커니즘)
+   - 🪟 Pages & 다중 창/탭/팝업 제어 API
+   - 🌐 BrowserContext (세션/쿠키/브라우저 컨텍스트 격리)
+   - 📥 Downloads (파일 무인 다운로드 자동화)
+   - ⌨️ Input Actions (텍스트 입력 및 키보드/마우스 시뮬레이션)
+   - 🖼️ Frames (iframe 프레임 자동 전환)
+   - 🚨 Dialogs (Alert/Confirm/Prompt 자동 수락)
+   - 🕵️ CDPSession (Chrome DevTools Protocol 직통 연동)
+   - 📦 NuGet 공식 패키지 (`Microsoft.Playwright`)
+   - 🐙 Microsoft Playwright .NET GitHub 공식 오픈소스 저장소
+2. **원클릭 외부 공식 문서 새 탭 직통 링크 연동**
+
+---
+
 ## [v1.7.0.Build.36] - 2026-08-16 19:00:00 (KST)
 
 ### 🎭 [차세대 Microsoft Playwright 초고속 직통 엔진 전면 도입 및 C# 코드 자동 컴파일러 탑재]
