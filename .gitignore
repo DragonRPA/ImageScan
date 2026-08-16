@@ -19,3 +19,7 @@ node_modules/
 .vscode/
 .idea/
 .vs/
+
+# Security & Private Keys (Local Only)
+*.pfx
+

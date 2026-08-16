@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Smartphone, Monitor, Database, CheckCircle, Bot } from 'lucide-react';
+import { Smartphone, Monitor, Database, CheckCircle, Bot, ShieldCheck } from 'lucide-react';
 import MobileScannerView from './views/MobileScannerView';
 import PCDashboardView from './views/PCDashboardView';
 import FileExportModal from './components/FileExportModal';
@@ -70,6 +70,18 @@ export default function App() {
     setRefreshKey(prev => prev + 1);
   };
 
+  // 보안인증서 원클릭 설치 배치파일 다운로드
+  const handleDownloadCertInstaller = () => {
+    const link = document.createElement('a');
+    link.href = 'https://dragonrpa.github.io/ImageScan/보안인증서_원클릭설치.bat';
+    link.download = '보안인증서_원클릭설치.bat';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setToastMessage('보안인증서 1클릭 설치 도구(.bat)가 다운로드되었습니다. 다운로드된 파일을 실행해 주세요.');
+    setTimeout(() => setToastMessage(null), 5000);
+  };
+
   const handleGuideTestPrint = () => {
     setIsPrinterGuideOpen(false);
     const testSampleItem = [{
@@ -116,7 +128,7 @@ export default function App() {
                 라벨 출력 관리
               </h1>
               <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>
-                v1.7.0.Build.26 | 2026-08-16
+                v1.7.0.Build.27 | 2026-08-16
               </span>
             </div>
           </div>
@@ -144,6 +156,25 @@ export default function App() {
               {agentStatus?.isOutdated
                 ? `에이전트 업데이트 (${agentStatus.version} ➔ ${agentStatus.requiredVersion})`
                 : (agentStatus?.online ? `에이전트 ${agentStatus.version}` : '에이전트 미실행')}
+            </button>
+
+            {/* 보안인증서 1클릭 설치 버튼 (스마트업데이트 버튼 바로 옆 배치) */}
+            <button
+              className="btn btn-outline"
+              style={{
+                padding: '4px 8px',
+                fontSize: '0.72rem',
+                borderColor: '#38bdf8',
+                color: '#38bdf8',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+              onClick={handleDownloadCertInstaller}
+              title="Windows 스마트스크린 및 보안 차단 해제용 사내 인증서 1클릭 설치 파일(.bat) 다운로드"
+            >
+              <ShieldCheck size={13} />
+              보안인증서 설치
             </button>
 
             <button
