@@ -16,7 +16,10 @@ import {
   Minus,
   Copy,
   Lock,
-  Unlock
+  Unlock,
+  Download,
+  Upload,
+  FileJson
 } from 'lucide-react';
 import {
   DEFAULT_LABEL_TEMPLATE,
@@ -77,6 +80,9 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
   // ⭐️ [ZPL 직접 편집 및 즉시 테스트 인쇄] 상태
   const [customZpl, setCustomZpl] = useState('');
   const [isZplCustomized, setIsZplCustomized] = useState(false);
+
+  // ⭐️ JSON 서식 파일 업로드용 input ref
+  const jsonFileInputRef = useRef(null);
 
   const [draggingId, setDraggingId] = useState(null);
   const [dragStartPos, setDragStartPos] = useState({ x: 0, y: 0 });
@@ -611,6 +617,105 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
     setGatekeeperState({ isOpen: false, templateId: null, templateName: '' });
   };
 
+  // ⭐️ [서식 JSON 로컬 파일로 내보내기]
+  const handleExportJson = (targetTpl = template) => {
+    if (!targetTpl) return;
+    try {
+      const exportData = {
+        version: '1.0',
+        exportedAt: new Date().toISOString(),
+        template: {
+          name: targetTpl.name,
+          targetTable: targetTpl.targetTable || 'asset',
+          schemaId: targetTpl.schemaId || 'main_schema',
+          paper: targetTpl.paper || { widthMm: 72, heightMm: 40, dpi: 203, dotsWidth: 576, dotsHeight: 320 },
+          elements: Array.isArray(targetTpl.elements) ? targetTpl.elements : [],
+          targetPrinterId: targetTpl.targetPrinterId || '',
+          targetPrinterName: targetTpl.targetPrinterName || ''
+        }
+      };
+
+      const jsonStr = JSON.stringify(exportData, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const safeName = (targetTpl.name || '라벨서식').replace(/[^a-zA-Z0-9가-힣_-]/g, '_');
+      link.href = url;
+      link.download = `라벨서식_${safeName}_${targetTpl.paper?.widthMm || 72}x${targetTpl.paper?.heightMm || 40}mm.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      alert(`JSON 내보내기 실패: ${err.message}`);
+    }
+  };
+
+  // ⭐️ [로컬 JSON 서식 파일 불러오기 / 추가]
+  const handleImportJsonFile = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const parsed = JSON.parse(event.target.result);
+        const rawTpl = parsed.template || parsed;
+
+        if (!rawTpl || !rawTpl.name || !Array.isArray(rawTpl.elements)) {
+          throw new Error('유효한 라벨 디자인 서식 JSON 형식이 아닙니다 (name, elements 필드 필수)');
+        }
+
+        const newId = `tpl_import_${Date.now()}`;
+        const importedName = rawTpl.name;
+        const widthMm = Number(rawTpl.paper?.widthMm) || 72;
+        const heightMm = Number(rawTpl.paper?.heightMm) || 40;
+        const dotsWidth = Math.round(widthMm * (203 / 25.4));
+        const dotsHeight = Math.round(heightMm * (203 / 25.4));
+
+        const importedTemplate = {
+          templateId: newId,
+          name: importedName,
+          targetTable: rawTpl.targetTable || 'asset',
+          schemaId: rawTpl.schemaId || 'main_schema',
+          targetPrinterId: rawTpl.targetPrinterId || '',
+          targetPrinterName: rawTpl.targetPrinterName || '',
+          isDefault: false,
+          isLocked: false,
+          paper: {
+            widthMm,
+            heightMm,
+            dpi: 203,
+            dotsWidth,
+            dotsHeight,
+            targetTable: rawTpl.targetTable || 'asset',
+            targetPrinterId: rawTpl.targetPrinterId || '',
+            targetPrinterName: rawTpl.targetPrinterName || '',
+            isLocked: false
+          },
+          elements: rawTpl.elements
+        };
+
+        saveStoredLabelTemplate(importedTemplate);
+        await saveBackendLabelTemplate(importedTemplate);
+        
+        const updated = getAllPresets();
+        setPresets(updated);
+        setTemplate(importedTemplate);
+        setSelectedElemId(importedTemplate.elements[0]?.id || 'elem_asset_no');
+        setIsCreateModalOpen(false);
+        setIsLoadModalOpen(false);
+
+        alert(`✅ '${importedName}' 라벨 서식이 성공적으로 불러와졌습니다!`);
+      } catch (err) {
+        alert(`❌ JSON 서식 파일 불러오기 실패: ${err.message}`);
+      } finally {
+        e.target.value = '';
+      }
+    };
+    reader.readAsText(file);
+  };
+
 
 
   return (
@@ -741,6 +846,24 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
             >
               {template.isLocked ? <Lock size={13} /> : <Unlock size={13} />}
               <span>{template.isLocked ? '확정 잠김' : '서식 잠금'}</span>
+            </button>
+
+            {/* ⭐️ JSON 서식 파일 내보내기 (다운로드) */}
+            <button
+              onClick={() => handleExportJson(template)}
+              className="btn btn-outline"
+              style={{
+                fontSize: '0.72rem',
+                padding: '4px 8px',
+                borderColor: '#38bdf8',
+                color: '#38bdf8',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+              title="현재 라벨 서식을 JSON 파일로 로컬에 내보내기 (다운로드)"
+            >
+              <Download size={12} /> JSON 내보내기
             </button>
 
             <button
@@ -2767,28 +2890,48 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
               </div>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px', marginTop: '6px', borderTop: '1px solid #334155', paddingTop: '10px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px', borderTop: '1px solid #334155', paddingTop: '10px' }}>
               <button
-                onClick={() => setIsCreateModalOpen(false)}
+                type="button"
+                onClick={() => jsonFileInputRef.current?.click()}
                 className="btn btn-outline"
-                style={{ fontSize: '0.72rem', padding: '5px 12px' }}
-              >
-                취소
-              </button>
-              <button
-                onClick={handleCreateNewDesign}
-                className="btn btn-primary"
                 style={{
                   fontSize: '0.72rem',
-                  padding: '5px 14px',
-                  backgroundColor: '#0284c7',
+                  padding: '5px 10px',
                   borderColor: '#38bdf8',
-                  color: '#ffffff',
-                  fontWeight: 700
+                  color: '#38bdf8',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
                 }}
+                title="로컬 PC에 저장된 JSON 라벨 서식 파일 불러와서 추가"
               >
-                디자인 생성
+                <Upload size={12} /> JSON 파일 불러오기
               </button>
+
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <button
+                  onClick={() => setIsCreateModalOpen(false)}
+                  className="btn btn-outline"
+                  style={{ fontSize: '0.72rem', padding: '5px 12px' }}
+                >
+                  취소
+                </button>
+                <button
+                  onClick={handleCreateNewDesign}
+                  className="btn btn-primary"
+                  style={{
+                    fontSize: '0.72rem',
+                    padding: '5px 14px',
+                    backgroundColor: '#0284c7',
+                    borderColor: '#38bdf8',
+                    color: '#ffffff',
+                    fontWeight: 700
+                  }}
+                >
+                  디자인 생성
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -2812,7 +2955,7 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
             backgroundColor: '#1e293b',
             border: '1px solid #38bdf8',
             borderRadius: '8px',
-            width: '560px',
+            width: '580px',
             maxWidth: '92vw',
             maxHeight: '80vh',
             padding: '16px',
@@ -2832,12 +2975,30 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                   (총 {presets.length}건)
                 </span>
               </div>
-              <button
-                onClick={() => setIsLoadModalOpen(false)}
-                style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: 0 }}
-              >
-                <X size={16} />
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button
+                  onClick={() => jsonFileInputRef.current?.click()}
+                  className="btn btn-outline"
+                  style={{
+                    fontSize: '0.68rem',
+                    padding: '3px 8px',
+                    borderColor: '#38bdf8',
+                    color: '#38bdf8',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                  title="로컬 JSON 서식 파일 불러와서 서식 목록에 추가"
+                >
+                  <Upload size={11} /> JSON 파일 추가
+                </button>
+                <button
+                  onClick={() => setIsLoadModalOpen(false)}
+                  style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: 0 }}
+                >
+                  <X size={16} />
+                </button>
+              </div>
             </div>
 
             {/* Presets List */}
@@ -2901,6 +3062,16 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }} onClick={(e) => e.stopPropagation()}>
+                      {/* JSON 서식 파일 내보내기 버튼 */}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleExportJson(p); }}
+                        className="btn btn-outline"
+                        style={{ fontSize: '0.68rem', padding: '3px 6px', borderColor: '#38bdf8', color: '#38bdf8' }}
+                        title="이 서식을 JSON 파일로 로컬에 내보내기 (다운로드)"
+                      >
+                        <Download size={12} />
+                      </button>
+
                       {/* 관리자 잠금/해제 토글 버튼 */}
                       <button
                         onClick={(e) => handleToggleLock(p.templateId, e)}
@@ -2967,6 +3138,15 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
         onClose={() => setGatekeeperState({ isOpen: false, templateId: null, templateName: '' })}
         onSuccess={handleUnlockAfterAuth}
         targetFeatureName={`라벨 서식 잠금 해제: ${gatekeeperState.templateName}`}
+      />
+
+      {/* ⭐️ JSON 서식 파일 로컬 업로드 input */}
+      <input
+        type="file"
+        ref={jsonFileInputRef}
+        onChange={handleImportJsonFile}
+        accept=".json,application/json"
+        style={{ display: 'none' }}
       />
     </div>
   );
