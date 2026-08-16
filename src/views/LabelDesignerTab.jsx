@@ -14,7 +14,9 @@ import {
   Database,
   X,
   Minus,
-  Copy
+  Copy,
+  Lock,
+  Unlock
 } from 'lucide-react';
 import {
   DEFAULT_LABEL_TEMPLATE,
@@ -28,7 +30,8 @@ import {
   generateWysiwygZpl,
   mmToDots,
   getAllPresets,
-  createEmptyTemplate
+  createEmptyTemplate,
+  updatePresetLock
 } from '../utils/labelTemplate';
 import { generateCode39DataUrl, RealBarcodeSvg } from '../utils/barcode39';
 import { getRegisteredPrinters, getActivePrinterId, sendZplToPrinter, fetchActualConnectedPrinters } from '../utils/printerManager';
@@ -376,6 +379,10 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
 
   // ⭐️ [수정 저장] 현재 서식 저장 (온라인 DB + 로컬 동시 보존)
   const handleSave = async () => {
+    if (template?.isLocked) {
+      alert('확정 잠금(Lock)된 서식입니다. 수정 사항을 저장하려면 먼저 서식 목록에서 잠금을 해제해 주세요.');
+      return;
+    }
     saveStoredLabelTemplate(template);
     setPresets(getAllPresets());
     try {
@@ -397,6 +404,10 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
 
   // ⭐️ [디자인 삭제] 현재 서식 삭제
   const handleDeleteCurrentDesign = async () => {
+    if (template?.isLocked) {
+      alert('확정 잠금(Lock)된 서식은 삭제할 수 없습니다.');
+      return;
+    }
     if (presets.length <= 1) {
       alert('최소 1개의 라벨 서식은 유지되어야 합니다.');
       return;
@@ -511,6 +522,10 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
   const handleLoadDesign = (presetId) => {
     const found = presets.find(p => p.templateId === presetId);
     if (found) {
+      if (found.isLocked) {
+        alert('확정 잠금(Lock)된 서식입니다. 수정 또는 불러오기를 진행하려면 먼저 잠금을 해제해 주세요.');
+        return;
+      }
       const prnId = found.targetPrinterId || found.paper?.targetPrinterId || '';
       const prnName = found.targetPrinterName || found.paper?.targetPrinterName || '';
       const normalized = {
@@ -533,6 +548,11 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
   // ⭐️ [디자인 불러오기 모달 내 삭제]
   const handleDeleteDesignInModal = async (presetId, name, e) => {
     e.stopPropagation();
+    const target = presets.find(p => p.templateId === presetId);
+    if (target?.isLocked) {
+      alert('확정 잠금(Lock)된 서식은 삭제할 수 없습니다.');
+      return;
+    }
     if (presets.length <= 1) {
       alert('최소 1개의 라벨 서식은 유지되어야 합니다.');
       return;
@@ -544,6 +564,22 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
       if (template?.templateId === presetId) {
         setTemplate(null);
         setSelectedElemId('elem_asset_no');
+      }
+    }
+  };
+
+  // ⭐️ [디자인 잠금(Lock) / 해제(Unlock) 토글]
+  const handleToggleLock = async (presetId, e) => {
+    if (e) e.stopPropagation();
+    const targetPreset = presets.find(p => p.templateId === presetId);
+    if (!targetPreset) return;
+    const nextLocked = !targetPreset.isLocked;
+
+    const res = await updatePresetLock(presetId, nextLocked);
+    if (res.success) {
+      setPresets(prev => prev.map(p => p.templateId === presetId ? { ...p, isLocked: nextLocked, paper: { ...(p.paper || {}), isLocked: nextLocked } } : p));
+      if (template && template.templateId === presetId) {
+        setTemplate(prev => ({ ...prev, isLocked: nextLocked, paper: { ...(prev.paper || {}), isLocked: nextLocked } }));
       }
     }
   };
@@ -597,7 +633,7 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
             <option value="">-- 서식 선택 (목록에서 선택 또는 추가) --</option>
             {presets.map(p => (
               <option key={p.templateId} value={p.templateId}>
-                {p.name} ({p.paper?.widthMm}×{p.paper?.heightMm}mm) {p.targetPrinterName ? `➔ [${p.targetPrinterName}]` : ''}
+                {p.isLocked ? '🔒 [확정] ' : ''}{p.name} ({p.paper?.widthMm}×{p.paper?.heightMm}mm) {p.targetPrinterName ? `➔ [${p.targetPrinterName}]` : ''}
               </option>
             ))}
           </select>
@@ -659,30 +695,74 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
         {/* Right: Save & Delete & Test Print Actions */}
         {template && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            {/* 서식 잠금/해제 토글 버튼 */}
+            <button
+              onClick={() => handleToggleLock(template.templateId)}
+              className="btn btn-outline"
+              style={{
+                fontSize: '0.72rem',
+                padding: '4px 8px',
+                borderColor: template.isLocked ? '#f59e0b' : '#475569',
+                color: template.isLocked ? '#fbbf24' : '#94a3b8',
+                backgroundColor: template.isLocked ? 'rgba(245, 158, 11, 0.15)' : 'transparent',
+                fontWeight: template.isLocked ? 700 : 500,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '3px'
+              }}
+              title={template.isLocked ? "확정 서식 잠금 해제" : "서식 잠금 (수정/삭제/불러오기 방지)"}
+            >
+              {template.isLocked ? <Lock size={13} /> : <Unlock size={13} />}
+              <span>{template.isLocked ? '확정 잠김' : '서식 잠금'}</span>
+            </button>
+
             <button
               onClick={handleReset}
+              disabled={template.isLocked}
               className="btn btn-outline"
-              style={{ fontSize: '0.72rem', padding: '4px 8px' }}
+              style={{ fontSize: '0.72rem', padding: '4px 8px', opacity: template.isLocked ? 0.5 : 1 }}
               title="서식 초기화"
             >
               <RotateCcw size={12} /> 초기화
             </button>
-            <button
-              onClick={handleDeleteCurrentDesign}
-              className="btn btn-outline"
-              style={{ fontSize: '0.72rem', padding: '4px 8px', borderColor: '#ef4444', color: '#fca5a5' }}
-              title="현재 서식 삭제"
-            >
-              <Trash2 size={12} /> 디자인 삭제
-            </button>
-            <button
-              onClick={handleSave}
-              className={`btn ${isSaved ? 'btn-success' : 'btn-primary'}`}
-              style={{ fontSize: '0.72rem', padding: '4px 12px' }}
-              title="현재 서식 수정 저장"
-            >
-              <Save size={12} /> {isSaved ? '저장됨' : '수정 저장'}
-            </button>
+
+            {!template.isLocked && (
+              <button
+                onClick={handleDeleteCurrentDesign}
+                className="btn btn-outline"
+                style={{ fontSize: '0.72rem', padding: '4px 8px', borderColor: '#ef4444', color: '#fca5a5' }}
+                title="현재 서식 삭제"
+              >
+                <Trash2 size={12} /> 디자인 삭제
+              </button>
+            )}
+
+            {!template.isLocked ? (
+              <button
+                onClick={handleSave}
+                className={`btn ${isSaved ? 'btn-success' : 'btn-primary'}`}
+                style={{ fontSize: '0.72rem', padding: '4px 12px' }}
+                title="현재 서식 수정 저장"
+              >
+                <Save size={12} /> {isSaved ? '저장됨' : '수정 저장'}
+              </button>
+            ) : (
+              <div style={{
+                fontSize: '0.70rem',
+                color: '#fbbf24',
+                backgroundColor: 'rgba(180, 83, 9, 0.2)',
+                border: '1px solid #b45309',
+                padding: '4px 8px',
+                borderRadius: '4px',
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}>
+                <Lock size={12} /> 수정 보호됨
+              </div>
+            )}
+
             <button
               onClick={handleTestPrint}
               disabled={isPrinting}
@@ -2742,7 +2822,7 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                 return (
                   <div
                     key={p.templateId}
-                    onClick={() => handleLoadDesign(p.templateId)}
+                    onClick={() => !p.isLocked && handleLoadDesign(p.templateId)}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
@@ -2750,16 +2830,32 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                       padding: '10px 12px',
                       borderRadius: '6px',
                       backgroundColor: isCurrent ? 'rgba(2, 132, 199, 0.15)' : '#0f172a',
-                      border: `1px solid ${isCurrent ? '#38bdf8' : '#334155'}`,
-                      cursor: 'pointer',
+                      border: `1px solid ${isCurrent ? '#38bdf8' : (p.isLocked ? '#b45309' : '#334155')}`,
+                      cursor: p.isLocked ? 'default' : 'pointer',
                       transition: 'all 0.15s'
                     }}
                   >
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                         <span style={{ fontSize: '0.8rem', fontWeight: 700, color: isCurrent ? '#38bdf8' : '#f8fafc' }}>
                           {p.name}
                         </span>
+                        {p.isLocked && (
+                          <span style={{
+                            fontSize: '0.65rem',
+                            backgroundColor: 'rgba(180, 83, 9, 0.25)',
+                            color: '#fbbf24',
+                            border: '1px solid #b45309',
+                            padding: '1px 5px',
+                            borderRadius: '3px',
+                            fontWeight: 700,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '3px'
+                          }}>
+                            <Lock size={10} /> 확정 서식
+                          </span>
+                        )}
                         {isCurrent && (
                           <span style={{ fontSize: '0.65rem', backgroundColor: '#0284c7', color: '#fff', padding: '1px 5px', borderRadius: '3px', fontWeight: 700 }}>
                             현재 서식
@@ -2778,21 +2874,46 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }} onClick={(e) => e.stopPropagation()}>
+                      {/* 관리자 잠금/해제 토글 버튼 */}
                       <button
-                        onClick={() => handleLoadDesign(p.templateId)}
-                        className="btn btn-primary"
-                        style={{ fontSize: '0.68rem', padding: '3px 8px' }}
-                      >
-                        불러오기
-                      </button>
-                      <button
-                        onClick={(e) => handleDeleteDesignInModal(p.templateId, p.name, e)}
+                        onClick={(e) => handleToggleLock(p.templateId, e)}
                         className="btn btn-outline"
-                        style={{ fontSize: '0.68rem', padding: '3px 6px', borderColor: '#ef4444', color: '#fca5a5' }}
-                        title="서식 삭제"
+                        style={{
+                          fontSize: '0.68rem',
+                          padding: '3px 7px',
+                          borderColor: p.isLocked ? '#f59e0b' : '#475569',
+                          color: p.isLocked ? '#fbbf24' : '#94a3b8',
+                          backgroundColor: p.isLocked ? 'rgba(245, 158, 11, 0.1)' : 'transparent',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '3px'
+                        }}
+                        title={p.isLocked ? "확정 서식 잠금 해제 (수정/삭제 허용)" : "서식 잠금 (수정/삭제/불러오기 방지)"}
                       >
-                        <Trash2 size={12} />
+                        {p.isLocked ? <Lock size={12} /> : <Unlock size={12} />}
+                        <span>{p.isLocked ? '잠김' : '잠금'}</span>
                       </button>
+
+                      {/* ⭐️ 잠금 상태가 아닐 때만 불러오기 및 삭제 버튼 노출 */}
+                      {!p.isLocked && (
+                        <>
+                          <button
+                            onClick={() => handleLoadDesign(p.templateId)}
+                            className="btn btn-primary"
+                            style={{ fontSize: '0.68rem', padding: '3px 8px' }}
+                          >
+                            불러오기
+                          </button>
+                          <button
+                            onClick={(e) => handleDeleteDesignInModal(p.templateId, p.name, e)}
+                            className="btn btn-outline"
+                            style={{ fontSize: '0.68rem', padding: '3px 6px', borderColor: '#ef4444', color: '#fca5a5' }}
+                            title="서식 삭제"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
                 );

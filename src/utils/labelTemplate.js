@@ -239,16 +239,18 @@ export async function syncTemplatesWithBackend() {
       .order('created_at', { ascending: true });
 
     if (!error && data) {
-      // 백엔드 데이터를 템플릿 포맷으로 매핑
+      // 백엔드 데이터를 템플릿 포맷으로 매핑 (isLocked 완벽 지원)
       const backendPresets = data.map(row => {
         const prnId = row.paper?.targetPrinterId || row.target_printer_id || '';
         const prnName = row.paper?.targetPrinterName || row.target_printer_name || '';
         const targetTbl = row.paper?.targetTable || row.target_table || (row.name?.includes('임시') ? 'temp_asset' : 'asset');
+        const isLocked = Boolean(row.is_locked || row.paper?.isLocked);
         const paperObj = {
           ...(row.paper || { widthMm: 72, heightMm: 40, dpi: 203, dotsWidth: 576, dotsHeight: 320 }),
           targetTable: targetTbl,
           targetPrinterId: prnId,
-          targetPrinterName: prnName
+          targetPrinterName: prnName,
+          isLocked
         };
 
         return {
@@ -259,6 +261,7 @@ export async function syncTemplatesWithBackend() {
           targetPrinterId: prnId,
           targetPrinterName: prnName,
           isDefault: Boolean(row.is_default),
+          isLocked,
           paper: paperObj,
           elements: Array.isArray(row.elements) ? row.elements : []
         };
@@ -326,17 +329,20 @@ export async function saveBackendLabelTemplate(template) {
   const targetPrinterId = template.targetPrinterId || template.paper?.targetPrinterId || '';
   const targetPrinterName = template.targetPrinterName || template.paper?.targetPrinterName || '';
   const targetTable = template.targetTable || template.paper?.targetTable || 'asset';
+  const isLocked = Boolean(template.isLocked || template.paper?.isLocked);
 
   const normalized = {
     ...template,
     targetTable,
     targetPrinterId,
     targetPrinterName,
+    isLocked,
     paper: {
       ...(template.paper || { widthMm: 72, heightMm: 40, dpi: 203, dotsWidth: 576, dotsHeight: 320 }),
       targetTable,
       targetPrinterId,
-      targetPrinterName
+      targetPrinterName,
+      isLocked
     }
   };
 
@@ -362,6 +368,34 @@ export async function saveBackendLabelTemplate(template) {
     console.error('백엔드 라벨 서식 저장 오류:', err);
     return { success: false, message: `DB 저장 오류: ${err.message}` };
   }
+}
+
+/**
+ * ⭐️ 템플릿 확정 잠금(Lock) / 해제(Unlock) 토글 및 즉시 동기화
+ */
+export async function updatePresetLock(templateId, isLocked) {
+  try {
+    const presets = getAllPresets();
+    const idx = presets.findIndex(p => p.templateId === templateId);
+    if (idx >= 0) {
+      presets[idx].isLocked = Boolean(isLocked);
+      if (!presets[idx].paper) presets[idx].paper = {};
+      presets[idx].paper.isLocked = Boolean(isLocked);
+      localStorage.setItem(LOCAL_KEY_TEMPLATE_PRESETS, JSON.stringify(presets));
+
+      const client = getSupabaseClient();
+      if (client) {
+        await client.from('label_templates').update({
+          paper: presets[idx].paper,
+          updated_at: new Date().toISOString()
+        }).eq('id', templateId);
+      }
+      return { success: true, isLocked: Boolean(isLocked) };
+    }
+  } catch (e) {
+    console.warn('템플릿 잠금 상태 변경 실패:', e);
+  }
+  return { success: false };
 }
 
 /**
