@@ -23,3 +23,8 @@ node_modules/
 # Security & Private Keys (Local Only)
 *.pfx
 
+# .NET Build Output
+agent-dotnet/bin/
+agent-dotnet/obj/
+
+

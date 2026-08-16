@@ -1,2 +1,0 @@
-d:\GoogleDrive\RPA 개발\01.AntiGravity\ImageScan\print-agent\dist\UBUS_DragonRPA_Agent.pdb
-d:\GoogleDrive\RPA 개발\01.AntiGravity\ImageScan\print-agent\dist\UBUS_DragonRPA_Agent.exe

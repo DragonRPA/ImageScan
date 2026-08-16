@@ -21,14 +21,15 @@ import {
   Radio,
   Maximize2,
   CheckCircle2,
-  Scan
+  Scan,
+  Monitor
 } from 'lucide-react';
 import { DEFAULT_SCHEMA_DEF } from '../utils/dynamicSchema';
 
 /**
  * 🎯 객체 정밀 조작 스튜디오 모달 (ObjectManipulatorModal)
- * 실시간 역동적 마우스 Hover 레이더 감지, Ctrl+클릭 명시적 락온,
- * 실시간 텔레메트리 피드백 및 6대 정밀 조작기 제공
+ * Windows OS 전역(다른 브라우저, ERP, 엑셀 등) 실시간 마우스 UIA 레이더 감지,
+ * Ctrl+클릭 명시적 락온, 실시간 텔레메트리 피드백 및 6대 정밀 조작기 제공
  */
 export default function ObjectManipulatorModal({
   isOpen,
@@ -40,9 +41,11 @@ export default function ObjectManipulatorModal({
   if (!isOpen || !step) return null;
 
   const [tempStep, setTempStep] = useState({ ...step });
-  const [isHoveringTriggerActive, setIsHoveringTriggerActive] = useState(true); // 기본 탐색 활성
+  const [isHoveringTriggerActive, setIsHoveringTriggerActive] = useState(true);
   const [hoveredElementInfo, setHoveredElementInfo] = useState({
+    windowTitle: 'Windows OS 전역 스캐너 가동 중',
     tagName: 'INPUT',
+    controlType: 'Edit',
     id: 'assetNo',
     name: 'asset_no',
     xpath: "//input[@id='assetNo']",
@@ -50,10 +53,11 @@ export default function ObjectManipulatorModal({
     className: 'form-control erp-input',
     innerText: '',
     rect: { x: 120, y: 45, width: 220, height: 32 },
-    hint: '마우스가 올려진 상태입니다. [Ctrl+클릭]을 누르면 락온됩니다.'
+    hint: '다른 브라우저나 창에 마우스를 올리고 [Ctrl+클릭]을 누르면 즉시 락온됩니다.'
   });
 
   const [lockedElementSpecs, setLockedElementSpecs] = useState({
+    windowTitle: '',
     tagName: 'INPUT',
     id: 'assetNo',
     name: 'asset_no',
@@ -81,9 +85,52 @@ export default function ObjectManipulatorModal({
 
   const [testResult, setTestResult] = useState(null);
   const [flashLockMessage, setFlashLockMessage] = useState(null);
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const lastLockedTimestampRef = useRef(0);
 
-  // 키보드 단축키 리스너 (Ctrl+클릭, Ctrl+Space 락온, Esc 취소)
+  // ⭐️ [Windows OS 전역 실시간 UIA 마우스 호버 & 락온 폴링 루프 (120ms)]
+  useEffect(() => {
+    if (!isOpen || !isHoveringTriggerActive) return;
+
+    const intervalId = setInterval(async () => {
+      try {
+        const res = await fetch('http://localhost:9988/api/rpa/current-hover', {
+          method: 'GET',
+          cache: 'no-store'
+        }).catch(() => null);
+
+        if (res && res.ok) {
+          const data = await res.json();
+          if (data && data.online && data.xpath) {
+            setHoveredElementInfo({
+              windowTitle: data.windowTitle || 'Windows 데스크톱 창',
+              tagName: data.tagName || 'ELEMENT',
+              controlType: data.controlType || '',
+              id: data.id || '',
+              name: data.name || '',
+              className: data.className || '',
+              xpath: data.xpath || "//*[@id='target']",
+              cssSelector: data.id ? '#' + data.id : '.' + (data.className?.split(' ')[0] || 'elem'),
+              rect: data.rect || { width: 150, height: 30 },
+              hint: '현재 마우스 위치의 실시간 객체입니다. [Ctrl+클릭] 시 즉시 락온!'
+            });
+
+            // 에이전트에서 OS 전역 Ctrl+클릭 락온이 발생했을 때 자동 바인딩
+            if (data.lastLocked && data.lastLocked.xpath) {
+              const lockTime = data.timestamp || 0;
+              if (lockTime > lastLockedTimestampRef.current) {
+                lastLockedTimestampRef.current = lockTime;
+                handleConfirmLockOn(data.lastLocked);
+              }
+            }
+          }
+        }
+      } catch (e) {}
+    }, 120);
+
+    return () => clearInterval(intervalId);
+  }, [isOpen, isHoveringTriggerActive]);
+
+  // 키보드 단축키 리스너 (브라우저 포커스 상태일 때 Ctrl+클릭, Ctrl+Space, Esc)
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
@@ -104,45 +151,24 @@ export default function ObjectManipulatorModal({
     setTempStep(prev => ({ ...prev, [field]: value }));
   };
 
-  // 실시간 마우스 Hover 감지 토글
-  const toggleHoverInspection = () => {
-    setIsHoveringTriggerActive(prev => !prev);
-  };
-
-  // 마우스 이동 시 실시간 텔레메트리 업데이트 핸들러
-  const handleSandboxMouseMove = (e, elemInfo) => {
-    if (!isHoveringTriggerActive) return;
-    setMousePos({ x: e.clientX, y: e.clientY });
-    setHoveredElementInfo({
-      tagName: elemInfo.tagName,
-      id: elemInfo.id,
-      name: elemInfo.name,
-      xpath: elemInfo.xpath,
-      cssSelector: elemInfo.cssSelector,
-      className: elemInfo.className,
-      innerText: elemInfo.innerText || '',
-      rect: elemInfo.rect || { width: 180, height: 32 },
-      hint: '마우스가 올려진 상태입니다. [Ctrl+클릭] 또는 버튼으로 확정하세요.'
-    });
-  };
-
-  // 명시적 락온 확정 트리거 (클릭 또는 Ctrl+클릭)
+  // 명시적 락온 확정 트리거
   const handleConfirmLockOn = (info) => {
     const targetInfo = info || hoveredElementInfo;
-    if (!targetInfo) return;
+    if (!targetInfo || !targetInfo.xpath) return;
 
     setLockedElementSpecs(prev => ({
       ...prev,
+      windowTitle: targetInfo.windowTitle || '',
       tagName: targetInfo.tagName || 'INPUT',
-      id: targetInfo.id || 'assetNo',
-      name: targetInfo.name || 'asset_no',
-      className: targetInfo.className || 'form-control',
-      xpath: targetInfo.xpath || "//input[@id='assetNo']",
-      cssSelector: targetInfo.cssSelector || '#assetNo'
+      id: targetInfo.id || '',
+      name: targetInfo.name || '',
+      className: targetInfo.className || '',
+      xpath: targetInfo.xpath || "//*[@id='target']",
+      cssSelector: targetInfo.cssSelector || (targetInfo.id ? '#' + targetInfo.id : '')
     }));
 
-    handlePropChange('selector', targetInfo.xpath || "//input[@id='assetNo']");
-    setFlashLockMessage(`🎯 타겟 [${targetInfo.tagName}#${targetInfo.id || targetInfo.name || 'target'}] 락온 확정 완료!`);
+    handlePropChange('selector', targetInfo.xpath || "//*[@id='target']");
+    setFlashLockMessage(`🎯 OS 전역 타겟 [${targetInfo.windowTitle ? targetInfo.windowTitle.slice(0, 18) + '... | ' : ''}${targetInfo.tagName}#${targetInfo.id || targetInfo.name || 'target'}] 락온 확정 완료!`);
     setTimeout(() => setFlashLockMessage(null), 3000);
   };
 
@@ -206,11 +232,11 @@ export default function ObjectManipulatorModal({
               justifyContent: 'center',
               boxShadow: '0 0 12px rgba(2, 132, 199, 0.6)'
             }}>
-              <Scan size={20} style={{ color: '#fff' }} />
+              <Monitor size={20} style={{ color: '#fff' }} />
             </div>
             <div>
               <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                🎯 객체 정밀 조작 스튜디오 (DOM / UIA Live Radar Studio)
+                🎯 Windows OS 전역 객체 정밀 조작 스튜디오 (Global UIA / DOM Radar)
                 {isHoveringTriggerActive && (
                   <span style={{
                     fontSize: '0.62rem',
@@ -224,12 +250,12 @@ export default function ObjectManipulatorModal({
                     gap: '4px'
                   }}>
                     <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#34d399', display: 'inline-block' }} />
-                    실시간 레이더 탐색 가동 중 (Ctrl+클릭 시 즉시 락온)
+                    OS 전체 화면 실시간 감시 중 (다른 창 어디든 Ctrl+클릭 시 락온)
                   </span>
                 )}
               </div>
               <div style={{ fontSize: '0.68rem', color: '#94a3b8' }}>
-                스텝: {tempStep.name} ({tempStep.id}) | 마우스 오버 시 실시간 테두리 펄스 &amp; 속성/메서드 스펙 즉시 분석
+                스텝: {tempStep.name} ({tempStep.id}) | 다른 브라우저, 사내 ERP, 엑셀, C# 프로그램 어디든 마우스를 올리면 실시간 감지
               </div>
             </div>
           </div>
@@ -254,7 +280,7 @@ export default function ObjectManipulatorModal({
           <div style={{
             backgroundColor: '#064e3b',
             borderBottom: '1px solid #10b981',
-            padding: '6px 20px',
+            padding: '8px 20px',
             color: '#a7f3d0',
             fontSize: '0.75rem',
             fontWeight: 700,
@@ -274,7 +300,7 @@ export default function ObjectManipulatorModal({
           flex: 1,
           overflow: 'hidden'
         }}>
-          {/* ── [좌측 패널 500px]: 역동적 실시간 뷰파인더 & 스펙 ── */}
+          {/* ── [좌측 패널 500px]: 실시간 전역 OS 레이더 텔레메트리 ── */}
           <div style={{
             backgroundColor: '#0b1120',
             borderRight: '1px solid #1e293b',
@@ -285,265 +311,111 @@ export default function ObjectManipulatorModal({
             overflowY: 'auto'
           }} className="grid-scrollbar">
 
-            {/* 1. 상단 라이브 샌드박스 뷰파인더 (실시간 마우스 오버 반응 캔버스) */}
+            {/* 1. 실시간 전역 OS 마우스 레이더 카드 */}
             <div style={{
               backgroundColor: '#0f172a',
-              border: isHoveringTriggerActive ? '1px solid #38bdf8' : '1px solid #334155',
+              border: '1px solid #38bdf8',
               borderRadius: '8px',
-              padding: '10px',
+              padding: '12px',
               display: 'flex',
               flexDirection: 'column',
               gap: '8px',
-              boxShadow: isHoveringTriggerActive ? '0 0 15px rgba(56, 189, 248, 0.2)' : 'none'
+              boxShadow: '0 0 15px rgba(56, 189, 248, 0.25)'
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <Radio size={12} style={{ color: isHoveringTriggerActive ? '#38bdf8' : '#94a3b8' }} />
-                  1. 실시간 객체 탐색 뷰파인더 (마우스를 올려보세요!)
+                <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Radio size={14} style={{ color: '#38bdf8' }} />
+                  1. OS 전역 실시간 마우스 레이더 (Live Telemetry)
                 </span>
-                <span style={{ fontSize: '0.62rem', color: '#fde047', fontWeight: 600 }}>
+                <span style={{ fontSize: '0.62rem', color: '#fde047', fontWeight: 700, backgroundColor: '#78350f', padding: '2px 6px', borderRadius: '4px' }}>
                   [Ctrl+클릭] = 락온
                 </span>
               </div>
 
-              {/* 모의 타겟 인터랙티브 엘리먼트 샌드박스 */}
+              {/* 현재 마우스가 위치한 대상 윈도우 창 제목 */}
               <div style={{
                 backgroundColor: '#020617',
-                border: '1px dashed #334155',
+                border: '1px solid #1e293b',
                 borderRadius: '6px',
-                padding: '12px',
+                padding: '8px 10px',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '8px',
-                position: 'relative'
+                gap: '3px'
               }}>
-                <div style={{ fontSize: '0.65rem', color: '#64748b' }}>
-                  🏢 사내 ERP / 웹 페이지 대상 폼 (시뮬레이터)
-                </div>
-
-                {/* 모의 입력 요소 1: 자산번호 */}
-                <div
-                  onMouseEnter={e => handleSandboxMouseMove(e, {
-                    tagName: 'INPUT',
-                    id: 'assetNo',
-                    name: 'asset_no',
-                    xpath: "//input[@id='assetNo']",
-                    cssSelector: '#assetNo',
-                    className: 'form-control erp-input',
-                    innerText: '',
-                    rect: { width: 220, height: 32 }
-                  })}
-                  onClick={e => {
-                    if (e.ctrlKey || isHoveringTriggerActive) {
-                      handleConfirmLockOn(hoveredElementInfo);
-                    }
-                  }}
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '2px',
-                    padding: '4px 6px',
-                    borderRadius: '4px',
-                    cursor: 'crosshair',
-                    backgroundColor: hoveredElementInfo?.id === 'assetNo' ? 'rgba(56, 189, 248, 0.15)' : 'transparent',
-                    border: hoveredElementInfo?.id === 'assetNo' ? '1px solid #38bdf8' : '1px solid transparent',
-                    boxShadow: hoveredElementInfo?.id === 'assetNo' ? '0 0 10px rgba(56, 189, 248, 0.4)' : 'none',
-                    transition: 'all 0.15s ease-out'
-                  }}
-                >
-                  <label style={{ fontSize: '0.65rem', color: '#94a3b8' }}>자산번호 (Asset No)</label>
-                  <input
-                    type="text"
-                    readOnly
-                    placeholder="예: AST-2026-001"
-                    style={{
-                      backgroundColor: '#0f172a',
-                      border: '1px solid #334155',
-                      borderRadius: '4px',
-                      padding: '4px 8px',
-                      color: '#38bdf8',
-                      fontSize: '0.75rem',
-                      fontFamily: 'Consolas, monospace'
-                    }}
-                  />
-                </div>
-
-                {/* 모의 입력 요소 2: 시리얼번호 */}
-                <div
-                  onMouseEnter={e => handleSandboxMouseMove(e, {
-                    tagName: 'INPUT',
-                    id: 'serialNo',
-                    name: 'serial_no',
-                    xpath: "//input[@id='serialNo']",
-                    cssSelector: '#serialNo',
-                    className: 'form-control serial-box',
-                    innerText: '',
-                    rect: { width: 220, height: 32 }
-                  })}
-                  onClick={e => {
-                    if (e.ctrlKey || isHoveringTriggerActive) {
-                      handleConfirmLockOn(hoveredElementInfo);
-                    }
-                  }}
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '2px',
-                    padding: '4px 6px',
-                    borderRadius: '4px',
-                    cursor: 'crosshair',
-                    backgroundColor: hoveredElementInfo?.id === 'serialNo' ? 'rgba(56, 189, 248, 0.15)' : 'transparent',
-                    border: hoveredElementInfo?.id === 'serialNo' ? '1px solid #38bdf8' : '1px solid transparent',
-                    boxShadow: hoveredElementInfo?.id === 'serialNo' ? '0 0 10px rgba(56, 189, 248, 0.4)' : 'none',
-                    transition: 'all 0.15s ease-out'
-                  }}
-                >
-                  <label style={{ fontSize: '0.65rem', color: '#94a3b8' }}>제조 시리얼 (Serial / IMEI)</label>
-                  <input
-                    type="text"
-                    readOnly
-                    placeholder="예: SN99882211"
-                    style={{
-                      backgroundColor: '#0f172a',
-                      border: '1px solid #334155',
-                      borderRadius: '4px',
-                      padding: '4px 8px',
-                      color: '#f8fafc',
-                      fontSize: '0.75rem'
-                    }}
-                  />
-                </div>
-
-                {/* 모의 버튼 2개: 조회 및 입고 승인 */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginTop: '4px' }}>
-                  <button
-                    type="button"
-                    onMouseEnter={e => handleSandboxMouseMove(e, {
-                      tagName: 'BUTTON',
-                      id: 'btnSearch',
-                      name: 'btn_search',
-                      xpath: "//button[@id='btnSearch']",
-                      cssSelector: '#btnSearch',
-                      className: 'btn btn-secondary',
-                      innerText: '🔍 장비 조회',
-                      rect: { width: 100, height: 30 }
-                    })}
-                    onClick={e => {
-                      if (e.ctrlKey || isHoveringTriggerActive) {
-                        handleConfirmLockOn(hoveredElementInfo);
-                      }
-                    }}
-                    style={{
-                      padding: '6px',
-                      fontSize: '0.70rem',
-                      cursor: 'crosshair',
-                      backgroundColor: hoveredElementInfo?.id === 'btnSearch' ? '#0284c7' : '#1e293b',
-                      border: hoveredElementInfo?.id === 'btnSearch' ? '1px solid #38bdf8' : '1px solid #475569',
-                      color: '#f8fafc',
-                      borderRadius: '4px',
-                      fontWeight: 700,
-                      boxShadow: hoveredElementInfo?.id === 'btnSearch' ? '0 0 10px rgba(56, 189, 248, 0.6)' : 'none',
-                      transition: 'all 0.15s ease-out'
-                    }}
-                  >
-                    🔍 장비 조회
-                  </button>
-
-                  <button
-                    type="button"
-                    onMouseEnter={e => handleSandboxMouseMove(e, {
-                      tagName: 'BUTTON',
-                      id: 'btnSubmitInbound',
-                      name: 'btn_submit',
-                      xpath: "//button[@id='btnSubmitInbound']",
-                      cssSelector: '#btnSubmitInbound',
-                      className: 'btn btn-primary btn-save',
-                      innerText: '💾 입고 확정 등록',
-                      rect: { width: 110, height: 30 }
-                    })}
-                    onClick={e => {
-                      if (e.ctrlKey || isHoveringTriggerActive) {
-                        handleConfirmLockOn(hoveredElementInfo);
-                      }
-                    }}
-                    style={{
-                      padding: '6px',
-                      fontSize: '0.70rem',
-                      cursor: 'crosshair',
-                      backgroundColor: hoveredElementInfo?.id === 'btnSubmitInbound' ? '#059669' : '#047857',
-                      border: hoveredElementInfo?.id === 'btnSubmitInbound' ? '1px solid #34d399' : '1px solid #10b981',
-                      color: '#fff',
-                      borderRadius: '4px',
-                      fontWeight: 700,
-                      boxShadow: hoveredElementInfo?.id === 'btnSubmitInbound' ? '0 0 12px rgba(52, 211, 153, 0.7)' : 'none',
-                      transition: 'all 0.15s ease-out'
-                    }}
-                  >
-                    💾 입고 확정 등록
-                  </button>
+                <div style={{ fontSize: '0.65rem', color: '#94a3b8' }}>📍 감지된 윈도우 창 (Window Title)</div>
+                <div style={{ fontSize: '0.75rem', color: '#f8fafc', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {hoveredElementInfo.windowTitle || 'Windows 바탕화면 / 애플리케이션'}
                 </div>
               </div>
 
-              {/* 실시간 감지 정보 및 원클릭 락온 버튼 */}
-              {hoveredElementInfo && (
-                <div style={{
-                  backgroundColor: '#1e3a5f',
-                  border: '1px solid #38bdf8',
-                  borderRadius: '6px',
-                  padding: '8px 10px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '4px'
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#fde047', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <Zap size={12} /> 실시간 감지: &lt;{hoveredElementInfo.tagName}#{hoveredElementInfo.id || 'element'}&gt;
-                    </span>
-                    <span style={{ fontSize: '0.60rem', color: '#94a3b8' }}>
-                      {hoveredElementInfo.rect?.width || 200}×{hoveredElementInfo.rect?.height || 32}px
-                    </span>
-                  </div>
-
-                  <div style={{ fontSize: '0.68rem', color: '#f8fafc', fontFamily: 'Consolas, monospace', wordBreak: 'break-all' }}>
-                    {hoveredElementInfo.xpath}
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => handleConfirmLockOn(hoveredElementInfo)}
-                    className="btn btn-primary"
-                    style={{
-                      marginTop: '4px',
-                      fontSize: '0.72rem',
-                      padding: '6px',
-                      fontWeight: 800,
-                      backgroundColor: '#0284c7',
-                      borderColor: '#38bdf8',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '6px'
-                    }}
-                  >
-                    <Target size={14} /> 🎯 이 객체로 락온 확정 (Ctrl+클릭)
-                  </button>
+              {/* 실시간 감지 요소 스펙 배지 */}
+              <div style={{
+                backgroundColor: '#1e3a5f',
+                border: '1px solid #38bdf8',
+                borderRadius: '6px',
+                padding: '10px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '6px'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#fde047', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Zap size={13} /> &lt;{hoveredElementInfo.tagName}#{hoveredElementInfo.id || 'target'}&gt; ({hoveredElementInfo.controlType || 'Control'})
+                  </span>
+                  <span style={{ fontSize: '0.62rem', color: '#94a3b8' }}>
+                    크기: {hoveredElementInfo.rect?.width || 0}×{hoveredElementInfo.rect?.height || 0}px
+                  </span>
                 </div>
-              )}
+
+                <div style={{
+                  fontSize: '0.70rem',
+                  color: '#7dd3fc',
+                  fontFamily: 'Consolas, monospace',
+                  wordBreak: 'break-all',
+                  backgroundColor: '#020617',
+                  padding: '6px 8px',
+                  borderRadius: '4px',
+                  border: '1px solid #0f172a'
+                }}>
+                  {hoveredElementInfo.xpath}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleConfirmLockOn(hoveredElementInfo)}
+                  className="btn btn-primary"
+                  style={{
+                    marginTop: '4px',
+                    fontSize: '0.75rem',
+                    padding: '8px',
+                    fontWeight: 800,
+                    backgroundColor: '#0284c7',
+                    borderColor: '#38bdf8',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    boxShadow: '0 0 10px rgba(2, 132, 199, 0.5)'
+                  }}
+                >
+                  <Target size={14} /> 🎯 이 객체로 즉시 락온 확정 (Ctrl+클릭)
+                </button>
+              </div>
             </div>
 
-            {/* 2. 락온된 객체의 정밀 DOM/UIA 스펙 인스펙터 */}
+            {/* 2. 락온 확정된 객체 정밀 DOM/UIA 스펙 인스펙터 */}
             <div style={{
               backgroundColor: '#0f172a',
               border: '1px solid #334155',
               borderRadius: '8px',
-              padding: '10px',
+              padding: '12px',
               display: 'flex',
               flexDirection: 'column',
               gap: '8px'
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#34d399', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <Eye size={12} /> 2. 락온된 객체 실시간 스펙 (DOM Spec)
+                  <Eye size={13} /> 2. 락온된 타겟 스펙 (Target Spec)
                 </span>
                 <span style={{ fontSize: '0.60rem', color: '#94a3b8' }}>
                   정밀 분석 완료
@@ -565,14 +437,34 @@ export default function ObjectManipulatorModal({
                 </div>
                 <div style={{ backgroundColor: '#020617', padding: '4px 6px', borderRadius: '4px', border: '1px solid #1e293b' }}>
                   <span style={{ color: '#94a3b8' }}>클래스: </span>
-                  <span style={{ color: '#cbd5e1' }}>{lockedElementSpecs.className}</span>
+                  <span style={{ color: '#cbd5e1' }}>{lockedElementSpecs.className || '없음'}</span>
                 </div>
+              </div>
+
+              {/* 선택자 직접 편집란 */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                <label style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 700 }}>최종 타겟 선택자 (XPath / UIA)</label>
+                <input
+                  type="text"
+                  value={tempStep.selector || lockedElementSpecs.xpath}
+                  onChange={e => handlePropChange('selector', e.target.value)}
+                  style={{
+                    backgroundColor: '#020617',
+                    border: '1px solid #38bdf8',
+                    borderRadius: '4px',
+                    padding: '6px 8px',
+                    color: '#38bdf8',
+                    fontSize: '0.72rem',
+                    fontFamily: 'Consolas, monospace',
+                    fontWeight: 700
+                  }}
+                />
               </div>
 
               {/* 사용 가능한 메서드 목록 */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
                 <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#a78bfa' }}>
-                  ⚡ 지원되는 JS 메서드 (원클릭 바인딩)
+                  ⚡ 지원되는 JS / UIA 메서드
                 </span>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px' }}>
                   {lockedElementSpecs.availableMethods.map((m, idx) => (
@@ -595,37 +487,6 @@ export default function ObjectManipulatorModal({
                       title="클릭하여 메서드 호출로 설정"
                     >
                       .{m}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              {/* 사용 가능한 속성 목록 */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#fbbf24' }}>
-                  🏷️ 지원되는 HTML 속성 (원클릭 바인딩)
-                </span>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px' }}>
-                  {lockedElementSpecs.availableAttributes.map((attr, idx) => (
-                    <span
-                      key={idx}
-                      onClick={() => {
-                        handlePropChange('operationType', 'SET_ATTRIBUTE');
-                        handlePropChange('attrName', attr);
-                      }}
-                      style={{
-                        fontSize: '0.62rem',
-                        backgroundColor: '#020617',
-                        border: '1px solid #b45309',
-                        borderRadius: '3px',
-                        padding: '1px 5px',
-                        color: '#fde047',
-                        cursor: 'pointer',
-                        userSelect: 'none'
-                      }}
-                      title="클릭하여 속성 변경으로 설정"
-                    >
-                      {attr}
                     </span>
                   ))}
                 </div>
@@ -764,7 +625,7 @@ export default function ObjectManipulatorModal({
               {/* CALL_METHOD */}
               {tempStep.operationType === 'CALL_METHOD' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '0.70rem', color: '#94a3b8' }}>호출할 JavaScript 메서드</label>
+                  <label style={{ fontSize: '0.70rem', color: '#94a3b8' }}>호출할 JavaScript / UIA 메서드</label>
                   <input
                     type="text"
                     value={tempStep.methodName || 'click()'}

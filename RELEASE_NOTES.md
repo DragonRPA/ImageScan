@@ -1,5 +1,18 @@
 # 릴리즈 노트 (RELEASE_NOTES.md)
 
+## [v1.7.0.Build.45] - 2026-08-16 20:15:00 (KST)
+
+### 🪟 [Windows OS 전역 실시간 UIA 마우스 스캐너 엔진 탑재 & 다른 창 Ctrl+클릭 락온 완성]
+
+1. **Windows OS 전역 저수준 UIA 실시간 마우스 스캐너 엔진(`agent-dotnet`) 탑재**:
+   - `System.Windows.Automation.AutomationElement.FromPoint` 및 `WindowFromPoint` 엔진 가동
+   - 다른 브라우저 창(Chrome/Edge), 사내 ERP, 엑셀, C# 프로그램 등 Windows 전체 화면 어디에 마우스를 올려도 **실시간 창 제목, 컨트롤 종류(Button/Edit/Select), AutomationId, Name, 클래스, XPath**를 120ms 단위로 실시간 캡처
+2. **OS 전역 `Ctrl + 마우스 좌클릭` 즉시 락온(Lock-on) 연동**:
+   - 다른 창에서 마우스를 둔 채 `Ctrl + 클릭`을 누르면 에이전트가 즉시 감지하여 웹 프론트엔드의 스텝 선택자란에 타겟 객체 자동 바인딩
+3. **웹 모달 실시간 텔레메트리 연동 (`/api/rpa/current-hover`)**
+
+---
+
 ## [v1.7.0.Build.44] - 2026-08-16 20:11:00 (KST)
 
 ### 🔌 [에이전트 localhost 및 127.0.0.1 이중 바인딩 & 실시간 온라인 인식 완벽 복구]

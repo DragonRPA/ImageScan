@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Windows.Automation;
 
 namespace DragonRPA
 {
@@ -14,37 +15,77 @@ namespace DragonRPA
         const string FRONTEND_URL = "https://dragonrpa.github.io/ImageScan/";
         const int HTTP_PORT = 9988;
 
+        const int VK_CONTROL = 0x11;
+        const int VK_LBUTTON = 0x01;
+        const int VK_SPACE   = 0x20;
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct POINT
+        {
+            public int X;
+            public int Y;
+        }
+
+        [DllImport("user32.dll")]
+        static extern bool GetCursorPos(out POINT lpPoint);
+
+        [DllImport("user32.dll")]
+        static extern IntPtr WindowFromPoint(POINT Point);
+
+        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
+
+        [DllImport("user32.dll")]
+        static extern short GetAsyncKeyState(int vKey);
+
         [DllImport("user32.dll")]
         static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
 
         [DllImport("kernel32.dll")]
         static extern IntPtr GetConsoleWindow();
 
+        static volatile HoverState CurrentHover = new HoverState();
+        static volatile HoverState LastLocked = null;
+        static bool IsScanningActive = true;
+
+        class HoverState
+        {
+            public string WindowTitle = "";
+            public string TagName = "ELEMENT";
+            public string ControlType = "";
+            public string Id = "";
+            public string Name = "";
+            public string ClassName = "";
+            public string XPath = "";
+            public int X = 0;
+            public int Y = 0;
+            public int Width = 0;
+            public int Height = 0;
+            public long Timestamp = 0;
+        }
+
+        [STAThread]
         static void Main(string[] args)
         {
             Console.OutputEncoding = Encoding.UTF8;
             Console.WriteLine("=================================================");
-            Console.WriteLine($"  DragonRPA 통합 에이전트 {VERSION} (C# Native)");
+            Console.WriteLine("  DragonRPA 통합 에이전트 " + VERSION + " (C# Native + UIA3)");
             Console.WriteLine("=================================================");
 
-            // 1. 브라우저 프론트엔드 최우선 실행
             OpenFrontendBrowser();
-
-            // 2. HTTP REST 서버 시작 (포트 9988)
             StartHttpServer();
+            StartGlobalUiaScanner();
 
-            // 3. 2초 후 콘솔창 조용히 백그라운드로 전환
-            ThreadPool.QueueUserWorkItem(_ =>
+            ThreadPool.QueueUserWorkItem(delegate
             {
                 Thread.Sleep(2000);
                 IntPtr hWnd = GetConsoleWindow();
                 if (hWnd != IntPtr.Zero)
                 {
-                    ShowWindow(hWnd, 0); // SW_HIDE
+                    ShowWindow(hWnd, 0);
                 }
             });
 
-            // 4. 메인 스레드 상시 대기
             Thread.Sleep(Timeout.Infinite);
         }
 
@@ -52,56 +93,176 @@ namespace DragonRPA
         {
             try
             {
-                var psi = new ProcessStartInfo
+                ProcessStartInfo psi = new ProcessStartInfo
                 {
                     FileName = FRONTEND_URL,
                     UseShellExecute = true
                 };
                 Process.Start(psi);
-                Console.WriteLine($"[OK] 프론트엔드 브라우저 실행: {FRONTEND_URL}");
+                Console.WriteLine("[OK] 프론트엔드 브라우저 실행: " + FRONTEND_URL);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[WARN] 브라우저 실행 실패: {ex.Message}");
+                Console.WriteLine("[WARN] 브라우저 실행 실패: " + ex.Message);
             }
+        }
+
+        static void StartGlobalUiaScanner()
+        {
+            Thread thread = new Thread(delegate()
+            {
+                POINT lastPt = new POINT { X = -1, Y = -1 };
+                bool lastCtrlState = false;
+
+                while (IsScanningActive)
+                {
+                    try
+                    {
+                        POINT pt;
+                        if (GetCursorPos(out pt))
+                        {
+                            if (pt.X != lastPt.X || pt.Y != lastPt.Y)
+                            {
+                                lastPt = pt;
+                                ScanElementAtPoint(pt);
+                            }
+
+                            bool isCtrlDown = (GetAsyncKeyState(VK_CONTROL) & 0x8000) != 0;
+                            bool isLButtonDown = (GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0;
+                            bool isSpaceDown = (GetAsyncKeyState(VK_SPACE) & 0x8000) != 0;
+
+                            if (isCtrlDown && (isLButtonDown || isSpaceDown))
+                            {
+                                if (!lastCtrlState)
+                                {
+                                    lastCtrlState = true;
+                                    LastLocked = CurrentHover;
+                                    Console.WriteLine("[LOCK-ON] 타겟 확정됨: " + CurrentHover.TagName + "#" + CurrentHover.Id + " (" + CurrentHover.XPath + ")");
+                                }
+                            }
+                            else
+                            {
+                                lastCtrlState = false;
+                            }
+                        }
+                    }
+                    catch { }
+
+                    Thread.Sleep(60);
+                }
+            });
+
+            thread.IsBackground = true;
+            thread.SetApartmentState(ApartmentState.STA);
+            thread.Start();
+            Console.WriteLine("[OK] Windows OS 전역 UIA 마우스 스캐너 가동 완료");
+        }
+
+        static void ScanElementAtPoint(POINT pt)
+        {
+            try
+            {
+                IntPtr hWnd = WindowFromPoint(pt);
+                string winTitle = "";
+                if (hWnd != IntPtr.Zero)
+                {
+                    StringBuilder sb = new StringBuilder(256);
+                    GetWindowText(hWnd, sb, 256);
+                    winTitle = sb.ToString();
+                }
+
+                System.Windows.Point uiaPoint = new System.Windows.Point(pt.X, pt.Y);
+                AutomationElement elem = AutomationElement.FromPoint(uiaPoint);
+
+                if (elem != null)
+                {
+                    AutomationElement.AutomationElementInformation cur = elem.Current;
+                    string ctrlType = cur.ControlType != null ? cur.ControlType.ProgrammaticName.Replace("ControlType.", "") : "Element";
+                    string id = cur.AutomationId ?? "";
+                    string name = cur.Name ?? "";
+                    string className = cur.ClassName ?? "";
+                    System.Windows.Rect rect = cur.BoundingRectangle;
+
+                    string tag = "INPUT";
+                    if (ctrlType.Equals("Button", StringComparison.OrdinalIgnoreCase)) tag = "BUTTON";
+                    else if (ctrlType.Equals("Edit", StringComparison.OrdinalIgnoreCase) || ctrlType.Equals("Document", StringComparison.OrdinalIgnoreCase)) tag = "INPUT";
+                    else if (ctrlType.Equals("ComboBox", StringComparison.OrdinalIgnoreCase)) tag = "SELECT";
+                    else if (ctrlType.Equals("CheckBox", StringComparison.OrdinalIgnoreCase)) tag = "INPUT_CHECK";
+                    else if (ctrlType.Equals("Text", StringComparison.OrdinalIgnoreCase)) tag = "SPAN";
+                    else tag = ctrlType.ToUpper();
+
+                    string xpath = "";
+                    if (!string.IsNullOrEmpty(id))
+                    {
+                        xpath = "//*[@id='" + id + "']";
+                    }
+                    else if (!string.IsNullOrEmpty(name))
+                    {
+                        xpath = "//" + tag + "[@name='" + name + "']";
+                    }
+                    else if (!string.IsNullOrEmpty(className))
+                    {
+                        xpath = "//" + tag + "[contains(@class, '" + className.Split(' ')[0] + "')]";
+                    }
+                    else
+                    {
+                        xpath = "//" + tag + "[@type='" + ctrlType + "']";
+                    }
+
+                    long nowMs = (long)(DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1))).TotalMilliseconds;
+                    CurrentHover = new HoverState
+                    {
+                        WindowTitle = winTitle,
+                        TagName = tag,
+                        ControlType = ctrlType,
+                        Id = id,
+                        Name = name,
+                        ClassName = className,
+                        XPath = xpath,
+                        X = (int)rect.X,
+                        Y = (int)rect.Y,
+                        Width = (int)rect.Width,
+                        Height = (int)rect.Height,
+                        Timestamp = nowMs
+                    };
+                }
+            }
+            catch { }
         }
 
         static void StartHttpServer()
         {
             try
             {
-                var listener = new HttpListener();
-                try { listener.Prefixes.Add($"http://localhost:{HTTP_PORT}/"); } catch { }
-                try { listener.Prefixes.Add($"http://127.0.0.1:{HTTP_PORT}/"); } catch { }
+                HttpListener listener = new HttpListener();
+                try { listener.Prefixes.Add("http://localhost:" + HTTP_PORT + "/"); } catch { }
+                try { listener.Prefixes.Add("http://127.0.0.1:" + HTTP_PORT + "/"); } catch { }
                 listener.Start();
-                Console.WriteLine($"[OK] HTTP REST API 가동: http://localhost:{HTTP_PORT}/ & http://127.0.0.1:{HTTP_PORT}/");
+                Console.WriteLine("[OK] HTTP REST API 가동: http://localhost:" + HTTP_PORT + "/ & http://127.0.0.1:" + HTTP_PORT + "/");
 
-                ThreadPool.QueueUserWorkItem(_ =>
+                ThreadPool.QueueUserWorkItem(delegate
                 {
                     while (listener.IsListening)
                     {
                         try
                         {
-                            var context = listener.GetContext();
-                            ThreadPool.QueueUserWorkItem(state => ProcessRequest((HttpListenerContext)state), context);
+                            HttpListenerContext context = listener.GetContext();
+                            ThreadPool.QueueUserWorkItem(delegate(object state) { ProcessRequest((HttpListenerContext)state); }, context);
                         }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine($"[ERR] 리스너 오류: {ex.Message}");
-                        }
+                        catch { }
                     }
                 });
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[ERR] HTTP 서버 시작 실패: {ex.Message}");
+                Console.WriteLine("[ERR] HTTP 서버 시작 실패: " + ex.Message);
             }
         }
 
         static void ProcessRequest(HttpListenerContext context)
         {
-            var req = context.Request;
-            var res = context.Response;
+            HttpListenerRequest req = context.Request;
+            HttpListenerResponse res = context.Response;
 
             res.AddHeader("Access-Control-Allow-Origin", "*");
             res.AddHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
@@ -125,22 +286,27 @@ namespace DragonRPA
                 {
                     responseString = "{\"supabase\":\"ok\",\"printer\":{\"ok\":true,\"label\":\"Zebra Direct (USB/TCP 9100)\"},\"todayCount\":0,\"pendingCount\":0,\"agentId\":\"" + Environment.MachineName + "_agent\",\"version\":\"" + VERSION + "\",\"online\":true}";
                 }
-                else if (rawUrl == "/api/print-direct" && req.HttpMethod == "POST")
+                else if (rawUrl == "/api/rpa/current-hover")
                 {
-                    using (var reader = new StreamReader(req.InputStream, req.ContentEncoding))
-                    {
-                        string body = reader.ReadToEnd();
-                        Console.WriteLine($"[PRINT] 직통 출력 요청 접수 ({body.Length} bytes)");
-                        responseString = "{\"ok\":true,\"message\":\"ZPL 직접 인쇄 완료\"}";
-                    }
+                    HoverState h = CurrentHover;
+                    HoverState locked = LastLocked;
+                    string lockedJson = locked != null
+                        ? "{\"tagName\":\"" + EscapeJson(locked.TagName) + "\",\"id\":\"" + EscapeJson(locked.Id) + "\",\"name\":\"" + EscapeJson(locked.Name) + "\",\"className\":\"" + EscapeJson(locked.ClassName) + "\",\"xpath\":\"" + EscapeJson(locked.XPath) + "\",\"rect\":{\"width\":" + locked.Width + ",\"height\":" + locked.Height + "}}"
+                        : "null";
+
+                    responseString = "{\"online\":true,\"windowTitle\":\"" + EscapeJson(h.WindowTitle) + "\",\"tagName\":\"" + EscapeJson(h.TagName) + "\",\"controlType\":\"" + EscapeJson(h.ControlType) + "\",\"id\":\"" + EscapeJson(h.Id) + "\",\"name\":\"" + EscapeJson(h.Name) + "\",\"className\":\"" + EscapeJson(h.ClassName) + "\",\"xpath\":\"" + EscapeJson(h.XPath) + "\",\"rect\":{\"x\":" + h.X + ",\"y\":" + h.Y + ",\"width\":" + h.Width + ",\"height\":" + h.Height + "},\"timestamp\":" + h.Timestamp + ",\"lastLocked\":" + lockedJson + "}";
                 }
                 else if (rawUrl == "/api/rpa/inspect-object" && req.HttpMethod == "POST")
                 {
-                    using (var reader = new StreamReader(req.InputStream, req.ContentEncoding))
+                    responseString = "{\"ok\":true,\"message\":\"실시간 전역 OS 레이더 객체 탐색기가 가동되었습니다. 어떤 창이든 마우스를 올리고 Ctrl+클릭을 누르면 락온됩니다.\"}";
+                }
+                else if (rawUrl == "/api/print-direct" && req.HttpMethod == "POST")
+                {
+                    using (StreamReader reader = new StreamReader(req.InputStream, req.ContentEncoding))
                     {
                         string body = reader.ReadToEnd();
-                        Console.WriteLine("[RPA] 실시간 레이더 객체 스캔 요청 접수");
-                        responseString = "{\"ok\":true,\"message\":\"실시간 객체 탐색기가 가동되었습니다. 원하는 객체 위에서 Ctrl+클릭을 누르면 락온됩니다.\"}";
+                        Console.WriteLine("[PRINT] 직통 출력 요청 접수 (" + body.Length + " bytes)");
+                        responseString = "{\"ok\":true,\"message\":\"ZPL 직접 인쇄 완료\"}";
                     }
                 }
                 else if (rawUrl == "/api/rpa/execute-scenario" && req.HttpMethod == "POST")
@@ -162,6 +328,12 @@ namespace DragonRPA
             res.ContentLength64 = buffer.Length;
             res.OutputStream.Write(buffer, 0, buffer.Length);
             res.OutputStream.Close();
+        }
+
+        static string EscapeJson(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return "";
+            return s.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\r", "").Replace("\n", " ");
         }
     }
 }
