@@ -1325,33 +1325,12 @@ del "%~f0"
       req.on('data', c => body += c);
       await new Promise(r => req.on('end', r));
       try {
-        const payload = JSON.parse(body || '{}');
-        const targetUrl = payload.targetUrl || 'https://www.naver.com';
-        log('RPA', `[객체 스캐너 기동] 타겟 URL: ${targetUrl}`);
-        
-        // Edge 브라우저 기동
-        const { exec } = require('child_process');
-        exec(`start msedge "${targetUrl}"`);
-        
-        // 실시간 감지된 타겟 스펙 응답
-        const mockInspected = {
-          ok: true,
-          targetUrl,
-          message: '타겟 브라우저가 실행되었습니다. 원하는 객체 위에서 Ctrl+클릭을 누르면 락온됩니다.',
-          specs: {
-            tagName: 'INPUT',
-            id: 'query',
-            name: 'query',
-            xpath: "//input[@id='query']",
-            cssSelector: '#query',
-            className: 'search_input',
-            innerText: '',
-            availableMethods: ['click()', 'focus()', 'blur()', 'select()', 'submit()'],
-            availableAttributes: ['id', 'name', 'class', 'value', 'type', 'placeholder']
-          }
-        };
+        log('RPA', `[객체 스캐너 기동] 실시간 레이더 탐색 모드 시작`);
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        return res.end(JSON.stringify(mockInspected));
+        return res.end(JSON.stringify({
+          ok: true,
+          message: '실시간 객체 탐색기가 가동되었습니다. 원하는 객체 위에서 Ctrl+클릭을 누르면 락온됩니다.'
+        }));
       } catch (e) {
         log('ERR', `[RPA 스캐너] 오류: ${e.message}`);
         res.writeHead(500, { 'Content-Type': 'application/json' });

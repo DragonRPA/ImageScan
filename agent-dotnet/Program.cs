@@ -138,9 +138,8 @@ namespace DragonRPA
                     using (var reader = new StreamReader(req.InputStream, req.ContentEncoding))
                     {
                         string body = reader.ReadToEnd();
-                        Console.WriteLine("[RPA] 객체 스캐너 기동 요청 접수");
-                        try { Process.Start(new ProcessStartInfo { FileName = "msedge", Arguments = "https://www.naver.com", UseShellExecute = true }); } catch { }
-                        responseString = "{\"ok\":true,\"targetUrl\":\"https://www.naver.com\",\"message\":\"타겟 브라우저가 실행되었습니다. 원하는 객체 위에서 Ctrl+클릭을 누르면 락온됩니다.\",\"specs\":{\"tagName\":\"INPUT\",\"id\":\"query\",\"name\":\"query\",\"xpath\":\"//input[@id='query']\",\"cssSelector\":\"#query\",\"className\":\"search_input\",\"innerText\":\"\",\"availableMethods\":[\"click()\",\"focus()\",\"blur()\",\"select()\",\"submit()\"],\"availableAttributes\":[\"id\",\"name\",\"class\",\"value\",\"type\",\"placeholder\"]}}";
+                        Console.WriteLine("[RPA] 실시간 레이더 객체 스캔 요청 접수");
+                        responseString = "{\"ok\":true,\"message\":\"실시간 객체 탐색기가 가동되었습니다. 원하는 객체 위에서 Ctrl+클릭을 누르면 락온됩니다.\"}";
                     }
                 }
                 else if (rawUrl == "/api/rpa/execute-scenario" && req.HttpMethod == "POST")
