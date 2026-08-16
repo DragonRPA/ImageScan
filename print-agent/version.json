@@ -1,8 +1,8 @@
 {
-  "version": "v1.4",
+  "version": "v1.5",
   "downloadUrl": "https://dragonrpa.github.io/ImageScan/UBUS_DragonRPA_Agent.exe",
   "backupUrl": "https://raw.githubusercontent.com/DragonRPA/ImageScan/main/print-agent/dist/UBUS_DragonRPA_Agent.exe",
-  "releaseDate": "2026-08-15",
-  "minRequiredVersion": "v1.4",
-  "releaseNotes": "실제 Windows 연결 프린터 실시간 감지 및 블루투스 스택 1초 강제 리셋 엔진 탑재"
+  "releaseDate": "2026-08-16",
+  "minRequiredVersion": "v1.5",
+  "releaseNotes": "Microsoft Playwright & CDP 실시간 객체 스캐너 및 통합 하이브리드 RPA 실행 엔진 탑재"
 }

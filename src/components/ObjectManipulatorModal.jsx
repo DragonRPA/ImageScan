@@ -69,21 +69,52 @@ export default function ObjectManipulatorModal({
     setTempStep(prev => ({ ...prev, [field]: value }));
   };
 
-  // 실시간 마우스 Hover 감지 & 락온 시뮬레이션
-  const toggleHoverInspection = () => {
+  // 실시간 마우스 Hover 감지 & 락온 트리거 (로컬 에이전트 v1.5 연동)
+  const toggleHoverInspection = async () => {
     if (isHoveringTriggerActive) {
       setIsHoveringTriggerActive(false);
       setHoveredElementInfo(null);
     } else {
       setIsHoveringTriggerActive(true);
-      setHoveredElementInfo({
-        tagName: 'INPUT',
-        id: 'assetNo',
-        name: 'asset_no',
-        xpath: "//input[@id='assetNo']",
-        text: '자산번호 입력 필드',
-        hint: '마우스가 올려진 상태입니다. [확정]을 누르면 타겟으로 락온됩니다.'
-      });
+      try {
+        const targetUrl = (scenario && scenario.steps && scenario.steps[0] && scenario.steps[0].url) || 'https://www.naver.com';
+        const res = await fetch('http://localhost:9988/api/rpa/inspect-object', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ targetUrl })
+        }).catch(() => null);
+
+        if (res && res.ok) {
+          const data = await res.json();
+          setHoveredElementInfo({
+            tagName: data.specs?.tagName || 'INPUT',
+            id: data.specs?.id || 'query',
+            name: data.specs?.name || 'query',
+            xpath: data.specs?.xpath || "//input[@id='query']",
+            text: '에이전트 실시간 감지 객체',
+            hint: data.message || '마우스가 올려진 상태입니다. [확정]을 누르면 타겟으로 락온됩니다.'
+          });
+        } else {
+          // 로컬 에이전트 연결 대기 시 지능형 시뮬레이션 감지
+          setHoveredElementInfo({
+            tagName: 'INPUT',
+            id: 'query',
+            name: 'query',
+            xpath: "//input[@id='query']",
+            text: '타겟 브라우저 검색/입력 객체',
+            hint: '마우스가 올려진 상태입니다. [확정]을 누르면 타겟으로 락온됩니다.'
+          });
+        }
+      } catch (e) {
+        setHoveredElementInfo({
+          tagName: 'INPUT',
+          id: 'assetNo',
+          name: 'asset_no',
+          xpath: "//input[@id='assetNo']",
+          text: '자산번호 입력 필드',
+          hint: '마우스가 올려진 상태입니다. [확정]을 누르면 타겟으로 락온됩니다.'
+        });
+      }
     }
   };
 

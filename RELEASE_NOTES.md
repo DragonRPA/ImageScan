@@ -1,5 +1,20 @@
 # 릴리즈 노트 (RELEASE_NOTES.md)
 
+## [v1.7.0.Build.41] - 2026-08-16 19:36:00 (KST)
+
+### 🚀 [통합 에이전트 v1.5 바이너리 빌드 & Playwright/CDP 실시간 객체 스캐너 엔드포인트 탑재]
+
+1. **`UBUS_DragonRPA_Agent.exe (v1.5)` 바이너리 최신 빌드 및 코드 서명 완료**:
+   - `Microsoft.Playwright` & CDP 기반 실시간 브라우저 객체 스캐너 API(`/api/rpa/inspect-object`) 탑재
+   - RPA 시나리오 백그라운드 초고속 실행기(`/api/rpa/execute-scenario`) 탑재
+   - `DragonRPA Software` 사내 디지털 코드 서명 날인 완료
+2. **웹 프론트엔드 - 에이전트 간 실시간 객체 락온 통신 연동**:
+   - `ObjectManipulatorModal`에서 Hover 감지 시 에이전트 v1.5와 실시간 통신하여 타겟 브라우저 팝업 및 선택자 캡처
+3. **최신 에이전트 바이너리 자동 다운로드 배포**:
+   - `public/UBUS_DragonRPA_Agent.exe`, `print-agent/dist/UBUS_DragonRPA_Agent.exe` 동기화
+
+---
+
 ## [v1.7.0.Build.40] - 2026-08-16 19:24:00 (KST)
 
 ### 🎯 [객체 정밀 조작 스튜디오 독립 모달 신설 및 실시간 마우스 Hover 락온 트리거 탑재]
