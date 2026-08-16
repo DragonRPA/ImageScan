@@ -30,7 +30,9 @@ import {
   saveBackendLabelTemplate,
   syncTemplatesWithBackend,
   generateDynamicZpl,
+  generateDynamicZplAsync,
   generateWysiwygZpl,
+  convertImageToZplGf,
   mmToDots,
   getAllPresets,
   createEmptyTemplate,
@@ -313,7 +315,7 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
     handleElemPropChange('fontSizePt', next);
   };
 
-  // ⭐️ [이미지 파일 업로드 ➔ Base64 DataURL]
+  // ⭐️ [이미지 파일 업로드 ➔ Base64 DataURL 및 실시간 ZPL ^GF 그래픽 비트맵 인코딩]
   const handleImageUpload = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -324,9 +326,28 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
     }
 
     const reader = new FileReader();
-    reader.onload = (loadEvt) => {
+    reader.onload = async (loadEvt) => {
       const dataUrl = loadEvt.target.result;
-      handleElemPropChange('imageDataUrl', dataUrl);
+      const targetElem = template?.elements?.find(el => el.id === selectedElemId) || {};
+      const dpi = template?.paper?.dpi || 203;
+      const imgW = mmToDots(targetElem.widthMm || 18, dpi);
+      const imgH = mmToDots(targetElem.heightMm || 12, dpi);
+
+      // ZPL II ^GF 비트맵 명령어 즉시 사전 인코딩
+      const zplGf = await convertImageToZplGf(dataUrl, imgW, imgH);
+
+      setTemplate(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          elements: prev.elements.map(el => {
+            if (el.id === selectedElemId) {
+              return { ...el, imageDataUrl: dataUrl, zplGf, visible: true };
+            }
+            return el;
+          })
+        };
+      });
     };
     reader.readAsDataURL(file);
   };
@@ -432,8 +453,8 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
   const handleTestPrint = async () => {
     setIsPrinting(true);
     try {
-      // 1. ⭐️ ZPL 생성
-      const zpl = generateDynamicZpl(SAMPLE_ITEM, template);
+      // 1. ⭐️ 비동기 ZPL 생성 (이미지 ^GF 그래픽 비트맵 100% 실시간 주입 보장)
+      const zpl = await generateDynamicZplAsync(SAMPLE_ITEM, template);
 
       // 2. 서식 지정 프린터 조회 및 직통 전송
       const registered = getRegisteredPrinters();
@@ -452,6 +473,29 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
       setIsPrinting(false);
     }
   };
+
+  // ⭐️ 이미지 요소의 크기(widthMm, heightMm) 또는 imageDataUrl 변경 시 zplGf 자동 동기화
+  useEffect(() => {
+    if (!template || !Array.isArray(template.elements)) return;
+    const dpi = template.paper?.dpi || 203;
+
+    template.elements.forEach(async (el) => {
+      if (el.type === 'image' && el.imageDataUrl && (!el.zplGf || el._lastW !== el.widthMm || el._lastH !== el.heightMm)) {
+        const imgW = mmToDots(el.widthMm || 18, dpi);
+        const imgH = mmToDots(el.heightMm || 12, dpi);
+        const zplGf = await convertImageToZplGf(el.imageDataUrl, imgW, imgH);
+        if (zplGf && zplGf !== el.zplGf) {
+          setTemplate(prev => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              elements: prev.elements.map(item => item.id === el.id ? { ...item, zplGf, _lastW: el.widthMm, _lastH: el.heightMm } : item)
+            };
+          });
+        }
+      }
+    });
+  }, [template?.elements, template?.paper]);
 
   const currentZpl = useMemo(() => (template ? generateDynamicZpl(SAMPLE_ITEM, template) : ''), [template, SAMPLE_ITEM]);
 

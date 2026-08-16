@@ -1,5 +1,17 @@
 # 릴리즈 노트 (RELEASE_NOTES.md)
 
+## [v1.7.0.Build.32] - 2026-08-16 18:21:00 (KST)
+
+### 🖼️ [Zebra ZPL II 표준 ^GF 그래픽 비트맵 이미지 인코더 엔진 탑재]
+
+1. **내용 없는 빈 박스(^GB) 출력 결함 원천 해결**:
+   - 기존 임시 코드 `^GB` (Graphic Box)를 **정품 Zebra ZPL II 표준 `^GF` (Graphic Field)** 비트맵 인코더 엔진으로 전면 교체
+2. **HTML5 Canvas 기반 실시간 흑백 도트 비트맵 변환**:
+   - 사용자 업로드 로고/이미지(PNG, JPG, SVG, WebP)를 용지 해상도(DPI)에 맞게 1비트 흑백 이진화 및 16진수 ASCII Hex 스트림으로 완벽 변환
+3. **비동기 ZPL 생성 엔진(`generateDynamicZplAsync`) 및 실시간 캐싱 파이프라인 구축**
+
+---
+
 ## [v1.7.0.Build.31] - 2026-08-16 18:07:00 (KST)
 
 ### 📦 [라벨 서식 디자인 JSON 로컬 내보내기 & 로컬 파일 불러오기 기능 탑재]

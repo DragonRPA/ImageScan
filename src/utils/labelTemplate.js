@@ -499,7 +499,13 @@ export function generateDynamicZpl(item = {}, template = DEFAULT_LABEL_TEMPLATE)
     } else if (elem.type === 'image') {
       const imgW = mmToDots(elem.widthMm || 20, dpi);
       const imgH = mmToDots(elem.heightMm || 10, dpi);
-      zplCommands.push(`^FO${posX},${posY}^GB${imgW},${imgH},1^FS`);
+      if (elem.zplGf) {
+        // ⭐️ Zebra ZPL II 표준 ^GF (Graphic Field) 고품질 비트맵 출력
+        zplCommands.push(`^FO${posX},${posY}${elem.zplGf}^FS`);
+      } else {
+        // 이미지가 로드되지 않은 상태의 폴백
+        zplCommands.push(`^FO${posX},${posY}^GB${imgW},${imgH},1^FS`);
+      }
     } else if (elem.type === 'barcode') {
       const targetVal = String(getValue({ field: elem.targetField }) || item[elem.targetField] || item.key_value || 'TEST0001');
       const showTextParam = elem.showText ? 'Y' : 'N';
@@ -521,8 +527,105 @@ export function generateDynamicZpl(item = {}, template = DEFAULT_LABEL_TEMPLATE)
 }
 
 /**
+ * ⭐️ ImageDataUrl (Base64)을 ZPL II ^GF (Graphic Field) 16진수 비트맵 명령어로 정밀 변환
+ */
+export async function convertImageToZplGf(imageDataUrl, widthDots, heightDots, threshold = 128) {
+  if (!imageDataUrl || widthDots <= 0 || heightDots <= 0) return null;
+
+  return new Promise((resolve) => {
+    if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = widthDots;
+          canvas.height = heightDots;
+          const ctx = canvas.getContext('2d', { willReadFrequently: true });
+          if (!ctx) return resolve(null);
+
+          // 배경 흰색으로 채우기 (투명 PNG 알파 채널 투과 대비)
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, widthDots, heightDots);
+          ctx.drawImage(img, 0, 0, widthDots, heightDots);
+
+          const imgData = ctx.getImageData(0, 0, widthDots, heightDots);
+          const pixels = imgData.data;
+
+          const bytesPerRow = Math.ceil(widthDots / 8);
+          const totalBytes = bytesPerRow * heightDots;
+          let hexData = '';
+
+          for (let y = 0; y < heightDots; y++) {
+            let byteVal = 0;
+            let bitCount = 0;
+
+            for (let x = 0; x < widthDots; x++) {
+              const idx = (y * widthDots + x) * 4;
+              const r = pixels[idx];
+              const g = pixels[idx + 1];
+              const b = pixels[idx + 2];
+              const a = pixels[idx + 3];
+
+              // ITU-R BT.601 표준 루미넌스 계산
+              const luminance = (0.299 * r) + (0.587 * g) + (0.114 * b);
+              // 투명 픽셀이거나 밝은 픽셀은 흰색(0), 어두운 픽셀은 검은색(1)
+              const isBlack = (a > 64 && luminance < threshold) ? 1 : 0;
+
+              byteVal = (byteVal << 1) | isBlack;
+              bitCount++;
+
+              if (bitCount === 8) {
+                hexData += byteVal.toString(16).padStart(2, '0').toUpperCase();
+                byteVal = 0;
+                bitCount = 0;
+              }
+            }
+
+            // 행 끝의 나머지 비트 패딩
+            if (bitCount > 0) {
+              byteVal = byteVal << (8 - bitCount);
+              hexData += byteVal.toString(16).padStart(2, '0').toUpperCase();
+            }
+          }
+
+          resolve(`^GFA,${totalBytes},${totalBytes},${bytesPerRow},${hexData}`);
+        } catch (e) {
+          console.warn('Canvas 이미지 ZPL 변환 오류:', e);
+          resolve(null);
+        }
+      };
+      img.onerror = () => resolve(null);
+      img.src = imageDataUrl;
+    } else {
+      resolve(null);
+    }
+  });
+}
+
+/**
+ * ⭐️ 이미지 요소를 포함한 비동기 ZPL 생성 엔진 (필요 시 실시간 ^GF 변환 보장)
+ */
+export async function generateDynamicZplAsync(item = {}, template = DEFAULT_LABEL_TEMPLATE) {
+  if (!template || !Array.isArray(template.elements)) return '';
+
+  const dpi = template.paper?.dpi || 203;
+
+  // 모든 이미지 요소의 zplGf 비동기 보장
+  for (const elem of template.elements) {
+    if (elem.type === 'image' && elem.visible && elem.imageDataUrl && !elem.zplGf) {
+      const imgW = mmToDots(elem.widthMm || 20, dpi);
+      const imgH = mmToDots(elem.heightMm || 10, dpi);
+      elem.zplGf = await convertImageToZplGf(elem.imageDataUrl, imgW, imgH);
+    }
+  }
+
+  return generateDynamicZpl(item, template);
+}
+
+/**
  * ⭐️ 호환성 유지용 WYSIWYG ZPL 비동기 래퍼
  */
 export async function generateWysiwygZpl(item = {}, template = DEFAULT_LABEL_TEMPLATE) {
-  return generateDynamicZpl(item, template);
+  return generateDynamicZplAsync(item, template);
 }
