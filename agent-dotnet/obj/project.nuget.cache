@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "dgSpecHash": "3wGicyoXH3A=",
+  "success": true,
+  "projectFilePath": "d:\\GoogleDrive\\RPA 개발\\01.AntiGravity\\ImageScan\\agent-dotnet\\DragonRPA_Agent.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\이정용\\.nuget\\packages\\microsoft.net.illink.tasks\\8.0.28\\microsoft.net.illink.tasks.8.0.28.nupkg.sha512",
+    "C:\\Users\\이정용\\.nuget\\packages\\microsoft.netcore.app.runtime.win-x64\\8.0.28\\microsoft.netcore.app.runtime.win-x64.8.0.28.nupkg.sha512",
+    "C:\\Users\\이정용\\.nuget\\packages\\microsoft.windowsdesktop.app.runtime.win-x64\\8.0.28\\microsoft.windowsdesktop.app.runtime.win-x64.8.0.28.nupkg.sha512",
+    "C:\\Users\\이정용\\.nuget\\packages\\microsoft.aspnetcore.app.runtime.win-x64\\8.0.28\\microsoft.aspnetcore.app.runtime.win-x64.8.0.28.nupkg.sha512"
+  ],
+  "logs": []
+}
