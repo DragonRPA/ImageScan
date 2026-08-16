@@ -27,6 +27,13 @@ export const BUILTIN_RPA_SCENARIOS = [
         action: 'NAVIGATE',
         name: 'ERP 입고 페이지 접속',
         url: 'https://erp.company.com/asset/inbound',
+        targetBrowser: 'Edge',
+        launchMode: 'ATTACH_EXISTING',
+        windowSize: 'MAXIMIZED',
+        windowAlias: 'main',
+        ignoreCertErrors: true,
+        disableBlinkFeatures: true,
+        waitUntil: 'networkidle',
         timeoutMs: 5000
       },
       {

@@ -1,5 +1,26 @@
 import React, { useState } from 'react';
-import { Bot, Plus, Trash2, Copy, Save, Play, Crosshair, Sparkles, Layers, ArrowDown, MoveUp, MoveDown, Check, MousePointer } from 'lucide-react';
+import {
+  Bot,
+  Plus,
+  Trash2,
+  Copy,
+  Save,
+  Play,
+  Crosshair,
+  Sparkles,
+  Layers,
+  ArrowDown,
+  MoveUp,
+  MoveDown,
+  Check,
+  MousePointer,
+  AppWindow,
+  Monitor,
+  XCircle,
+  ExternalLink,
+  Globe,
+  Layout
+} from 'lucide-react';
 import { getAllRpaScenarios, getRpaScenarioById, saveRpaScenario, deleteRpaScenario, BUILTIN_RPA_SCENARIOS } from '../utils/rpaEngine';
 import { DEFAULT_SCHEMA_DEF } from '../utils/dynamicSchema';
 
@@ -57,6 +78,13 @@ export default function RPABuilderTab({ onError }) {
           action: 'NAVIGATE',
           name: '웹 페이지 접속',
           url: 'https://',
+          targetBrowser: 'Edge',
+          launchMode: 'ATTACH_EXISTING',
+          windowSize: 'MAXIMIZED',
+          windowAlias: 'main',
+          ignoreCertErrors: true,
+          disableBlinkFeatures: true,
+          waitUntil: 'networkidle',
           timeoutMs: 5000
         }
       ]
@@ -78,11 +106,43 @@ export default function RPABuilderTab({ onError }) {
       timeoutMs: 3000
     };
 
-    if (actionType === 'NAVIGATE') newStep = { ...newStep, name: '페이지 접속', url: 'https://' };
+    if (actionType === 'NAVIGATE') {
+      newStep = {
+        ...newStep,
+        name: '페이지 접속',
+        url: 'https://',
+        targetBrowser: 'Edge',
+        launchMode: 'ATTACH_EXISTING',
+        windowSize: 'MAXIMIZED',
+        windowAlias: 'main',
+        ignoreCertErrors: true,
+        disableBlinkFeatures: true,
+        waitUntil: 'networkidle',
+        timeoutMs: 5000
+      };
+    }
+    if (actionType === 'SWITCH_WINDOW') {
+      newStep = {
+        ...newStep,
+        name: '창/탭 전환',
+        matchType: 'LAST_OPENED',
+        targetAlias: 'main',
+        matchPattern: '',
+        timeoutMs: 5000
+      };
+    }
+    if (actionType === 'CLOSE_WINDOW') {
+      newStep = {
+        ...newStep,
+        name: '창 닫기',
+        targetAlias: '',
+        returnToAlias: 'main'
+      };
+    }
     if (actionType === 'SWITCH_FRAME') newStep = { ...newStep, name: '프레임 전환', frameSelector: 'contentFrame' };
     if (actionType === 'WAIT_ELEMENT') newStep = { ...newStep, name: '요소 로딩 대기', selector: "//input[@id='']" };
     if (actionType === 'INPUT_TEXT') newStep = { ...newStep, name: '텍스트 입력', selector: "//input[@id='']", valueTemplate: '{{자산번호}}', sendEnter: false, fallbackType: 'NONE' };
-    if (actionType === 'CLICK') newStep = { ...newStep, name: '버튼 클릭', selector: "//button[@id='']", fallbackType: 'PIXEL_MATCH' };
+    if (actionType === 'CLICK') newStep = { ...newStep, name: '버튼 클릭', selector: "//button[@id='']", fallbackType: 'PIXEL_MATCH', opensNewWindow: false, newWindowAlias: 'popup_1' };
     if (actionType === 'HANDLE_ALERT') newStep = { ...newStep, name: '알럿창 수락', alertAction: 'ACCEPT' };
 
     const updatedSteps = [...(scenario.steps || []), newStep];
@@ -238,6 +298,12 @@ export default function RPABuilderTab({ onError }) {
               <button onClick={() => handleAddStep('NAVIGATE')} className="btn btn-outline" style={{ fontSize: '0.68rem', padding: '4px' }}>
                 🌐 URL 이동
               </button>
+              <button onClick={() => handleAddStep('SWITCH_WINDOW')} className="btn btn-outline" style={{ fontSize: '0.68rem', padding: '4px', borderColor: '#38bdf8', color: '#7dd3fc' }}>
+                🪟 창 전환
+              </button>
+              <button onClick={() => handleAddStep('CLOSE_WINDOW')} className="btn btn-outline" style={{ fontSize: '0.68rem', padding: '4px', borderColor: '#f43f5e', color: '#fda4af' }}>
+                ❌ 창 닫기
+              </button>
               <button onClick={() => handleAddStep('SWITCH_FRAME')} className="btn btn-outline" style={{ fontSize: '0.68rem', padding: '4px' }}>
                 🖼️ 프레임 전환
               </button>
@@ -358,8 +424,8 @@ export default function RPABuilderTab({ onError }) {
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ fontSize: '0.68rem', color: '#94a3b8', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {st.url || st.selector || st.valueTemplate || st.alertAction || ''}
+                    <span style={{ fontSize: '0.68rem', color: '#94a3b8', maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {st.url || (st.action === 'SWITCH_WINDOW' ? `창: ${st.matchType === 'LAST_OPENED' ? '최근 팝업' : st.targetAlias || st.matchPattern}` : '') || (st.action === 'CLOSE_WINDOW' ? `닫기 ➔ 복귀:${st.returnToAlias}` : '') || st.selector || st.valueTemplate || st.alertAction || ''}
                     </span>
                     <button
                       onClick={(e) => {
@@ -415,27 +481,285 @@ export default function RPABuilderTab({ onError }) {
                 />
               </div>
 
-              {/* NAVIGATE 액션: URL */}
+              {/* ── [1] NAVIGATE 액션: URL & 브라우저 기동/세션 옵션 ── */}
               {selectedStep.action === 'NAVIGATE' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                  <label style={{ fontSize: '0.68rem', color: '#94a3b8' }}>접속 URL</label>
-                  <input
-                    type="text"
-                    value={selectedStep.url || ''}
-                    onChange={e => handleStepPropChange('url', e.target.value)}
-                    style={{
-                      backgroundColor: '#0f172a',
-                      border: '1px solid #475569',
-                      borderRadius: '4px',
-                      padding: '4px 8px',
-                      color: '#f8fafc',
-                      fontSize: '0.75rem'
-                    }}
-                  />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <label style={{ fontSize: '0.68rem', color: '#94a3b8' }}>접속 URL</label>
+                    <input
+                      type="text"
+                      value={selectedStep.url || ''}
+                      onChange={e => handleStepPropChange('url', e.target.value)}
+                      placeholder="https://erp.company.com/..."
+                      style={{
+                        backgroundColor: '#0f172a',
+                        border: '1px solid #475569',
+                        borderRadius: '4px',
+                        padding: '4px 8px',
+                        color: '#f8fafc',
+                        fontSize: '0.75rem'
+                      }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <label style={{ fontSize: '0.68rem', color: '#94a3b8' }}>대상 브라우저</label>
+                      <select
+                        value={selectedStep.targetBrowser || 'Edge'}
+                        onChange={e => handleStepPropChange('targetBrowser', e.target.value)}
+                        style={{
+                          backgroundColor: '#0f172a',
+                          border: '1px solid #475569',
+                          borderRadius: '4px',
+                          padding: '4px 6px',
+                          color: '#38bdf8',
+                          fontSize: '0.72rem',
+                          fontWeight: 600
+                        }}
+                      >
+                        <option value="Edge">🌐 Microsoft Edge (권장)</option>
+                        <option value="Chrome">🌐 Google Chrome</option>
+                        <option value="Whale">🌐 Naver Whale</option>
+                        <option value="Default">💻 OS 기본 브라우저</option>
+                      </select>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <label style={{ fontSize: '0.68rem', color: '#94a3b8' }}>실행/연결 모드</label>
+                      <select
+                        value={selectedStep.launchMode || 'ATTACH_EXISTING'}
+                        onChange={e => handleStepPropChange('launchMode', e.target.value)}
+                        style={{
+                          backgroundColor: '#0f172a',
+                          border: '1px solid #475569',
+                          borderRadius: '4px',
+                          padding: '4px 6px',
+                          color: '#f8fafc',
+                          fontSize: '0.72rem'
+                        }}
+                      >
+                        <option value="ATTACH_EXISTING">기존 열린 브라우저 연결 (로그인 유지)</option>
+                        <option value="LAUNCH_NEW">새 브라우저 창 기동 (독립 실행)</option>
+                        <option value="HEADLESS">무화면 백그라운드 (초고속)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <label style={{ fontSize: '0.68rem', color: '#94a3b8' }}>창 크기 / 화면 배치</label>
+                      <select
+                        value={selectedStep.windowSize || 'MAXIMIZED'}
+                        onChange={e => handleStepPropChange('windowSize', e.target.value)}
+                        style={{
+                          backgroundColor: '#0f172a',
+                          border: '1px solid #475569',
+                          borderRadius: '4px',
+                          padding: '4px 6px',
+                          color: '#f8fafc',
+                          fontSize: '0.72rem'
+                        }}
+                      >
+                        <option value="MAXIMIZED">전체화면 최대화 (Maximized)</option>
+                        <option value="DOCK_RIGHT">우측 50% 분할 도킹 (화면 공유)</option>
+                        <option value="DOCK_LEFT">좌측 50% 분할 도킹 (화면 공유)</option>
+                        <option value="1920x1080">FHD (1920 × 1080)</option>
+                      </select>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <label style={{ fontSize: '0.68rem', color: '#94a3b8' }}>창 식별 별칭 (Window Alias)</label>
+                      <input
+                        type="text"
+                        value={selectedStep.windowAlias || 'main'}
+                        onChange={e => handleStepPropChange('windowAlias', e.target.value)}
+                        placeholder="main"
+                        style={{
+                          backgroundColor: '#0f172a',
+                          border: '1px solid #38bdf8',
+                          borderRadius: '4px',
+                          padding: '4px 8px',
+                          color: '#38bdf8',
+                          fontSize: '0.75rem',
+                          fontWeight: 700
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{
+                    backgroundColor: '#0f172a',
+                    border: '1px solid #334155',
+                    borderRadius: '6px',
+                    padding: '8px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '4px'
+                  }}>
+                    <label style={{ fontSize: '0.68rem', fontWeight: 700, color: '#38bdf8' }}>
+                      브라우저 보안 및 제어 옵션
+                    </label>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.70rem', color: '#cbd5e1' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={selectedStep.ignoreCertErrors !== false}
+                          onChange={e => handleStepPropChange('ignoreCertErrors', e.target.checked)}
+                        />
+                        사내 사설 SSL/인증서 오류 무시 (--ignore-cert-errors)
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={selectedStep.disableBlinkFeatures !== false}
+                          onChange={e => handleStepPropChange('disableBlinkFeatures', e.target.checked)}
+                        />
+                        봇 탐지 방지 플래그 (--disable-blink-features)
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={!!selectedStep.isIncognito}
+                          onChange={e => handleStepPropChange('isIncognito', e.target.checked)}
+                        />
+                        InPrivate / 시크릿 모드 (세션 격리)
+                      </label>
+                    </div>
+                  </div>
                 </div>
               )}
 
-              {/* SWITCH_FRAME 액션: Frame Selector */}
+              {/* ── [2] SWITCH_WINDOW 액션: 창/탭 전환 ── */}
+              {selectedStep.action === 'SWITCH_WINDOW' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <label style={{ fontSize: '0.68rem', color: '#94a3b8' }}>창 전환 기준 (Match Type)</label>
+                    <select
+                      value={selectedStep.matchType || 'LAST_OPENED'}
+                      onChange={e => handleStepPropChange('matchType', e.target.value)}
+                      style={{
+                        backgroundColor: '#0f172a',
+                        border: '1px solid #38bdf8',
+                        borderRadius: '4px',
+                        padding: '4px 6px',
+                        color: '#38bdf8',
+                        fontSize: '0.72rem',
+                        fontWeight: 700
+                      }}
+                    >
+                      <option value="LAST_OPENED">⚡ 가장 최근에 열린 새 팝업 창</option>
+                      <option value="ALIAS">🏷️ 지정한 창 별칭 (Alias)</option>
+                      <option value="TITLE_CONTAINS">📄 창 제목(Title)에 특정 텍스트 포함</option>
+                      <option value="URL_CONTAINS">🌐 URL 주소에 특정 경로 포함</option>
+                      <option value="MAIN">🏠 메인 창 ('main')으로 복귀</option>
+                    </select>
+                  </div>
+
+                  {selectedStep.matchType === 'ALIAS' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <label style={{ fontSize: '0.68rem', color: '#94a3b8' }}>전환할 대상 창 별칭</label>
+                      <input
+                        type="text"
+                        value={selectedStep.targetAlias || 'main'}
+                        onChange={e => handleStepPropChange('targetAlias', e.target.value)}
+                        placeholder="예: popup_inbound, main"
+                        style={{
+                          backgroundColor: '#0f172a',
+                          border: '1px solid #475569',
+                          borderRadius: '4px',
+                          padding: '4px 8px',
+                          color: '#f8fafc',
+                          fontSize: '0.75rem'
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {(selectedStep.matchType === 'TITLE_CONTAINS' || selectedStep.matchType === 'URL_CONTAINS') && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <label style={{ fontSize: '0.68rem', color: '#94a3b8' }}>
+                        {selectedStep.matchType === 'TITLE_CONTAINS' ? '포함될 창 제목' : '포함될 URL 경로'}
+                      </label>
+                      <input
+                        type="text"
+                        value={selectedStep.matchPattern || ''}
+                        onChange={e => handleStepPropChange('matchPattern', e.target.value)}
+                        placeholder={selectedStep.matchType === 'TITLE_CONTAINS' ? "예: 입고 등록, 자산 관리" : "예: /asset/inbound"}
+                        style={{
+                          backgroundColor: '#0f172a',
+                          border: '1px solid #475569',
+                          borderRadius: '4px',
+                          padding: '4px 8px',
+                          color: '#f8fafc',
+                          fontSize: '0.75rem'
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <label style={{ fontSize: '0.68rem', color: '#94a3b8' }}>창 감지 대기 시간 (ms)</label>
+                    <input
+                      type="number"
+                      value={selectedStep.timeoutMs || 5000}
+                      onChange={e => handleStepPropChange('timeoutMs', Number(e.target.value))}
+                      style={{
+                        backgroundColor: '#0f172a',
+                        border: '1px solid #475569',
+                        borderRadius: '4px',
+                        padding: '4px 8px',
+                        color: '#f8fafc',
+                        fontSize: '0.75rem'
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* ── [3] CLOSE_WINDOW 액션: 창 닫기 ── */}
+              {selectedStep.action === 'CLOSE_WINDOW' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <label style={{ fontSize: '0.68rem', color: '#94a3b8' }}>닫을 창 별칭 (비워둘 시 현재 활성 창)</label>
+                    <input
+                      type="text"
+                      value={selectedStep.targetAlias || ''}
+                      onChange={e => handleStepPropChange('targetAlias', e.target.value)}
+                      placeholder="현재 활성 창 닫기"
+                      style={{
+                        backgroundColor: '#0f172a',
+                        border: '1px solid #475569',
+                        borderRadius: '4px',
+                        padding: '4px 8px',
+                        color: '#f8fafc',
+                        fontSize: '0.75rem'
+                      }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <label style={{ fontSize: '0.68rem', color: '#94a3b8' }}>닫은 후 자동 복귀할 창 별칭</label>
+                    <input
+                      type="text"
+                      value={selectedStep.returnToAlias || 'main'}
+                      onChange={e => handleStepPropChange('returnToAlias', e.target.value)}
+                      placeholder="main"
+                      style={{
+                        backgroundColor: '#0f172a',
+                        border: '1px solid #38bdf8',
+                        borderRadius: '4px',
+                        padding: '4px 8px',
+                        color: '#38bdf8',
+                        fontSize: '0.75rem',
+                        fontWeight: 700
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* ── [4] SWITCH_FRAME 액션: Frame Selector ── */}
               {selectedStep.action === 'SWITCH_FRAME' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                   <label style={{ fontSize: '0.68rem', color: '#94a3b8' }}>프레임 식별자 (ID 또는 Name)</label>
@@ -455,7 +779,7 @@ export default function RPABuilderTab({ onError }) {
                 </div>
               )}
 
-              {/* INPUT_TEXT / CLICK / WAIT: Target Selector & Navigator */}
+              {/* ── [5] INPUT_TEXT / CLICK / WAIT: Target Selector & Navigator ── */}
               {(selectedStep.action === 'INPUT_TEXT' || selectedStep.action === 'CLICK' || selectedStep.action === 'WAIT_ELEMENT') && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -482,6 +806,48 @@ export default function RPABuilderTab({ onError }) {
                       fontSize: '0.75rem'
                     }}
                   />
+                </div>
+              )}
+
+              {/* CLICK 액션: 새 팝업창 열림 감지 및 별칭 지정 */}
+              {selectedStep.action === 'CLICK' && (
+                <div style={{
+                  backgroundColor: '#0f172a',
+                  border: '1px solid #334155',
+                  borderRadius: '6px',
+                  padding: '8px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '6px'
+                }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.70rem', color: '#38bdf8', fontWeight: 700, cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={!!selectedStep.opensNewWindow}
+                      onChange={e => handleStepPropChange('opensNewWindow', e.target.checked)}
+                    />
+                    클릭 시 새 팝업/창이 열림 (Window Tracking)
+                  </label>
+                  {selectedStep.opensNewWindow && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', paddingLeft: '16px' }}>
+                      <label style={{ fontSize: '0.65rem', color: '#94a3b8' }}>새로 열릴 창 별칭 (New Window Alias)</label>
+                      <input
+                        type="text"
+                        value={selectedStep.newWindowAlias || 'popup_1'}
+                        onChange={e => handleStepPropChange('newWindowAlias', e.target.value)}
+                        placeholder="예: popup_inbound"
+                        style={{
+                          backgroundColor: '#1e293b',
+                          border: '1px solid #38bdf8',
+                          borderRadius: '4px',
+                          padding: '3px 6px',
+                          color: '#38bdf8',
+                          fontSize: '0.72rem',
+                          fontWeight: 700
+                        }}
+                      />
+                    </div>
+                  )}
                 </div>
               )}
 
