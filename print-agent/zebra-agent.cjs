@@ -1297,11 +1297,9 @@ if exist "temp\\agent-update.exe" (
   del /f /q "temp\\agent-update.exe" > nul
 )
 if exist "UBUS_DragonRPA_Agent.exe" (
-  powershell -NoProfile -Command "Unblock-File -Path 'UBUS_DragonRPA_Agent.exe' -ErrorAction SilentlyContinue" > nul 2>&1
-  start "" "UBUS_DragonRPA_Agent.exe"
+  powershell -WindowStyle Hidden -NoProfile -Command "Unblock-File -Path 'UBUS_DragonRPA_Agent.exe'; Start-Process 'UBUS_DragonRPA_Agent.exe' -WindowStyle Hidden" > nul 2>&1
 ) else if exist "zebra-agent.exe" (
-  powershell -NoProfile -Command "Unblock-File -Path 'zebra-agent.exe' -ErrorAction SilentlyContinue" > nul 2>&1
-  start "" "zebra-agent.exe"
+  powershell -WindowStyle Hidden -NoProfile -Command "Unblock-File -Path 'zebra-agent.exe'; Start-Process 'zebra-agent.exe' -WindowStyle Hidden" > nul 2>&1
 )
 del "%~f0"
 `;
