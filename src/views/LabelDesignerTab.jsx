@@ -35,6 +35,7 @@ import {
 } from '../utils/labelTemplate';
 import { generateCode39DataUrl, RealBarcodeSvg } from '../utils/barcode39';
 import { getRegisteredPrinters, getActivePrinterId, sendZplToPrinter, fetchActualConnectedPrinters } from '../utils/printerManager';
+import AdminGatekeeperModal from '../components/AdminGatekeeperModal';
 
 import {
   DEFAULT_SCHEMA_DEF,
@@ -57,6 +58,7 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
   const [isPrinting, setIsPrinting] = useState(false);
   const [presets, setPresets] = useState(getAllPresets);
   const [showZplCode, setShowZplCode] = useState(false);
+  const [gatekeeperState, setGatekeeperState] = useState({ isOpen: false, templateId: null, templateName: '' });
 
   // ⭐️ 로컬 실제 감지 프린터 목록 state
   const [printers, setPrinters] = useState(() => getRegisteredPrinters());
@@ -573,15 +575,40 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
     if (e) e.stopPropagation();
     const targetPreset = presets.find(p => p.templateId === presetId);
     if (!targetPreset) return;
-    const nextLocked = !targetPreset.isLocked;
 
-    const res = await updatePresetLock(presetId, nextLocked);
+    // 🔒 잠금 해제(Unlock) 시에는 관리자 비밀번호 인증 필수
+    if (targetPreset.isLocked) {
+      setGatekeeperState({
+        isOpen: true,
+        templateId: presetId,
+        templateName: targetPreset.name
+      });
+      return;
+    }
+
+    // 🔓 잠금(Lock) 설정 시에는 원클릭으로 즉시 확정 잠금
+    const res = await updatePresetLock(presetId, true);
     if (res.success) {
-      setPresets(prev => prev.map(p => p.templateId === presetId ? { ...p, isLocked: nextLocked, paper: { ...(p.paper || {}), isLocked: nextLocked } } : p));
+      setPresets(prev => prev.map(p => p.templateId === presetId ? { ...p, isLocked: true, paper: { ...(p.paper || {}), isLocked: true } } : p));
       if (template && template.templateId === presetId) {
-        setTemplate(prev => ({ ...prev, isLocked: nextLocked, paper: { ...(prev.paper || {}), isLocked: nextLocked } }));
+        setTemplate(prev => ({ ...prev, isLocked: true, paper: { ...(prev.paper || {}), isLocked: true } }));
       }
     }
+  };
+
+  // ⭐️ 관리자 비밀번호 인증 통과 시 잠금 해제 실행
+  const handleUnlockAfterAuth = async () => {
+    const { templateId } = gatekeeperState;
+    if (!templateId) return;
+
+    const res = await updatePresetLock(templateId, false);
+    if (res.success) {
+      setPresets(prev => prev.map(p => p.templateId === templateId ? { ...p, isLocked: false, paper: { ...(p.paper || {}), isLocked: false } } : p));
+      if (template && template.templateId === templateId) {
+        setTemplate(prev => ({ ...prev, isLocked: false, paper: { ...(prev.paper || {}), isLocked: false } }));
+      }
+    }
+    setGatekeeperState({ isOpen: false, templateId: null, templateName: '' });
   };
 
 
@@ -2933,6 +2960,14 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
           </div>
         </div>
       )}
+
+      {/* ⭐️ 관리자 비밀번호 게이트키퍼 모달 (확정 서식 잠금 해제 시 필수 인증) */}
+      <AdminGatekeeperModal
+        isOpen={gatekeeperState.isOpen}
+        onClose={() => setGatekeeperState({ isOpen: false, templateId: null, templateName: '' })}
+        onSuccess={handleUnlockAfterAuth}
+        targetFeatureName={`라벨 서식 잠금 해제: ${gatekeeperState.templateName}`}
+      />
     </div>
   );
 }
