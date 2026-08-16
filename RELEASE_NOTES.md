@@ -1,5 +1,18 @@
 # 릴리즈 노트 (RELEASE_NOTES.md)
 
+## [v1.7.0.Build.38] - 2026-08-16 19:15:00 (KST)
+
+### 🖥️ [엔터프라이즈 하이브리드 RPA 완성: 윈도우 데스크톱(FlaUI UIA3 & Win32 KVM) 3대 액션군 전면 탑재]
+
+1. **윈도우 데스크톱 3대 전문 액션군 신설**:
+   - 🪟 `[FIND_WINDOW]` (윈도우 창 찾기 및 포커스): 프로세스명, 창 제목, SetForeground, 화면 최대화
+   - 🎛️ `[UIA_CONTROL]` (FlaUI UIA3 컨트롤 조작): AutomationId/Name 기반 Button, TextBox, CheckBox, ComboBox, DataGrid 제어
+   - 🖱️ `[KVM_INPUT]` (OS 하드웨어 마우스/키보드): UBUS KVMW 기반 절대좌표 클릭, 단축키 조합(Ctrl+V 등), 타이핑
+2. **좌측 액션 도구함 `🌐 웹 (Playwright)` 및 `🖥️ 데스크톱 (FlaUI/Win32)` 2대 그룹화**
+3. **C# Playwright & FlaUI 하이브리드 비동기 코드 실시간 자동 컴파일러 업그레이드**
+
+---
+
 ## [v1.7.0.Build.37] - 2026-08-16 19:02:00 (KST)
 
 ### 📖 [Microsoft Playwright 공식 기술문서 12대 핵심 레퍼런스 퀵 메뉴 탑재]

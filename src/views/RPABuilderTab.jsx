@@ -173,6 +173,43 @@ export default function RPABuilderTab({ onError }) {
         timeoutMs: 3000
       };
     }
+    if (actionType === 'FIND_WINDOW') {
+      newStep = {
+        ...newStep,
+        name: '윈도우 창 찾기 및 활성화',
+        processName: '',
+        windowTitle: '사내 ERP',
+        bringToFront: true,
+        windowState: 'MAXIMIZED',
+        timeoutMs: 5000
+      };
+    }
+    if (actionType === 'UIA_CONTROL') {
+      newStep = {
+        ...newStep,
+        name: 'UIA 데스크톱 컨트롤 조작',
+        automationId: 'btnSave',
+        controlName: '',
+        controlType: 'Button',
+        operationType: 'Click',
+        attrValue: '{{자산번호}}',
+        saveToVariable: '',
+        fallbackType: 'PIXEL_MATCH',
+        timeoutMs: 3000
+      };
+    }
+    if (actionType === 'KVM_INPUT') {
+      newStep = {
+        ...newStep,
+        name: 'OS 마우스/키보드 (KVM)',
+        kvmType: 'CLICK_COORD',
+        coordX: 500,
+        coordY: 300,
+        hotKey: 'Ctrl+V',
+        text: '{{자산번호}}',
+        delayMs: 300
+      };
+    }
     if (actionType === 'SWITCH_FRAME') newStep = { ...newStep, name: '프레임 전환', frameSelector: 'contentFrame' };
     if (actionType === 'WAIT_ELEMENT') newStep = { ...newStep, name: '요소 로딩 대기', selector: "//input[@id='']" };
     if (actionType === 'INPUT_TEXT') newStep = { ...newStep, name: '텍스트 입력', selector: "//input[@id='']", valueTemplate: '{{자산번호}}', sendEnter: false, fallbackType: 'NONE' };
@@ -674,39 +711,60 @@ export default function RPABuilderTab({ onError }) {
             padding: '10px',
             display: 'flex',
             flexDirection: 'column',
-            gap: '6px'
+            gap: '8px'
           }}>
-            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#94a3b8' }}>
-              액션 도구 상자
+            {/* 1. 🌐 웹 브라우저 액션 (Playwright) */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <div style={{ fontSize: '0.68rem', fontWeight: 700, color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Globe size={11} /> 🌐 웹 브라우저 (Playwright)
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3px' }}>
+                <button onClick={() => handleAddStep('NAVIGATE')} className="btn btn-outline" style={{ fontSize: '0.65rem', padding: '3px 4px' }}>
+                  🌐 URL 이동
+                </button>
+                <button onClick={() => handleAddStep('MANIPULATE_OBJECT')} className="btn btn-primary" style={{ fontSize: '0.65rem', padding: '3px 4px', backgroundColor: '#0284c7', borderColor: '#38bdf8', color: '#fff', fontWeight: 700 }}>
+                  🎯 객체 조작
+                </button>
+                <button onClick={() => handleAddStep('SWITCH_WINDOW')} className="btn btn-outline" style={{ fontSize: '0.65rem', padding: '3px 4px', borderColor: '#38bdf8', color: '#7dd3fc' }}>
+                  🪟 창 전환
+                </button>
+                <button onClick={() => handleAddStep('CLOSE_WINDOW')} className="btn btn-outline" style={{ fontSize: '0.65rem', padding: '3px 4px', borderColor: '#f43f5e', color: '#fda4af' }}>
+                  ❌ 창 닫기
+                </button>
+                <button onClick={() => handleAddStep('SWITCH_FRAME')} className="btn btn-outline" style={{ fontSize: '0.65rem', padding: '3px 4px' }}>
+                  🖼️ 프레임 전환
+                </button>
+                <button onClick={() => handleAddStep('WAIT_ELEMENT')} className="btn btn-outline" style={{ fontSize: '0.65rem', padding: '3px 4px' }}>
+                  ⏳ 요소 대기
+                </button>
+                <button onClick={() => handleAddStep('INPUT_TEXT')} className="btn btn-outline" style={{ fontSize: '0.65rem', padding: '3px 4px' }}>
+                  ⌨️ 텍스트 입력
+                </button>
+                <button onClick={() => handleAddStep('CLICK')} className="btn btn-outline" style={{ fontSize: '0.65rem', padding: '3px 4px' }}>
+                  🖱️ 버튼 클릭
+                </button>
+                <button onClick={() => handleAddStep('HANDLE_ALERT')} className="btn btn-outline" style={{ fontSize: '0.65rem', padding: '3px 4px', gridColumn: 'span 2' }}>
+                  🚨 알럿 수락
+                </button>
+              </div>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
-              <button onClick={() => handleAddStep('NAVIGATE')} className="btn btn-outline" style={{ fontSize: '0.68rem', padding: '4px' }}>
-                🌐 URL 이동
-              </button>
-              <button onClick={() => handleAddStep('MANIPULATE_OBJECT')} className="btn btn-primary" style={{ fontSize: '0.68rem', padding: '4px', backgroundColor: '#0284c7', borderColor: '#38bdf8', color: '#fff', fontWeight: 700 }}>
-                🎯 객체 조작
-              </button>
-              <button onClick={() => handleAddStep('SWITCH_WINDOW')} className="btn btn-outline" style={{ fontSize: '0.68rem', padding: '4px', borderColor: '#38bdf8', color: '#7dd3fc' }}>
-                🪟 창 전환
-              </button>
-              <button onClick={() => handleAddStep('CLOSE_WINDOW')} className="btn btn-outline" style={{ fontSize: '0.68rem', padding: '4px', borderColor: '#f43f5e', color: '#fda4af' }}>
-                ❌ 창 닫기
-              </button>
-              <button onClick={() => handleAddStep('SWITCH_FRAME')} className="btn btn-outline" style={{ fontSize: '0.68rem', padding: '4px' }}>
-                🖼️ 프레임 전환
-              </button>
-              <button onClick={() => handleAddStep('WAIT_ELEMENT')} className="btn btn-outline" style={{ fontSize: '0.68rem', padding: '4px' }}>
-                ⏳ 요소 대기
-              </button>
-              <button onClick={() => handleAddStep('INPUT_TEXT')} className="btn btn-outline" style={{ fontSize: '0.68rem', padding: '4px' }}>
-                ⌨️ 텍스트 입력
-              </button>
-              <button onClick={() => handleAddStep('CLICK')} className="btn btn-outline" style={{ fontSize: '0.68rem', padding: '4px' }}>
-                🖱️ 버튼 클릭
-              </button>
-              <button onClick={() => handleAddStep('HANDLE_ALERT')} className="btn btn-outline" style={{ fontSize: '0.68rem', padding: '4px', gridColumn: 'span 2' }}>
-                🚨 알럿 수락
-              </button>
+
+            {/* 2. 🖥️ 윈도우 데스크톱 액션 (FlaUI & Win32 KVM) */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', borderTop: '1px solid #334155', paddingTop: '6px' }}>
+              <div style={{ fontSize: '0.68rem', fontWeight: 700, color: '#a78bfa', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Monitor size={11} /> 🖥️ 데스크톱 윈도우 (FlaUI / Win32)
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '3px' }}>
+                <button onClick={() => handleAddStep('FIND_WINDOW')} className="btn btn-outline" style={{ fontSize: '0.65rem', padding: '3px 6px', borderColor: '#8b5cf6', color: '#c4b5fd', textAlign: 'left' }}>
+                  🪟 윈도우 창 찾기 / 포커스 (FIND_WINDOW)
+                </button>
+                <button onClick={() => handleAddStep('UIA_CONTROL')} className="btn btn-outline" style={{ fontSize: '0.65rem', padding: '3px 6px', borderColor: '#a855f7', color: '#e9d5ff', textAlign: 'left' }}>
+                  🎛️ UIA 컨트롤 조작 (UIA_CONTROL)
+                </button>
+                <button onClick={() => handleAddStep('KVM_INPUT')} className="btn btn-outline" style={{ fontSize: '0.65rem', padding: '3px 6px', borderColor: '#ec4899', color: '#fbcfe8', textAlign: 'left' }}>
+                  🖱️ OS 마우스/키보드 (KVM_INPUT)
+                </button>
+              </div>
             </div>
           </div>
 
@@ -1712,6 +1770,314 @@ export default function RPABuilderTab({ onError }) {
                       <option value="NONE">기본 실패 (예외 중단)</option>
                     </select>
                   </div>
+                </div>
+              )}
+
+              {/* ── [5] FIND_WINDOW 액션: 윈도우 창 찾기 및 포커스 ── */}
+              {selectedStep.action === 'FIND_WINDOW' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <label style={{ fontSize: '0.68rem', color: '#a78bfa', fontWeight: 700 }}>윈도우 창 제목 (Window Title)</label>
+                    <input
+                      type="text"
+                      value={selectedStep.windowTitle || ''}
+                      onChange={e => handleStepPropChange('windowTitle', e.target.value)}
+                      placeholder="예: 사내 ERP, 자산관리 시스템"
+                      style={{
+                        backgroundColor: '#0f172a',
+                        border: '1px solid #8b5cf6',
+                        borderRadius: '4px',
+                        padding: '4px 8px',
+                        color: '#f8fafc',
+                        fontSize: '0.75rem'
+                      }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <label style={{ fontSize: '0.68rem', color: '#94a3b8' }}>실행 프로세스명 (선택)</label>
+                      <input
+                        type="text"
+                        value={selectedStep.processName || ''}
+                        onChange={e => handleStepPropChange('processName', e.target.value)}
+                        placeholder="예: ErpClient.exe"
+                        style={{
+                          backgroundColor: '#0f172a',
+                          border: '1px solid #475569',
+                          borderRadius: '4px',
+                          padding: '4px 8px',
+                          color: '#f8fafc',
+                          fontSize: '0.75rem'
+                        }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <label style={{ fontSize: '0.68rem', color: '#94a3b8' }}>창 화면 상태</label>
+                      <select
+                        value={selectedStep.windowState || 'MAXIMIZED'}
+                        onChange={e => handleStepPropChange('windowState', e.target.value)}
+                        style={{
+                          backgroundColor: '#0f172a',
+                          border: '1px solid #475569',
+                          borderRadius: '4px',
+                          padding: '4px 6px',
+                          color: '#f8fafc',
+                          fontSize: '0.72rem'
+                        }}
+                      >
+                        <option value="MAXIMIZED">전체화면 최대화 (Maximized)</option>
+                        <option value="NORMAL">일반 크기 복원 (Normal)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.70rem', color: '#c4b5fd', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={selectedStep.bringToFront !== false}
+                      onChange={e => handleStepPropChange('bringToFront', e.target.checked)}
+                    />
+                    창을 최상단 전면으로 강제 활성화 (SetForeground)
+                  </label>
+                </div>
+              )}
+
+              {/* ── [6] UIA_CONTROL 액션: 데스크톱 UIA 컨트롤 조작 ── */}
+              {selectedStep.action === 'UIA_CONTROL' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <label style={{ fontSize: '0.68rem', color: '#a855f7', fontWeight: 700 }}>AutomationId (권장)</label>
+                      <input
+                        type="text"
+                        value={selectedStep.automationId || ''}
+                        onChange={e => handleStepPropChange('automationId', e.target.value)}
+                        placeholder="예: txtAssetNo, btnSave"
+                        style={{
+                          backgroundColor: '#0f172a',
+                          border: '1px solid #a855f7',
+                          borderRadius: '4px',
+                          padding: '4px 8px',
+                          color: '#f8fafc',
+                          fontSize: '0.75rem',
+                          fontWeight: 600
+                        }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <label style={{ fontSize: '0.68rem', color: '#94a3b8' }}>컨트롤 Name / 텍스트</label>
+                      <input
+                        type="text"
+                        value={selectedStep.controlName || ''}
+                        onChange={e => handleStepPropChange('controlName', e.target.value)}
+                        placeholder="예: 저장, 등록"
+                        style={{
+                          backgroundColor: '#0f172a',
+                          border: '1px solid #475569',
+                          borderRadius: '4px',
+                          padding: '4px 8px',
+                          color: '#f8fafc',
+                          fontSize: '0.75rem'
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <label style={{ fontSize: '0.68rem', color: '#94a3b8' }}>컨트롤 유형</label>
+                      <select
+                        value={selectedStep.controlType || 'Button'}
+                        onChange={e => handleStepPropChange('controlType', e.target.value)}
+                        style={{
+                          backgroundColor: '#0f172a',
+                          border: '1px solid #475569',
+                          borderRadius: '4px',
+                          padding: '4px 6px',
+                          color: '#f8fafc',
+                          fontSize: '0.72rem'
+                        }}
+                      >
+                        <option value="Button">버튼 (Button)</option>
+                        <option value="TextBox">텍스트박스 (TextBox)</option>
+                        <option value="CheckBox">체크박스 (CheckBox)</option>
+                        <option value="ComboBox">콤보박스 (ComboBox)</option>
+                        <option value="Grid">데이터 그리드 (DataGrid)</option>
+                      </select>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <label style={{ fontSize: '0.68rem', color: '#94a3b8' }}>조작 유형</label>
+                      <select
+                        value={selectedStep.operationType || 'Click'}
+                        onChange={e => handleStepPropChange('operationType', e.target.value)}
+                        style={{
+                          backgroundColor: '#0f172a',
+                          border: '1px solid #475569',
+                          borderRadius: '4px',
+                          padding: '4px 6px',
+                          color: '#38bdf8',
+                          fontSize: '0.72rem',
+                          fontWeight: 600
+                        }}
+                      >
+                        <option value="Click">클릭 실행 (Invoke / Click)</option>
+                        <option value="SetValue">값 입력 (.Text = ...)</option>
+                        <option value="GetValue">값 추출 (변수에 저장)</option>
+                        <option value="Toggle">체크박스 토글 (Toggle)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {selectedStep.operationType === 'SetValue' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <label style={{ fontSize: '0.68rem', color: '#94a3b8' }}>입력할 값 / 변수 템플릿</label>
+                      <input
+                        type="text"
+                        value={selectedStep.attrValue || ''}
+                        onChange={e => handleStepPropChange('attrValue', e.target.value)}
+                        placeholder="{{자산번호}}"
+                        style={{
+                          backgroundColor: '#0f172a',
+                          border: '1px solid #475569',
+                          borderRadius: '4px',
+                          padding: '4px 8px',
+                          color: '#f8fafc',
+                          fontSize: '0.75rem'
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {selectedStep.operationType === 'GetValue' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <label style={{ fontSize: '0.68rem', color: '#94a3b8' }}>저장할 변수명</label>
+                      <input
+                        type="text"
+                        value={selectedStep.saveToVariable || '데스크톱_추출값'}
+                        onChange={e => handleStepPropChange('saveToVariable', e.target.value)}
+                        placeholder="예: 추출_자산번호"
+                        style={{
+                          backgroundColor: '#0f172a',
+                          border: '1px solid #34d399',
+                          borderRadius: '4px',
+                          padding: '4px 8px',
+                          color: '#34d399',
+                          fontSize: '0.75rem',
+                          fontWeight: 700
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ── [7] KVM_INPUT 액션: OS 마우스/키보드 (KVMW) ── */}
+              {selectedStep.action === 'KVM_INPUT' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <label style={{ fontSize: '0.68rem', color: '#ec4899', fontWeight: 700 }}>KVM 하드웨어 조작 유형</label>
+                    <select
+                      value={selectedStep.kvmType || 'CLICK_COORD'}
+                      onChange={e => handleStepPropChange('kvmType', e.target.value)}
+                      style={{
+                        backgroundColor: '#0f172a',
+                        border: '1px solid #ec4899',
+                        borderRadius: '4px',
+                        padding: '4px 6px',
+                        color: '#fbcfe8',
+                        fontSize: '0.75rem',
+                        fontWeight: 700
+                      }}
+                    >
+                      <option value="CLICK_COORD">🖱️ 절대 화면 좌표 클릭 (Mouse Click)</option>
+                      <option value="HOTKEY">⌨️ 시스템 단축키 입력 (Ctrl+V, Enter, Tab)</option>
+                      <option value="TYPE_TEXT">⌨️ 네이티브 키보드 타이핑 (Type String)</option>
+                    </select>
+                  </div>
+
+                  {selectedStep.kvmType === 'CLICK_COORD' && (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        <label style={{ fontSize: '0.68rem', color: '#94a3b8' }}>X 좌표 (Pixel)</label>
+                        <input
+                          type="number"
+                          value={selectedStep.coordX || 500}
+                          onChange={e => handleStepPropChange('coordX', Number(e.target.value))}
+                          style={{
+                            backgroundColor: '#0f172a',
+                            border: '1px solid #475569',
+                            borderRadius: '4px',
+                            padding: '4px 8px',
+                            color: '#f8fafc',
+                            fontSize: '0.75rem'
+                          }}
+                        />
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        <label style={{ fontSize: '0.68rem', color: '#94a3b8' }}>Y 좌표 (Pixel)</label>
+                        <input
+                          type="number"
+                          value={selectedStep.coordY || 300}
+                          onChange={e => handleStepPropChange('coordY', Number(e.target.value))}
+                          style={{
+                            backgroundColor: '#0f172a',
+                            border: '1px solid #475569',
+                            borderRadius: '4px',
+                            padding: '4px 8px',
+                            color: '#f8fafc',
+                            fontSize: '0.75rem'
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedStep.kvmType === 'HOTKEY' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <label style={{ fontSize: '0.68rem', color: '#94a3b8' }}>단축키 조합</label>
+                      <select
+                        value={selectedStep.hotKey || 'Ctrl+V'}
+                        onChange={e => handleStepPropChange('hotKey', e.target.value)}
+                        style={{
+                          backgroundColor: '#0f172a',
+                          border: '1px solid #475569',
+                          borderRadius: '4px',
+                          padding: '4px 6px',
+                          color: '#f8fafc',
+                          fontSize: '0.72rem'
+                        }}
+                      >
+                        <option value="Ctrl+V">Ctrl + V (붙여넣기)</option>
+                        <option value="Ctrl+C">Ctrl + C (복사)</option>
+                        <option value="Ctrl+A">Ctrl + A (전체선택)</option>
+                        <option value="Enter">Enter (엔터)</option>
+                        <option value="Tab">Tab (탭 이동)</option>
+                        <option value="Esc">Esc (취소/닫기)</option>
+                      </select>
+                    </div>
+                  )}
+
+                  {selectedStep.kvmType === 'TYPE_TEXT' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <label style={{ fontSize: '0.68rem', color: '#94a3b8' }}>타이핑할 텍스트</label>
+                      <input
+                        type="text"
+                        value={selectedStep.text || ''}
+                        onChange={e => handleStepPropChange('text', e.target.value)}
+                        placeholder="{{자산번호}}"
+                        style={{
+                          backgroundColor: '#0f172a',
+                          border: '1px solid #475569',
+                          borderRadius: '4px',
+                          padding: '4px 8px',
+                          color: '#f8fafc',
+                          fontSize: '0.75rem'
+                        }}
+                      />
+                    </div>
+                  )}
                 </div>
               )}
 
