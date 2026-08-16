@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { getAllRpaScenarios, getRpaScenarioById, saveRpaScenario, deleteRpaScenario, generatePlaywrightCSharpCode, BUILTIN_RPA_SCENARIOS } from '../utils/rpaEngine';
 import { DEFAULT_SCHEMA_DEF } from '../utils/dynamicSchema';
+import ObjectManipulatorModal from '../components/ObjectManipulatorModal';
 
 export default function RPABuilderTab({ onError }) {
   const [scenarios, setScenarios] = useState(getAllRpaScenarios);
@@ -40,6 +41,7 @@ export default function RPABuilderTab({ onError }) {
   const [isInspecting, setIsInspecting] = useState(false);
   const [showCodeModal, setShowCodeModal] = useState(false);
   const [showDocsModal, setShowDocsModal] = useState(false);
+  const [showObjectModal, setShowObjectModal] = useState(false);
 
   // 좌측 도구함 & 변수 관리 접고 펼치기 상태
   const [isWebOpen, setIsWebOpen] = useState(true);
@@ -243,6 +245,22 @@ export default function RPABuilderTab({ onError }) {
       });
     };
 
+    const updatedSteps = updateInList(scenario.steps || []);
+    updateScenarioState({ ...scenario, steps: updatedSteps });
+  };
+
+  // 객체 정밀 조작 모달 저장 핸들러
+  const handleSaveStepFromModal = (updatedStep) => {
+    if (!updatedStep) return;
+    const updateInList = (stepsList) => {
+      return stepsList.map(st => {
+        if (st.id === updatedStep.id) return updatedStep;
+        if (st.action === 'LOOP_ROWS' && Array.isArray(st.subSteps)) {
+          return { ...st, subSteps: updateInList(st.subSteps) };
+        }
+        return st;
+      });
+    };
     const updatedSteps = updateInList(scenario.steps || []);
     updateScenarioState({ ...scenario, steps: updatedSteps });
   };
@@ -1535,30 +1553,103 @@ export default function RPABuilderTab({ onError }) {
                 </div>
               )}
 
-              {/* ── [4] MANIPULATE_OBJECT 액션: 객체 탐색 및 속성/메서드/값 조작 ── */}
+              {/* ── [4] MANIPULATE_OBJECT 액션: 객체 정밀 조작 스튜디오 연동 ── */}
               {selectedStep.action === 'MANIPULATE_OBJECT' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {/* 1. 타겟 요소 선택자 & 인스펙터 */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {/* 대형 스튜디오 모달 열기 버튼 */}
+                  <button
+                    type="button"
+                    onClick={() => setShowObjectModal(true)}
+                    className="btn btn-primary"
+                    style={{
+                      fontSize: '0.82rem',
+                      padding: '10px 14px',
+                      backgroundColor: '#0284c7',
+                      borderColor: '#38bdf8',
+                      color: '#fff',
+                      fontWeight: 800,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      boxShadow: '0 4px 12px rgba(2, 132, 199, 0.4)'
+                    }}
+                  >
+                    <Target size={16} /> 🎯 객체 정밀 조작 스튜디오 열기 (추천)
+                  </button>
+
+                  {/* 현재 설정 요약 카드 */}
+                  <div style={{
+                    backgroundColor: '#0f172a',
+                    border: '1px solid #334155',
+                    borderRadius: '8px',
+                    padding: '10px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '6px'
+                  }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <label style={{ fontSize: '0.68rem', color: '#94a3b8', fontWeight: 700 }}>
-                        타겟 Object 선택자 (XPath / ID / CSS)
-                      </label>
-                      <button
-                        type="button"
-                        onClick={handleInspectElement}
-                        disabled={isInspecting}
-                        className="btn btn-outline"
-                        style={{ fontSize: '0.65rem', padding: '2px 6px', borderColor: '#38bdf8', color: '#7dd3fc', display: 'flex', alignItems: 'center', gap: '3px' }}
-                      >
-                        <Crosshair size={11} /> {isInspecting ? '객체 분석 중...' : '🔍 객체 탐색 및 스펙 분석'}
-                      </button>
+                      <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>타겟 Object</span>
+                      <span style={{ fontSize: '0.65rem', color: '#38bdf8', fontFamily: 'Consolas, monospace', fontWeight: 600 }}>
+                        {selectedStep.selector || '미지정 (스튜디오에서 지정)'}
+                      </span>
                     </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>조작 유형</span>
+                      <span style={{ fontSize: '0.68rem', color: '#fde047', fontWeight: 700 }}>
+                        {selectedStep.operationType === 'SET_VALUE' && '✏️ 값 / 텍스트 설정'}
+                        {selectedStep.operationType === 'GET_VALUE' && '📥 값 추출 및 변수 저장'}
+                        {selectedStep.operationType === 'CALL_METHOD' && '⚡ JS 메서드 실행'}
+                        {selectedStep.operationType === 'SET_ATTRIBUTE' && '🏷️ HTML 속성 변경'}
+                        {selectedStep.operationType === 'SET_STYLE' && '🎨 CSS 스타일 조작'}
+                        {selectedStep.operationType === 'CLASS_TOGGLE' && '🔄 CSS 클래스 토글'}
+                      </span>
+                    </div>
+
+                    {selectedStep.operationType === 'SET_VALUE' && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>설정값</span>
+                        <span style={{ fontSize: '0.68rem', color: '#34d399', fontWeight: 600 }}>
+                          {selectedStep.attrValue || '(비어있음)'}
+                        </span>
+                      </div>
+                    )}
+
+                    {selectedStep.operationType === 'GET_VALUE' && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>저장 변수</span>
+                        <span style={{ fontSize: '0.68rem', color: '#34d399', fontWeight: 700 }}>
+                          {selectedStep.saveToVariable || '추출_값'}
+                        </span>
+                      </div>
+                    )}
+
+                    {selectedStep.operationType === 'CALL_METHOD' && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>호출 메서드</span>
+                        <span style={{ fontSize: '0.68rem', color: '#c4b5fd', fontFamily: 'Consolas, monospace' }}>
+                          .{selectedStep.methodName || 'click()'}
+                        </span>
+                      </div>
+                    )}
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #1e293b', paddingTop: '4px' }}>
+                      <span style={{ fontSize: '0.65rem', color: '#94a3b8' }}>비상 대안</span>
+                      <span style={{ fontSize: '0.65rem', color: '#f59e0b' }}>
+                        {selectedStep.fallbackType || 'JS_INJECT'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* 빠른 선택자 직접 입력창 */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <label style={{ fontSize: '0.68rem', color: '#94a3b8' }}>타겟 선택자 (직접 입력 시)</label>
                     <input
                       type="text"
                       value={selectedStep.selector || ''}
                       onChange={e => handleStepPropChange('selector', e.target.value)}
-                      placeholder="//input[@id='assetNo'] 또는 #assetNo"
+                      placeholder="//input[@id='assetNo']"
                       style={{
                         backgroundColor: '#0f172a',
                         border: '1px solid #475569',
@@ -1568,280 +1659,6 @@ export default function RPABuilderTab({ onError }) {
                         fontSize: '0.75rem'
                       }}
                     />
-                  </div>
-
-                  {/* 2. 객체 조작 유형 선택 */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                    <label style={{ fontSize: '0.68rem', color: '#38bdf8', fontWeight: 700 }}>
-                      객체 조작 유형 (Operation Type)
-                    </label>
-                    <select
-                      value={selectedStep.operationType || 'SET_VALUE'}
-                      onChange={e => handleStepPropChange('operationType', e.target.value)}
-                      style={{
-                        backgroundColor: '#0f172a',
-                        border: '1px solid #38bdf8',
-                        borderRadius: '4px',
-                        padding: '4px 6px',
-                        color: '#38bdf8',
-                        fontSize: '0.75rem',
-                        fontWeight: 700
-                      }}
-                    >
-                      <option value="SET_VALUE">✏️ 값 / 텍스트 강제 설정 (.value / .innerText)</option>
-                      <option value="GET_VALUE">📥 값 추출 및 변수에 저장 (.value / .innerText ➔ 변수)</option>
-                      <option value="CALL_METHOD">⚡ JavaScript 메서드 / 함수 호출 (.click(), .focus(), .scrollIntoView())</option>
-                      <option value="SET_ATTRIBUTE">🏷️ HTML 속성 변경 (disabled, readOnly, checked, src, href)</option>
-                      <option value="SET_STYLE">🎨 CSS 스타일 강제 조작 (display: block, visibility: visible)</option>
-                      <option value="CLASS_TOGGLE">🔄 CSS 클래스 추가 / 제거 (classList.add / remove)</option>
-                    </select>
-                  </div>
-
-                  {/* 3-1: SET_VALUE 설정 */}
-                  {selectedStep.operationType === 'SET_VALUE' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                      <label style={{ fontSize: '0.68rem', color: '#94a3b8' }}>설정할 값 / 텍스트 템플릿</label>
-                      <input
-                        type="text"
-                        value={selectedStep.attrValue || ''}
-                        onChange={e => handleStepPropChange('attrValue', e.target.value)}
-                        placeholder="{{자산번호}}"
-                        style={{
-                          backgroundColor: '#0f172a',
-                          border: '1px solid #475569',
-                          borderRadius: '4px',
-                          padding: '4px 8px',
-                          color: '#f8fafc',
-                          fontSize: '0.75rem'
-                        }}
-                      />
-                    </div>
-                  )}
-
-                  {/* 3-2: GET_VALUE 설정 */}
-                  {selectedStep.operationType === 'GET_VALUE' && (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                        <label style={{ fontSize: '0.68rem', color: '#94a3b8' }}>추출할 속성/항목</label>
-                        <select
-                          value={selectedStep.attrName || 'innerText'}
-                          onChange={e => handleStepPropChange('attrName', e.target.value)}
-                          style={{
-                            backgroundColor: '#0f172a',
-                            border: '1px solid #475569',
-                            borderRadius: '4px',
-                            padding: '4px 6px',
-                            color: '#f8fafc',
-                            fontSize: '0.72rem'
-                          }}
-                        >
-                          <option value="innerText">innerText (화면 표시 텍스트)</option>
-                          <option value="value">value (입력창 값)</option>
-                          <option value="innerHTML">innerHTML (HTML 원문)</option>
-                          <option value="src">src (이미지/스크립트 경로)</option>
-                          <option value="href">href (링크 주소)</option>
-                        </select>
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                        <label style={{ fontSize: '0.68rem', color: '#94a3b8' }}>저장할 변수명</label>
-                        <input
-                          type="text"
-                          value={selectedStep.saveToVariable || '추출_값'}
-                          onChange={e => handleStepPropChange('saveToVariable', e.target.value)}
-                          placeholder="예: 추출_자산번호"
-                          style={{
-                            backgroundColor: '#0f172a',
-                            border: '1px solid #34d399',
-                            borderRadius: '4px',
-                            padding: '4px 8px',
-                            color: '#34d399',
-                            fontSize: '0.75rem',
-                            fontWeight: 700
-                          }}
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {/* 3-3: CALL_METHOD 설정 */}
-                  {selectedStep.operationType === 'CALL_METHOD' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                      <label style={{ fontSize: '0.68rem', color: '#94a3b8' }}>실행할 메서드 (Method Call)</label>
-                      <select
-                        value={selectedStep.methodName || 'click()'}
-                        onChange={e => handleStepPropChange('methodName', e.target.value)}
-                        style={{
-                          backgroundColor: '#0f172a',
-                          border: '1px solid #475569',
-                          borderRadius: '4px',
-                          padding: '4px 6px',
-                          color: '#38bdf8',
-                          fontSize: '0.75rem',
-                          fontWeight: 600
-                        }}
-                      >
-                        <option value="click()">.click() - 강제 클릭 실행</option>
-                        <option value="focus()">.focus() - 포커스 이동</option>
-                        <option value="blur()">.blur() - 포커스 해제</option>
-                        <option value="select()">.select() - 텍스트 전체 블록 지정</option>
-                        <option value="scrollIntoView({behavior:'smooth',block:'center'})">.scrollIntoView() - 화면 중앙 스크롤</option>
-                        <option value="dispatchEvent(new Event('change'))">.dispatchEvent('change') - 변경 이벤트 강제 트리거</option>
-                        <option value="submit()">.submit() - 폼 즉시 전송</option>
-                      </select>
-                    </div>
-                  )}
-
-                  {/* 3-4: SET_ATTRIBUTE 설정 */}
-                  {selectedStep.operationType === 'SET_ATTRIBUTE' && (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                        <label style={{ fontSize: '0.68rem', color: '#94a3b8' }}>속성명 (Attribute)</label>
-                        <input
-                          type="text"
-                          value={selectedStep.attrName || 'disabled'}
-                          onChange={e => handleStepPropChange('attrName', e.target.value)}
-                          placeholder="예: disabled, readOnly"
-                          style={{
-                            backgroundColor: '#0f172a',
-                            border: '1px solid #475569',
-                            borderRadius: '4px',
-                            padding: '4px 8px',
-                            color: '#f8fafc',
-                            fontSize: '0.75rem'
-                          }}
-                        />
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                        <label style={{ fontSize: '0.68rem', color: '#94a3b8' }}>속성값 (Value)</label>
-                        <input
-                          type="text"
-                          value={selectedStep.attrValue || 'false'}
-                          onChange={e => handleStepPropChange('attrValue', e.target.value)}
-                          placeholder="예: false, true, none"
-                          style={{
-                            backgroundColor: '#0f172a',
-                            border: '1px solid #475569',
-                            borderRadius: '4px',
-                            padding: '4px 8px',
-                            color: '#f8fafc',
-                            fontSize: '0.75rem'
-                          }}
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {/* 3-5: SET_STYLE 설정 */}
-                  {selectedStep.operationType === 'SET_STYLE' && (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                        <label style={{ fontSize: '0.68rem', color: '#94a3b8' }}>CSS 스타일명</label>
-                        <input
-                          type="text"
-                          value={selectedStep.attrName || 'display'}
-                          onChange={e => handleStepPropChange('attrName', e.target.value)}
-                          placeholder="예: display, visibility, opacity"
-                          style={{
-                            backgroundColor: '#0f172a',
-                            border: '1px solid #475569',
-                            borderRadius: '4px',
-                            padding: '4px 8px',
-                            color: '#f8fafc',
-                            fontSize: '0.75rem'
-                          }}
-                        />
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                        <label style={{ fontSize: '0.68rem', color: '#94a3b8' }}>스타일 값</label>
-                        <input
-                          type="text"
-                          value={selectedStep.attrValue || 'block'}
-                          onChange={e => handleStepPropChange('attrValue', e.target.value)}
-                          placeholder="예: block, visible, 1"
-                          style={{
-                            backgroundColor: '#0f172a',
-                            border: '1px solid #475569',
-                            borderRadius: '4px',
-                            padding: '4px 8px',
-                            color: '#f8fafc',
-                            fontSize: '0.75rem'
-                          }}
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {/* 3-6: CLASS_TOGGLE 설정 */}
-                  {selectedStep.operationType === 'CLASS_TOGGLE' && (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                        <label style={{ fontSize: '0.68rem', color: '#94a3b8' }}>동작</label>
-                        <select
-                          value={selectedStep.attrName || 'add'}
-                          onChange={e => handleStepPropChange('attrName', e.target.value)}
-                          style={{
-                            backgroundColor: '#0f172a',
-                            border: '1px solid #475569',
-                            borderRadius: '4px',
-                            padding: '4px 6px',
-                            color: '#f8fafc',
-                            fontSize: '0.72rem'
-                          }}
-                        >
-                          <option value="add">클래스 추가 (.classList.add)</option>
-                          <option value="remove">클래스 제거 (.classList.remove)</option>
-                        </select>
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                        <label style={{ fontSize: '0.68rem', color: '#94a3b8' }}>클래스명</label>
-                        <input
-                          type="text"
-                          value={selectedStep.attrValue || 'active'}
-                          onChange={e => handleStepPropChange('attrValue', e.target.value)}
-                          placeholder="예: active, show, selected"
-                          style={{
-                            backgroundColor: '#0f172a',
-                            border: '1px solid #475569',
-                            borderRadius: '4px',
-                            padding: '4px 8px',
-                            color: '#f8fafc',
-                            fontSize: '0.75rem'
-                          }}
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {/* 비상 대안 */}
-                  <div style={{
-                    backgroundColor: '#0f172a',
-                    border: '1px solid #334155',
-                    borderRadius: '6px',
-                    padding: '8px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '4px'
-                  }}>
-                    <label style={{ fontSize: '0.68rem', fontWeight: 700, color: '#f59e0b' }}>
-                      비상 대안 설정 (CSS/XPath 미검출 시)
-                    </label>
-                    <select
-                      value={selectedStep.fallbackType || 'JS_INJECT'}
-                      onChange={e => handleStepPropChange('fallbackType', e.target.value)}
-                      style={{
-                        backgroundColor: '#1e293b',
-                        border: '1px solid #475569',
-                        borderRadius: '4px',
-                        padding: '4px 6px',
-                        color: '#f8fafc',
-                        fontSize: '0.72rem'
-                      }}
-                    >
-                      <option value="JS_INJECT">⚡ JavaScript 강제 주입 실행 (권장)</option>
-                      <option value="PIXEL_MATCH">🖼️ 0MB 초경량 픽셀 매칭 (이미지 탐색)</option>
-                      <option value="KEYBOARD_TAB">⌨️ 키보드 탭(Tab) 시퀀스 이동</option>
-                      <option value="NONE">기본 실패 (예외 중단)</option>
-                    </select>
                   </div>
                 </div>
               )}
@@ -2308,6 +2125,17 @@ export default function RPABuilderTab({ onError }) {
           )}
         </div>
       </div>
+
+      {/* ── [3] 객체 정밀 조작 스튜디오 모달 ────────────────────────── */}
+      {showObjectModal && selectedStep && (
+        <ObjectManipulatorModal
+          isOpen={showObjectModal}
+          onClose={() => setShowObjectModal(false)}
+          step={selectedStep}
+          onSaveStep={handleSaveStepFromModal}
+          scenario={scenario}
+        />
+      )}
     </div>
   );
 }
