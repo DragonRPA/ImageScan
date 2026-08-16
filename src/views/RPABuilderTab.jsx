@@ -25,7 +25,9 @@ import {
   Code2,
   Variable,
   FileCode2,
-  BookOpen
+  BookOpen,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react';
 import { getAllRpaScenarios, getRpaScenarioById, saveRpaScenario, deleteRpaScenario, generatePlaywrightCSharpCode, BUILTIN_RPA_SCENARIOS } from '../utils/rpaEngine';
 import { DEFAULT_SCHEMA_DEF } from '../utils/dynamicSchema';
@@ -38,6 +40,11 @@ export default function RPABuilderTab({ onError }) {
   const [isInspecting, setIsInspecting] = useState(false);
   const [showCodeModal, setShowCodeModal] = useState(false);
   const [showDocsModal, setShowDocsModal] = useState(false);
+
+  // 좌측 도구함 & 변수 관리 접고 펼치기 상태
+  const [isWebOpen, setIsWebOpen] = useState(true);
+  const [isDesktopOpen, setIsDesktopOpen] = useState(true);
+  const [isVariablesOpen, setIsVariablesOpen] = useState(true);
 
   const scenario = scenarios.find(s => s.id === selectedScenarioId) || scenarios[0];
 
@@ -708,198 +715,264 @@ export default function RPABuilderTab({ onError }) {
             backgroundColor: '#1e293b',
             border: '1px solid #334155',
             borderRadius: '8px',
-            padding: '10px',
+            padding: '8px 10px',
             display: 'flex',
             flexDirection: 'column',
             gap: '8px'
           }}>
-            {/* 1. 🌐 웹 브라우저 액션 (Playwright) */}
+            {/* 1. 🌐 웹 브라우저 액션 (Playwright) - 접고 펼치기 */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <div style={{ fontSize: '0.68rem', fontWeight: 700, color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <Globe size={11} /> 🌐 웹 브라우저 (Playwright)
+              <div
+                onClick={() => setIsWebOpen(prev => !prev)}
+                style={{
+                  fontSize: '0.70rem',
+                  fontWeight: 700,
+                  color: '#38bdf8',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                  padding: '2px 0'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <Globe size={12} /> 🌐 웹 브라우저 (Playwright)
+                </div>
+                {isWebOpen ? <ChevronDown size={13} style={{ color: '#94a3b8' }} /> : <ChevronRight size={13} style={{ color: '#94a3b8' }} />}
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3px' }}>
-                <button onClick={() => handleAddStep('NAVIGATE')} className="btn btn-outline" style={{ fontSize: '0.65rem', padding: '3px 4px' }}>
-                  🌐 URL 이동
-                </button>
-                <button onClick={() => handleAddStep('MANIPULATE_OBJECT')} className="btn btn-primary" style={{ fontSize: '0.65rem', padding: '3px 4px', backgroundColor: '#0284c7', borderColor: '#38bdf8', color: '#fff', fontWeight: 700 }}>
-                  🎯 객체 조작
-                </button>
-                <button onClick={() => handleAddStep('SWITCH_WINDOW')} className="btn btn-outline" style={{ fontSize: '0.65rem', padding: '3px 4px', borderColor: '#38bdf8', color: '#7dd3fc' }}>
-                  🪟 창 전환
-                </button>
-                <button onClick={() => handleAddStep('CLOSE_WINDOW')} className="btn btn-outline" style={{ fontSize: '0.65rem', padding: '3px 4px', borderColor: '#f43f5e', color: '#fda4af' }}>
-                  ❌ 창 닫기
-                </button>
-                <button onClick={() => handleAddStep('SWITCH_FRAME')} className="btn btn-outline" style={{ fontSize: '0.65rem', padding: '3px 4px' }}>
-                  🖼️ 프레임 전환
-                </button>
-                <button onClick={() => handleAddStep('WAIT_ELEMENT')} className="btn btn-outline" style={{ fontSize: '0.65rem', padding: '3px 4px' }}>
-                  ⏳ 요소 대기
-                </button>
-                <button onClick={() => handleAddStep('INPUT_TEXT')} className="btn btn-outline" style={{ fontSize: '0.65rem', padding: '3px 4px' }}>
-                  ⌨️ 텍스트 입력
-                </button>
-                <button onClick={() => handleAddStep('CLICK')} className="btn btn-outline" style={{ fontSize: '0.65rem', padding: '3px 4px' }}>
-                  🖱️ 버튼 클릭
-                </button>
-                <button onClick={() => handleAddStep('HANDLE_ALERT')} className="btn btn-outline" style={{ fontSize: '0.65rem', padding: '3px 4px', gridColumn: 'span 2' }}>
-                  🚨 알럿 수락
-                </button>
-              </div>
+
+              {isWebOpen && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3px', marginTop: '2px' }}>
+                  <button onClick={() => handleAddStep('NAVIGATE')} className="btn btn-outline" style={{ fontSize: '0.65rem', padding: '3px 4px' }}>
+                    🌐 URL 이동
+                  </button>
+                  <button onClick={() => handleAddStep('MANIPULATE_OBJECT')} className="btn btn-primary" style={{ fontSize: '0.65rem', padding: '3px 4px', backgroundColor: '#0284c7', borderColor: '#38bdf8', color: '#fff', fontWeight: 700 }}>
+                    🎯 객체 조작
+                  </button>
+                  <button onClick={() => handleAddStep('SWITCH_WINDOW')} className="btn btn-outline" style={{ fontSize: '0.65rem', padding: '3px 4px', borderColor: '#38bdf8', color: '#7dd3fc' }}>
+                    🪟 창 전환
+                  </button>
+                  <button onClick={() => handleAddStep('CLOSE_WINDOW')} className="btn btn-outline" style={{ fontSize: '0.65rem', padding: '3px 4px', borderColor: '#f43f5e', color: '#fda4af' }}>
+                    ❌ 창 닫기
+                  </button>
+                  <button onClick={() => handleAddStep('SWITCH_FRAME')} className="btn btn-outline" style={{ fontSize: '0.65rem', padding: '3px 4px' }}>
+                    🖼️ 프레임 전환
+                  </button>
+                  <button onClick={() => handleAddStep('WAIT_ELEMENT')} className="btn btn-outline" style={{ fontSize: '0.65rem', padding: '3px 4px' }}>
+                    ⏳ 요소 대기
+                  </button>
+                  <button onClick={() => handleAddStep('INPUT_TEXT')} className="btn btn-outline" style={{ fontSize: '0.65rem', padding: '3px 4px' }}>
+                    ⌨️ 텍스트 입력
+                  </button>
+                  <button onClick={() => handleAddStep('CLICK')} className="btn btn-outline" style={{ fontSize: '0.65rem', padding: '3px 4px' }}>
+                    🖱️ 버튼 클릭
+                  </button>
+                  <button onClick={() => handleAddStep('HANDLE_ALERT')} className="btn btn-outline" style={{ fontSize: '0.65rem', padding: '3px 4px', gridColumn: 'span 2' }}>
+                    🚨 알럿 수락
+                  </button>
+                </div>
+              )}
             </div>
 
-            {/* 2. 🖥️ 윈도우 데스크톱 액션 (FlaUI & Win32 KVM) */}
+            {/* 2. 🖥️ 윈도우 데스크톱 액션 (FlaUI & Win32 KVM) - 접고 펼치기 */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', borderTop: '1px solid #334155', paddingTop: '6px' }}>
-              <div style={{ fontSize: '0.68rem', fontWeight: 700, color: '#a78bfa', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <Monitor size={11} /> 🖥️ 데스크톱 윈도우 (FlaUI / Win32)
+              <div
+                onClick={() => setIsDesktopOpen(prev => !prev)}
+                style={{
+                  fontSize: '0.70rem',
+                  fontWeight: 700,
+                  color: '#a78bfa',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                  padding: '2px 0'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <Monitor size={12} /> 🖥️ 데스크톱 윈도우 (FlaUI)
+                </div>
+                {isDesktopOpen ? <ChevronDown size={13} style={{ color: '#94a3b8' }} /> : <ChevronRight size={13} style={{ color: '#94a3b8' }} />}
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '3px' }}>
-                <button onClick={() => handleAddStep('FIND_WINDOW')} className="btn btn-outline" style={{ fontSize: '0.65rem', padding: '3px 6px', borderColor: '#8b5cf6', color: '#c4b5fd', textAlign: 'left' }}>
-                  🪟 윈도우 창 찾기 / 포커스 (FIND_WINDOW)
-                </button>
-                <button onClick={() => handleAddStep('UIA_CONTROL')} className="btn btn-outline" style={{ fontSize: '0.65rem', padding: '3px 6px', borderColor: '#a855f7', color: '#e9d5ff', textAlign: 'left' }}>
-                  🎛️ UIA 컨트롤 조작 (UIA_CONTROL)
-                </button>
-                <button onClick={() => handleAddStep('KVM_INPUT')} className="btn btn-outline" style={{ fontSize: '0.65rem', padding: '3px 6px', borderColor: '#ec4899', color: '#fbcfe8', textAlign: 'left' }}>
-                  🖱️ OS 마우스/키보드 (KVM_INPUT)
-                </button>
-              </div>
+
+              {isDesktopOpen && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '3px', marginTop: '2px' }}>
+                  <button onClick={() => handleAddStep('FIND_WINDOW')} className="btn btn-outline" style={{ fontSize: '0.65rem', padding: '3px 6px', borderColor: '#8b5cf6', color: '#c4b5fd', textAlign: 'left' }}>
+                    🪟 윈도우 창 찾기 / 포커스 (FIND_WINDOW)
+                  </button>
+                  <button onClick={() => handleAddStep('UIA_CONTROL')} className="btn btn-outline" style={{ fontSize: '0.65rem', padding: '3px 6px', borderColor: '#a855f7', color: '#e9d5ff', textAlign: 'left' }}>
+                    🎛️ UIA 컨트롤 조작 (UIA_CONTROL)
+                  </button>
+                  <button onClick={() => handleAddStep('KVM_INPUT')} className="btn btn-outline" style={{ fontSize: '0.65rem', padding: '3px 6px', borderColor: '#ec4899', color: '#fbcfe8', textAlign: 'left' }}>
+                    🖱️ OS 마우스/키보드 (KVM_INPUT)
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* 🔴 [변수 관리] 섹션 */}
+          {/* 🔴 [변수 관리] 섹션 - 접고 펼치기 */}
           <div style={{
             backgroundColor: '#1e293b',
             border: '1px solid #38bdf8',
             borderRadius: '8px',
-            padding: '10px',
+            padding: '8px 10px',
             display: 'flex',
             flexDirection: 'column',
             gap: '8px',
-            flex: 1,
-            maxHeight: '440px',
-            overflowY: 'auto'
+            flex: isVariablesOpen ? 1 : 'none',
+            maxHeight: isVariablesOpen ? '440px' : 'auto',
+            overflowY: isVariablesOpen ? 'auto' : 'hidden'
           }} className="grid-scrollbar">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #334155', paddingBottom: '4px' }}>
+            <div
+              onClick={() => setIsVariablesOpen(prev => !prev)}
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                borderBottom: isVariablesOpen ? '1px solid #334155' : 'none',
+                paddingBottom: isVariablesOpen ? '4px' : '0',
+                cursor: 'pointer',
+                userSelect: 'none'
+              }}
+            >
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <Variable size={13} style={{ color: '#38bdf8' }} />
                 <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#f8fafc' }}>
                   변수 관리
                 </span>
               </div>
-              <span style={{ fontSize: '0.62rem', color: '#94a3b8' }}>
-                클릭 시 스텝에 삽입
-              </span>
-            </div>
-
-            {/* 그룹 1: 12대 스키마 데이터 변수 */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#38bdf8' }}>
-                📁 12대 정규 스키마 변수
-              </span>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px' }}>
-                {DEFAULT_SCHEMA_DEF.fields.map(f => (
-                  <span
-                    key={f.id}
-                    onClick={() => {
-                      if (selectedStep) {
-                        if (selectedStep.action === 'INPUT_TEXT') {
-                          handleStepPropChange('valueTemplate', `${selectedStep.valueTemplate || ''}{{${f.name}}}`);
-                        } else if (selectedStep.action === 'MANIPULATE_OBJECT') {
-                          handleStepPropChange('attrValue', `${selectedStep.attrValue || ''}{{${f.name}}}`);
-                        }
-                      }
-                    }}
-                    style={{
-                      fontSize: '0.65rem',
-                      backgroundColor: '#0f172a',
-                      border: '1px solid #334155',
-                      borderRadius: '4px',
-                      padding: '1px 5px',
-                      color: '#7dd3fc',
-                      cursor: 'pointer',
-                      userSelect: 'none'
-                    }}
-                    title={`클릭하여 {{${f.name}}} 삽입`}
-                  >
-                    {`{{${f.name}}}`}
-                  </span>
-                ))}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                {isVariablesOpen && <span style={{ fontSize: '0.60rem', color: '#94a3b8' }}>클릭 시 삽입</span>}
+                {isVariablesOpen ? <ChevronDown size={13} style={{ color: '#94a3b8' }} /> : <ChevronRight size={13} style={{ color: '#94a3b8' }} />}
               </div>
             </div>
 
-            {/* 그룹 2: 시스템 내장 변수 */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#fbbf24' }}>
-                ⚙️ 시스템 내장 변수
-              </span>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px' }}>
-                {['현재일자', '현재시간', '루프인덱스', '총건수', '실행자'].map(v => (
-                  <span
-                    key={v}
-                    onClick={() => {
-                      if (selectedStep) {
-                        if (selectedStep.action === 'INPUT_TEXT') {
-                          handleStepPropChange('valueTemplate', `${selectedStep.valueTemplate || ''}{{${v}}}`);
-                        } else if (selectedStep.action === 'MANIPULATE_OBJECT') {
-                          handleStepPropChange('attrValue', `${selectedStep.attrValue || ''}{{${v}}}`);
-                        }
-                      }
-                    }}
-                    style={{
-                      fontSize: '0.65rem',
-                      backgroundColor: '#0f172a',
-                      border: '1px solid #b45309',
-                      borderRadius: '4px',
-                      padding: '1px 5px',
-                      color: '#fde047',
-                      cursor: 'pointer',
-                      userSelect: 'none'
-                    }}
-                    title={`클릭하여 {{${v}}} 삽입`}
-                  >
-                    {`{{${v}}}`}
+            {isVariablesOpen && (
+              <>
+                {/* 그룹 1: 12대 스키마 데이터 변수 */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#38bdf8' }}>
+                    📁 12대 정규 스키마 변수
                   </span>
-                ))}
-              </div>
-            </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px' }}>
+                    {DEFAULT_SCHEMA_DEF.fields.map(f => (
+                      <span
+                        key={f.id}
+                        onClick={() => {
+                          if (selectedStep) {
+                            if (selectedStep.action === 'INPUT_TEXT') {
+                              handleStepPropChange('valueTemplate', `${selectedStep.valueTemplate || ''}{{${f.name}}}`);
+                            } else if (selectedStep.action === 'MANIPULATE_OBJECT') {
+                              handleStepPropChange('attrValue', `${selectedStep.attrValue || ''}{{${f.name}}}`);
+                            } else if (selectedStep.action === 'UIA_CONTROL') {
+                              handleStepPropChange('attrValue', `${selectedStep.attrValue || ''}{{${f.name}}}`);
+                            } else if (selectedStep.action === 'KVM_INPUT') {
+                              handleStepPropChange('text', `${selectedStep.text || ''}{{${f.name}}}`);
+                            }
+                          }
+                        }}
+                        style={{
+                          fontSize: '0.65rem',
+                          backgroundColor: '#0f172a',
+                          border: '1px solid #334155',
+                          borderRadius: '4px',
+                          padding: '1px 5px',
+                          color: '#7dd3fc',
+                          cursor: 'pointer',
+                          userSelect: 'none'
+                        }}
+                        title={`클릭하여 {{${f.name}}} 삽입`}
+                      >
+                        {`{{${f.name}}}`}
+                      </span>
+                    ))}
+                  </div>
+                </div>
 
-            {/* 그룹 3: 사용자 정의 / 추출 변수 */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#34d399' }}>
-                🏷️ 추출 / 임시 변수
-              </span>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px' }}>
-                {['추출_값', '임시결과', 'API응답', '등록상태'].map(v => (
-                  <span
-                    key={v}
-                    onClick={() => {
-                      if (selectedStep) {
-                        if (selectedStep.action === 'INPUT_TEXT') {
-                          handleStepPropChange('valueTemplate', `${selectedStep.valueTemplate || ''}{{${v}}}`);
-                        } else if (selectedStep.action === 'MANIPULATE_OBJECT') {
-                          handleStepPropChange('attrValue', `${selectedStep.attrValue || ''}{{${v}}}`);
-                        }
-                      }
-                    }}
-                    style={{
-                      fontSize: '0.65rem',
-                      backgroundColor: '#0f172a',
-                      border: '1px solid #065f46',
-                      borderRadius: '4px',
-                      padding: '1px 5px',
-                      color: '#6ee7b7',
-                      cursor: 'pointer',
-                      userSelect: 'none'
-                    }}
-                    title={`클릭하여 {{${v}}} 삽입`}
-                  >
-                    {`{{${v}}}`}
+                {/* 그룹 2: 시스템 내장 변수 */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#fbbf24' }}>
+                    ⚙️ 시스템 내장 변수
                   </span>
-                ))}
-              </div>
-            </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px' }}>
+                    {['현재일자', '현재시간', '루프인덱스', '총건수', '실행자'].map(v => (
+                      <span
+                        key={v}
+                        onClick={() => {
+                          if (selectedStep) {
+                            if (selectedStep.action === 'INPUT_TEXT') {
+                              handleStepPropChange('valueTemplate', `${selectedStep.valueTemplate || ''}{{${v}}}`);
+                            } else if (selectedStep.action === 'MANIPULATE_OBJECT') {
+                              handleStepPropChange('attrValue', `${selectedStep.attrValue || ''}{{${v}}}`);
+                            } else if (selectedStep.action === 'UIA_CONTROL') {
+                              handleStepPropChange('attrValue', `${selectedStep.attrValue || ''}{{${v}}}`);
+                            } else if (selectedStep.action === 'KVM_INPUT') {
+                              handleStepPropChange('text', `${selectedStep.text || ''}{{${v}}}`);
+                            }
+                          }
+                        }}
+                        style={{
+                          fontSize: '0.65rem',
+                          backgroundColor: '#0f172a',
+                          border: '1px solid #b45309',
+                          borderRadius: '4px',
+                          padding: '1px 5px',
+                          color: '#fde047',
+                          cursor: 'pointer',
+                          userSelect: 'none'
+                        }}
+                        title={`클릭하여 {{${v}}} 삽입`}
+                      >
+                        {`{{${v}}}`}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 그룹 3: 사용자 정의 / 추출 변수 */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#34d399' }}>
+                    🏷️ 추출 / 임시 변수
+                  </span>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px' }}>
+                    {['추출_값', '임시결과', 'API응답', '등록상태'].map(v => (
+                      <span
+                        key={v}
+                        onClick={() => {
+                          if (selectedStep) {
+                            if (selectedStep.action === 'INPUT_TEXT') {
+                              handleStepPropChange('valueTemplate', `${selectedStep.valueTemplate || ''}{{${v}}}`);
+                            } else if (selectedStep.action === 'MANIPULATE_OBJECT') {
+                              handleStepPropChange('attrValue', `${selectedStep.attrValue || ''}{{${v}}}`);
+                            } else if (selectedStep.action === 'UIA_CONTROL') {
+                              handleStepPropChange('attrValue', `${selectedStep.attrValue || ''}{{${v}}}`);
+                            } else if (selectedStep.action === 'KVM_INPUT') {
+                              handleStepPropChange('text', `${selectedStep.text || ''}{{${v}}}`);
+                            }
+                          }
+                        }}
+                        style={{
+                          fontSize: '0.65rem',
+                          backgroundColor: '#0f172a',
+                          border: '1px solid #065f46',
+                          borderRadius: '4px',
+                          padding: '1px 5px',
+                          color: '#6ee7b7',
+                          cursor: 'pointer',
+                          userSelect: 'none'
+                        }}
+                        title={`클릭하여 {{${v}}} 삽입`}
+                      >
+                        {`{{${v}}}`}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
