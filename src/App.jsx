@@ -8,6 +8,7 @@ import DataImportModal from './components/DataImportModal';
 import SupabaseConfigModal from './components/SupabaseConfigModal';
 import PrinterGuideModal from './components/PrinterGuideModal';
 import AgentUpdateModal from './components/AgentUpdateModal';
+import AgentShutdownButton from './components/AgentShutdownButton';
 import ErrorModal from './components/ErrorModal';
 import { getStoredConfig } from './utils/supabaseClient';
 import { initHardwareScannerListener } from './utils/hardwareScanner';
@@ -157,6 +158,7 @@ export default function App() {
                 ? `에이전트 업데이트 (${agentStatus.version} ➔ ${agentStatus.requiredVersion})`
                 : (agentStatus?.online ? `에이전트 ${agentStatus.version}` : '에이전트 미실행')}
             </button>
+            <AgentShutdownButton onShutdown={() => console.log('Agent stopped')} />
 
             {/* 보안인증서 1클릭 설치 버튼 (스마트업데이트 버튼 바로 옆 배치) */}
             <button

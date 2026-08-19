@@ -555,6 +555,17 @@ namespace DragonRPA
                 {
                     responseString = "{\"ok\":true,\"message\":\"C# 하이브리드 엔진에서 시나리오가 즉시 실행되었습니다.\"}";
                 }
+                else if (rawUrl == "/api/agent/shutdown" && req.HttpMethod == "POST")
+                {
+                    // 🛑 에이전트 종료 요청
+                    res.WriteHead(200, { 'Content-Type': 'application/json' });
+                    res.End(JSON.stringify({ ok: true, message: 'Agent shutting down' }));
+                    // 응답 후 짧게 대기 후 프로세스 종료
+                    new Thread(() => {
+                        Thread.Sleep(500);
+                        Environment.Exit(0);
+                    }).Start();
+                }
                 else
                 {
                     responseString = "{\"ok\":true,\"agent\":\"DragonRPA Native Agent\",\"version\":\"" + VERSION + "\"}";
