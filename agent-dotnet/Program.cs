@@ -558,13 +558,73 @@ namespace DragonRPA
                 else if (rawUrl == "/api/agent/shutdown" && req.HttpMethod == "POST")
                 {
                     // 🛑 에이전트 종료 요청
-                    res.WriteHead(200, { 'Content-Type': 'application/json' });
-                    res.End(JSON.stringify({ ok: true, message: 'Agent shutting down' }));
-                    // 응답 후 짧게 대기 후 프로세스 종료
-                    new Thread(() => {
+                    responseString = "{\"ok\":true,\"message\":\"Agent shutting down\"}";
+                    ThreadPool.QueueUserWorkItem(delegate
+                    {
                         Thread.Sleep(500);
                         Environment.Exit(0);
-                    }).Start();
+                    });
+                }
+                // 🔄 [스마트 자가 업데이트]
+                else if (rawUrl == "/api/self-update" && req.HttpMethod == "POST")
+                {
+                    using (StreamReader reader = new StreamReader(req.InputStream, req.ContentEncoding))
+                    {
+                        string body = reader.ReadToEnd();
+                        string updateUrl = ExtractJsonValue(body, "updateUrl");
+                        if (string.IsNullOrEmpty(updateUrl))
+                        {
+                            updateUrl = "https://dragonrpa.github.io/ImageScan/UBUS_DragonRPA_Agent.exe";
+                        }
+
+                        try
+                        {
+                            string currentExe = Process.GetCurrentProcess().MainModule?.FileName ?? "";
+                            string currentDir = !string.IsNullOrEmpty(currentExe) ? Path.GetDirectoryName(currentExe) ?? "" : AppDomain.CurrentDomain.BaseDirectory;
+                            string batPath = Path.Combine(currentDir, "update_agent.bat");
+
+                            StringBuilder sb = new StringBuilder();
+                            sb.AppendLine("@echo off");
+                            sb.AppendLine("chcp 65001 >nul");
+                            sb.AppendLine("echo [1/4] 새 에이전트 다운로드 중...");
+                            sb.AppendLine("powershell -Command \"[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; (New-Object Net.WebClient).DownloadFile('" + updateUrl + "', '" + currentExe + ".new')\"");
+                            sb.AppendLine("if exist \"" + currentExe + ".new\" (");
+                            sb.AppendLine("    echo [2/4] 실행 중인 기존 에이전트 프로세스 종료...");
+                            sb.AppendLine("    taskkill /f /im UBUS_DragonRPA_Agent.exe >nul 2>&1");
+                            sb.AppendLine("    taskkill /f /im zebra-agent.exe >nul 2>&1");
+                            sb.AppendLine("    timeout /t 1 /nobreak >nul");
+                            sb.AppendLine("    echo [3/4] 최신 파일 교체...");
+                            sb.AppendLine("    move /y \"" + currentExe + ".new\" \"" + currentExe + "\"");
+                            sb.AppendLine("    echo [4/4] 최신 에이전트 자동 실행...");
+                            sb.AppendLine("    start \"\" \"" + currentExe + "\"");
+                            sb.AppendLine(")");
+                            sb.AppendLine("del \"%~f0\"");
+
+                            File.WriteAllText(batPath, sb.ToString(), Encoding.Default);
+
+                            ProcessStartInfo psi = new ProcessStartInfo
+                            {
+                                FileName = "cmd.exe",
+                                Arguments = "/c \"" + batPath + "\"",
+                                CreateNoWindow = true,
+                                UseShellExecute = false
+                            };
+                            Process.Start(psi);
+
+                            responseString = "{\"ok\":true,\"message\":\"에이전트 자가 업데이트가 시작되었습니다.\"}";
+
+                            ThreadPool.QueueUserWorkItem(delegate
+                            {
+                                Thread.Sleep(800);
+                                Environment.Exit(0);
+                            });
+                        }
+                        catch (Exception updateEx)
+                        {
+                            res.StatusCode = 500;
+                            responseString = "{\"ok\":false,\"error\":\"업데이트 스크립트 실행 실패: " + EscapeJson(updateEx.Message) + "\"}";
+                        }
+                    }
                 }
                 else
                 {
