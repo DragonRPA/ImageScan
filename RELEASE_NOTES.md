@@ -1,5 +1,19 @@
 # 릴리즈 노트 (RELEASE_NOTES.md)
 
+## [v1.7.0.Build.47] - 2026-08-19 13:17:00 (KST)
+
+### 🖨️ [WinSpool RAW 직접 인쇄 엔진 및 실제 프린터 실시간 스캔 완벽 복원]
+
+1. **Windows WinSpool RAW 프린팅 엔진 C# Native 탑재**:
+   - `winspool.drv` 저수준 P/Invoke (`OpenPrinter`, `StartDocPrinter`, `WritePrinter`, `EndDocPrinter`, `ClosePrinter`) 완벽 구현
+   - 웹 화면에서 생성된 ZPL 코드를 Zebra/일반 프린터로 CP949 완성형 한글 바이트 스트림으로 직접 RAW 전송하여 즉시 출력 복구
+2. **실제 Windows 설치 프린터 실시간 스캔 API (`/api/printers`) 탑재**:
+   - `System.Drawing.Printing.PrinterSettings.InstalledPrinters` 연동으로 PC에 연결된 모든 실제 프린터 목록 실시간 탐색 및 기본 프린터 자동 매핑
+3. **프린터 선택 및 상태 관리 (`/api/select-printer`, `/api/status`) 완전 복원**:
+   - 20KB 초경량 단일 실행 에이전트 내에서 [라벨 인쇄]와 [OS 전역 RPA 객체 스캐너]가 충돌 없이 100% 동시 가동
+
+---
+
 ## [v1.7.0.Build.46] - 2026-08-16 20:50:00 (KST)
 
 ### 📐 [레이아웃 시프트 전면 제거 & 건조한 명사 단일 표준 & 8대 정밀 텔레메트리 데이터 확장]

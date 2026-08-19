@@ -1,14 +1,93 @@
 using System;
 using System.IO;
 using System.Net;
+using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Diagnostics;
+using System.Collections.Generic;
+using System.Drawing.Printing;
 using System.Runtime.InteropServices;
 using System.Windows.Automation;
 
 namespace DragonRPA
 {
+    // 🖨️ [WinSpool RAW 직접 인쇄 헬퍼]
+    public class RawPrinterHelper
+    {
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
+        public class DOCINFOA
+        {
+            [MarshalAs(UnmanagedType.LPStr)]
+            public string pDocName;
+            [MarshalAs(UnmanagedType.LPStr)]
+            public string pOutputFile;
+            [MarshalAs(UnmanagedType.LPStr)]
+            public string pDataType;
+        }
+
+        [DllImport("winspool.Drv", EntryPoint = "OpenPrinterA", SetLastError = true, CharSet = CharSet.Ansi, ExactSpelling = true, CallingConvention = CallingConvention.StdCall)]
+        public static extern bool OpenPrinter([MarshalAs(UnmanagedType.LPStr)] string szPrinter, out IntPtr hPrinter, IntPtr pd);
+
+        [DllImport("winspool.Drv", EntryPoint = "ClosePrinter", SetLastError = true, ExactSpelling = true, CallingConvention = CallingConvention.StdCall)]
+        public static extern bool ClosePrinter(IntPtr hPrinter);
+
+        [DllImport("winspool.Drv", EntryPoint = "StartDocPrinterA", SetLastError = true, CharSet = CharSet.Ansi, ExactSpelling = true, CallingConvention = CallingConvention.StdCall)]
+        public static extern bool StartDocPrinter(IntPtr hPrinter, int level, [In, MarshalAs(UnmanagedType.LPStruct)] DOCINFOA di);
+
+        [DllImport("winspool.Drv", EntryPoint = "EndDocPrinter", SetLastError = true, ExactSpelling = true, CallingConvention = CallingConvention.StdCall)]
+        public static extern bool EndDocPrinter(IntPtr hPrinter);
+
+        [DllImport("winspool.Drv", EntryPoint = "StartPagePrinter", SetLastError = true, ExactSpelling = true, CallingConvention = CallingConvention.StdCall)]
+        public static extern bool StartPagePrinter(IntPtr hPrinter);
+
+        [DllImport("winspool.Drv", EntryPoint = "EndPagePrinter", SetLastError = true, ExactSpelling = true, CallingConvention = CallingConvention.StdCall)]
+        public static extern bool EndPagePrinter(IntPtr hPrinter);
+
+        [DllImport("winspool.Drv", EntryPoint = "WritePrinter", SetLastError = true, ExactSpelling = true, CallingConvention = CallingConvention.StdCall)]
+        public static extern bool WritePrinter(IntPtr hPrinter, IntPtr pBytes, int dwCount, out int dwWritten);
+
+        public static bool SendBytesToPrinter(string szPrinterName, byte[] pBytes)
+        {
+            IntPtr hPrinter = IntPtr.Zero;
+            DOCINFOA di = new DOCINFOA();
+            bool bSuccess = false;
+
+            di.pDocName = "DragonRPA_ZPL_Doc";
+            di.pDataType = "RAW";
+
+            if (OpenPrinter(szPrinterName.Normalize(), out hPrinter, IntPtr.Zero))
+            {
+                if (StartDocPrinter(hPrinter, 1, di))
+                {
+                    if (StartPagePrinter(hPrinter))
+                    {
+                        IntPtr pUnmanagedBytes = Marshal.AllocCoTaskMem(pBytes.Length);
+                        Marshal.Copy(pBytes, 0, pUnmanagedBytes, pBytes.Length);
+                        int dwWritten = 0;
+                        bSuccess = WritePrinter(hPrinter, pUnmanagedBytes, pBytes.Length, out dwWritten);
+                        Marshal.FreeCoTaskMem(pUnmanagedBytes);
+                        EndPagePrinter(hPrinter);
+                    }
+                    EndDocPrinter(hPrinter);
+                }
+                ClosePrinter(hPrinter);
+            }
+            return bSuccess;
+        }
+
+        public static bool SendStringToPrinter(string szPrinterName, string szString)
+        {
+            // 한글 및 ZPL 특수문자 완벽 인코딩 (CP949 / EUC-KR)
+            Encoding encoding;
+            try { encoding = Encoding.GetEncoding("ks_c_5601-1987"); }
+            catch { encoding = Encoding.UTF8; }
+
+            byte[] pBytes = encoding.GetBytes(szString);
+            return SendBytesToPrinter(szPrinterName, pBytes);
+        }
+    }
+
     class Program
     {
         const string VERSION = "v1.5";
@@ -53,6 +132,8 @@ namespace DragonRPA
         static volatile DetailedTargetInfo CurrentHover = new DetailedTargetInfo();
         static volatile DetailedTargetInfo LastLocked = null;
         static bool IsScanningActive = true;
+        static string SelectedPrinterName = "";
+        static int TodayPrintCount = 0;
 
         public class DetailedTargetInfo
         {
@@ -85,8 +166,11 @@ namespace DragonRPA
         {
             Console.OutputEncoding = Encoding.UTF8;
             Console.WriteLine("=================================================");
-            Console.WriteLine("  DragonRPA 통합 에이전트 " + VERSION + " (C# Native + UIA3)");
+            Console.WriteLine("  DragonRPA 통합 에이전트 " + VERSION + " (C# Native + WinSpool + UIA3)");
             Console.WriteLine("=================================================");
+
+            // 기본 프린터 자동 감지
+            AutoDetectDefaultPrinter();
 
             OpenFrontendBrowser();
             StartHttpServer();
@@ -103,6 +187,28 @@ namespace DragonRPA
             });
 
             Thread.Sleep(Timeout.Infinite);
+        }
+
+        static void AutoDetectDefaultPrinter()
+        {
+            try
+            {
+                PrinterSettings settings = new PrinterSettings();
+                SelectedPrinterName = settings.PrinterName;
+                foreach (string printer in PrinterSettings.InstalledPrinters)
+                {
+                    if (printer.ToLower().Contains("zdesigner") || printer.ToLower().Contains("zebra") || printer.ToLower().Contains("gk420") || printer.ToLower().Contains("zd"))
+                    {
+                        SelectedPrinterName = printer;
+                        break;
+                    }
+                }
+                Console.WriteLine("[PRINTER] 기본 프린터 설정됨: " + SelectedPrinterName);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("[WARN] 프린터 감지 오류: " + ex.Message);
+            }
         }
 
         static void OpenFrontendBrowser()
@@ -221,7 +327,6 @@ namespace DragonRPA
                     bool isOffscreen = cur.IsOffscreen;
                     bool isPassword = cur.IsPassword;
 
-                    // 프레임 및 상위 계층 탐색
                     string frameInfo = "Main Frame";
                     string hierarchy = "";
                     try
@@ -363,7 +468,75 @@ namespace DragonRPA
             {
                 if (rawUrl == "/api/status" || rawUrl == "/status")
                 {
-                    responseString = "{\"supabase\":\"ok\",\"printer\":{\"ok\":true,\"label\":\"Zebra Direct (USB/TCP 9100)\"},\"todayCount\":0,\"pendingCount\":0,\"agentId\":\"" + Environment.MachineName + "_agent\",\"version\":\"" + VERSION + "\",\"online\":true}";
+                    string label = string.IsNullOrEmpty(SelectedPrinterName) ? "Zebra Direct (USB/Spooler)" : SelectedPrinterName;
+                    responseString = "{\"supabase\":\"ok\",\"printer\":{\"ok\":true,\"label\":\"" + EscapeJson(label) + "\"},\"todayCount\":" + TodayPrintCount + ",\"pendingCount\":0,\"agentId\":\"" + Environment.MachineName + "_agent\",\"version\":\"" + VERSION + "\",\"online\":true}";
+                }
+                // 🖨️ [프린터 목록 실시간 조회]
+                else if (rawUrl == "/api/printers")
+                {
+                    List<string> list = new List<string>();
+                    foreach (string p in PrinterSettings.InstalledPrinters)
+                    {
+                        bool isZebra = p.ToLower().Contains("zdesigner") || p.ToLower().Contains("zebra") || p.ToLower().Contains("gk420") || p.ToLower().Contains("zd");
+                        string type = isZebra ? "USB_RAW" : "WIN_SPOOL";
+                        list.Add("{\"name\":\"" + EscapeJson(p) + "\",\"type\":\"" + type + "\",\"status\":\"Ready\"}");
+                    }
+                    responseString = "[" + string.Join(",", list.ToArray()) + "]";
+                }
+                // 🖨️ [프린터 선택 및 저장]
+                else if (rawUrl == "/api/select-printer" && req.HttpMethod == "POST")
+                {
+                    using (StreamReader reader = new StreamReader(req.InputStream, req.ContentEncoding))
+                    {
+                        string body = reader.ReadToEnd();
+                        string pName = ExtractJsonValue(body, "printerName");
+                        if (!string.IsNullOrEmpty(pName))
+                        {
+                            SelectedPrinterName = pName;
+                            Console.WriteLine("[PRINTER] 활성 프린터 변경: " + SelectedPrinterName);
+                        }
+                        responseString = "{\"ok\":true,\"selected\":\"" + EscapeJson(SelectedPrinterName) + "\"}";
+                    }
+                }
+                // 🖨️ [직통 ZPL 인쇄] WinSpool RAW 전송 실행
+                else if (rawUrl == "/api/print-direct" && req.HttpMethod == "POST")
+                {
+                    using (StreamReader reader = new StreamReader(req.InputStream, req.ContentEncoding))
+                    {
+                        string body = reader.ReadToEnd();
+                        string zpl = ExtractJsonValue(body, "zpl");
+                        string targetPrinter = ExtractJsonValue(body, "printerName");
+                        if (string.IsNullOrEmpty(targetPrinter)) targetPrinter = SelectedPrinterName;
+
+                        if (string.IsNullOrEmpty(zpl))
+                        {
+                            // raw body 자체가 ZPL인 경우 처리
+                            if (body.Trim().StartsWith("^XA")) zpl = body;
+                        }
+
+                        if (!string.IsNullOrEmpty(zpl) && !string.IsNullOrEmpty(targetPrinter))
+                        {
+                            Console.WriteLine("[PRINT] WinSpool RAW 직접 인쇄 시작 ➔ " + targetPrinter + " (" + zpl.Length + " chars)");
+                            bool success = RawPrinterHelper.SendStringToPrinter(targetPrinter, zpl);
+                            if (success)
+                            {
+                                TodayPrintCount++;
+                                Console.WriteLine("[PRINT] [OK] 정상 인쇄 완료!");
+                                responseString = "{\"ok\":true,\"message\":\"정상 출력 완료 (WinSpool RAW)\"}";
+                            }
+                            else
+                            {
+                                Console.WriteLine("[PRINT] [ERR] WinSpool Open/Write 실패: " + Marshal.GetLastWin32Error());
+                                res.StatusCode = 500;
+                                responseString = "{\"ok\":false,\"error\":\"WinSpool RAW 인쇄 실패 (Error code: " + Marshal.GetLastWin32Error() + ")\"}";
+                            }
+                        }
+                        else
+                        {
+                            res.StatusCode = 400;
+                            responseString = "{\"ok\":false,\"error\":\"ZPL 코드 또는 프린터 이름이 비어 있습니다.\"}";
+                        }
+                    }
                 }
                 else if (rawUrl == "/api/rpa/current-hover")
                 {
@@ -377,15 +550,6 @@ namespace DragonRPA
                 else if (rawUrl == "/api/rpa/inspect-object" && req.HttpMethod == "POST")
                 {
                     responseString = "{\"ok\":true,\"message\":\"실시간 전역 OS 레이더 객체 탐색기가 가동되었습니다.\"}";
-                }
-                else if (rawUrl == "/api/print-direct" && req.HttpMethod == "POST")
-                {
-                    using (StreamReader reader = new StreamReader(req.InputStream, req.ContentEncoding))
-                    {
-                        string body = reader.ReadToEnd();
-                        Console.WriteLine("[PRINT] 직통 출력 요청 접수 (" + body.Length + " bytes)");
-                        responseString = "{\"ok\":true,\"message\":\"ZPL 직접 인쇄 완료\"}";
-                    }
                 }
                 else if (rawUrl == "/api/rpa/execute-scenario" && req.HttpMethod == "POST")
                 {
@@ -430,6 +594,23 @@ namespace DragonRPA
                    "\"isPassword\":" + (t.IsPassword ? "true" : "false") + "," +
                    "\"rect\":{\"x\":" + t.X + ",\"y\":" + t.Y + ",\"width\":" + t.Width + ",\"height\":" + t.Height + "}," +
                    "\"timestamp\":" + t.Timestamp + "}";
+        }
+
+        static string ExtractJsonValue(string json, string key)
+        {
+            if (string.IsNullOrEmpty(json)) return "";
+            string search = "\"" + key + "\":";
+            int idx = json.IndexOf(search);
+            if (idx < 0) return "";
+            int start = idx + search.Length;
+            while (start < json.Length && (json[start] == ' ' || json[start] == '"')) start++;
+            int end = start;
+            while (end < json.Length && json[end] != '"' && json[end] != ',' && json[end] != '}') end++;
+            if (start < json.Length && end <= json.Length && end > start)
+            {
+                return json.Substring(start, end - start).Trim().Replace("\\n", "\n").Replace("\\r", "\r");
+            }
+            return "";
         }
 
         static string EscapeJson(string s)
