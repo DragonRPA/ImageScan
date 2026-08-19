@@ -61,6 +61,7 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
   const [selectedElemId, setSelectedElemId] = useState('elem_asset_no');
   const [isSaved, setIsSaved] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
+  const [testCount, setTestCount] = useState(1);
   const [presets, setPresets] = useState(getAllPresets);
   const [showZplCode, setShowZplCode] = useState(false);
   const [gatekeeperState, setGatekeeperState] = useState({ isOpen: false, templateId: null, templateName: '' });
@@ -461,8 +462,11 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
       const targetId = template.targetPrinterId || getActivePrinterId();
       const targetPrinter = registered.find(p => p.id === targetId) || registered[0] || { type: 'agent_auto', name: '기본 라벨 프린터' };
 
-      const res = await sendZplToPrinter(zpl, targetPrinter);
-      alert(`[테스트 인쇄 완료 - ${targetPrinter.name}] ${res?.message || '라벨이 출력되었습니다.'}`);
+      // 3. 지정 횟수만큼 인쇄
+      for (let i = 0; i < testCount; i++) {
+        await sendZplToPrinter(zpl, targetPrinter);
+      }
+      alert(`[테스트 인쇄 완료 (${testCount}회) - ${targetPrinter.name}]`);
     } catch (err) {
       if (onOpenPrintModal) {
         onOpenPrintModal([SAMPLE_ITEM]);
@@ -957,20 +961,31 @@ export default function LabelDesignerTab({ onError, onOpenPrintModal }) {
               </div>
             )}
 
-            <button
-              onClick={handleTestPrint}
-              disabled={isPrinting}
-              className="btn"
-              style={{
-                backgroundColor: '#10b981',
-                color: '#fff',
-                border: 'none',
-                fontSize: '0.72rem',
-                padding: '4px 12px'
-              }}
-            >
-              <Printer size={12} /> {isPrinting ? '전송중' : '테스트 인쇄'}
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}>
+              <input
+                type="number"
+                min={1}
+                value={testCount}
+                onChange={e => setTestCount(Math.max(1, Number(e.target.value) || 1))}
+                className="input"
+                style={{ width: '60px', fontSize: '0.72rem', padding: '2px 4px' }}
+                placeholder="매수"
+              />
+              <button
+                onClick={handleTestPrint}
+                disabled={isPrinting}
+                className="btn"
+                style={{
+                  backgroundColor: '#10b981',
+                  color: '#fff',
+                  border: 'none',
+                  fontSize: '0.72rem',
+                  padding: '4px 12px'
+                }}
+              >
+                <Printer size={12} /> {isPrinting ? '전송중' : '테스트 인쇄'}
+              </button>
+            </div>
           </div>
         )}
       </div>

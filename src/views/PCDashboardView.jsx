@@ -62,6 +62,14 @@ function PrintQueueMonitor() {
     const latestAgent = (data || []).find(r => r.agent_id)?.agent_id;
     if (latestAgent) setAgentSeen(latestAgent);
   };
+const clearQueue = async () => {
+  if (!window.confirm('큐를 모두 삭제하시겠습니까?')) return;
+  const client = getSupabaseClient();
+  if (!client) { alert('Supabase 클라이언트 없음'); return; }
+  const { error } = await client.from('print_queue').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+  if (error) { console.error(error); alert('프린트 큐 삭제 실패'); }
+  else { alert('프린트 큐 삭제 완료'); loadQueueData(); }
+};
 
   useEffect(() => {
     loadQueueData();
@@ -135,14 +143,22 @@ function PrintQueueMonitor() {
               <span style={{ fontWeight: 700 }}>{stats[st.key]}</span>
             </div>
           ))}
-          <button
-            onClick={loadQueueData}
-            className="btn btn-outline"
-            style={{ padding: '2px 6px', fontSize: '0.68rem', border: '1px solid #475569' }}
-            title="새로고침"
-          >
-            <RefreshCw size={11} />
-          </button>
+            <button
+              onClick={loadQueueData}
+              className="btn btn-outline"
+              style={{ padding: '2px 6px', fontSize: '0.68rem', border: '1px solid #475569' }}
+              title="새로고침"
+            >
+              <RefreshCw size={11} />
+            </button>
+            <button
+              onClick={clearQueue}
+              className="btn btn-outline"
+              style={{ padding: '2px 6px', fontSize: '0.68rem', border: '1px solid #475569', marginLeft: '4px' }}
+              title="큐 삭제"
+            >
+              큐 삭제
+            </button>
         </div>
       </div>
 
